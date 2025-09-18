@@ -477,3 +477,4 @@ Monitor MongoDB for:
 4. **Use MongoDB Compass** to inspect database state
 5. **Monitor network requests** in browser dev tools
 
+

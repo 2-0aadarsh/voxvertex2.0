@@ -42,6 +42,7 @@ export interface User {
     data: Buffer;
     contentType: string;
   };
+  profileImageUrl?: string;
   bio?: string;
   professionalTitle?: string;
   location?: string;
@@ -82,6 +83,7 @@ export interface User {
       data: Buffer;
       contentType: string;
     };
+    profileImageUrl?: string;
     bio?: string;
     professionalTitle?: string;
     location?: string;
@@ -181,6 +183,7 @@ export interface Comment {
     data: Buffer;
     contentType: string;
   };
+  userProfileImageUrl?: string;
   content: string;
   likes: Array<{
     user: string;
@@ -228,12 +231,14 @@ export interface FeedPost {
       data: Buffer;
       contentType: string;
     };
+    profileImageUrl?: string;
   };
   userName: string;
   userProfileImage?: {
     data: Buffer;
     contentType: string;
   };
+  userProfileImageUrl?: string;
   userProfessionalTitle?: string;
   title?: string;
   caption: string;
@@ -260,6 +265,7 @@ export interface FeedPost {
       data: Buffer;
       contentType: string;
     };
+    userProfileImageUrl?: string;
     content: string;
     likes: {
       user: string;

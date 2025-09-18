@@ -1,14 +1,13 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Heart, MessageCircle, Calendar, MapPin } from 'lucide-react';
+import { Heart, MessageCircle, Calendar, MapPin } from 'lucide-react';
 import BottomHalf from "./components/BottomHalf";
 import {  CreditCard, Monitor, UserCheck, Grid3X3, Target, Clipboard } from 'lucide-react';
-import Logo from '@/components/Logo';
+import Navbar from '@/components/Navbar';
 import { useAuth, useAppDispatch } from '@/store/hooks';
 import { useGetCurrentUserQuery } from '@/store/slices/authSlice';
 import { useGetFeedPostsQuery, useToggleFeedPostLikeMutation, useTestConnectionQuery, useTestDatabaseQuery, useDebugPostsQuery, useTestUserLikesQuery, useAddCommentMutation, feedApi } from '@/store/slices/feedSlice';
-import { IoIosArrowDown } from 'react-icons/io';
 import ImageCarousel from './components/ImageCarousel';
 import CustomVerticalScrollbarV2 from '@/components/CustomVerticalScrollbarV2';
 
@@ -21,13 +20,46 @@ export default function EventManagementPage() {
   const [commentText, setCommentText] = useState('');
   const [viewingAllComments, setViewingAllComments] = useState<Set<string>>(new Set());
   
-  // Router hook for navigation
-  const router = useRouter();
   
   // Authentication hooks
   const { user, isAuthenticated } = useAuth();
   const { data: currentUserData } = useGetCurrentUserQuery();
   const dispatch = useAppDispatch();
+
+  // Helper function to get profile image URL
+  const getProfileImageUrl = (profileImage: any) => {
+    console.log('🔍 Home Profile Image Debug:', {
+      profileImage,
+      type: typeof profileImage,
+      hasData: profileImage?.data ? 'yes' : 'no',
+      hasContentType: profileImage?.contentType ? 'yes' : 'no',
+      hasUrl: profileImage?.url ? 'yes' : 'no'
+    });
+    
+    if (!profileImage) return null;
+    
+    // Handle string URLs
+    if (typeof profileImage === 'string') {
+      if (profileImage.startsWith('http')) return profileImage;
+      return `https://res.cloudinary.com/demo/image/fetch/${profileImage}`;
+    }
+    
+    // Handle object with data and contentType (Buffer)
+    if (typeof profileImage === 'object' && profileImage.data && profileImage.contentType) {
+      const dataUrl = `data:${profileImage.contentType};base64,${profileImage.data.toString('base64')}`;
+      console.log('✅ Created data URL from Buffer');
+      return dataUrl;
+    }
+    
+    // Handle object with url property
+    if (typeof profileImage === 'object' && profileImage.url) {
+      if (profileImage.url.startsWith('http')) return profileImage.url;
+      return `https://res.cloudinary.com/demo/image/fetch/${profileImage.url}`;
+    }
+    
+    console.log('❌ No valid profile image format found');
+    return null;
+  };
   
   // Feed data hooks - fetch all posts at once
   const { 
@@ -233,8 +265,13 @@ export default function EventManagementPage() {
           : currentUserData?.user?.firstName && currentUserData?.user?.lastName
           ? `${currentUserData.user.firstName} ${currentUserData.user.lastName}`
           : "You",
-        userProfileImage: user?.profileImageUrl || currentUserData?.user?.profileImageUrl,
-        user: user || currentUserData?.user,
+        userProfileImage: user?.profileImageUrl || currentUserData?.user?.profileImageUrl || user?.profileImage || currentUserData?.user?.profileImage,
+        user: user?._id || currentUserData?.user?._id || 'unknown',
+        likes: [],
+        likesCount: 0,
+        replies: [],
+        isEdited: false,
+        updatedAt: new Date().toISOString(),
       };
       
       // Optimistic update - immediately update the UI
@@ -342,37 +379,6 @@ export default function EventManagementPage() {
     return postDate.toLocaleDateString();
   }, []);
 
-  // Helper function to get profile image URL
-  const getProfileImageUrl = useCallback((profileImage: { data?: Buffer | string; contentType?: string; url?: string } | string | null) => {
-    console.log('🔍 Profile Image Debug:', profileImage);
-    
-    if (!profileImage) {
-      console.log('❌ No profile image provided');
-      return null;
-    }
-    
-    // Check if it's already a URL string
-    if (typeof profileImage === 'string') {
-      console.log('✅ Profile image is already a URL:', profileImage);
-      return profileImage;
-    }
-    
-    // Check if it has data and contentType (binary data)
-    if (profileImage.data && profileImage.contentType) {
-      const dataUrl = `data:${profileImage.contentType};base64,${profileImage.data.toString('base64')}`;
-      console.log('✅ Created data URL from binary data');
-      return dataUrl;
-    }
-    
-    // Check if it has a url property
-    if (profileImage.url) {
-      console.log('✅ Profile image has URL property:', profileImage.url);
-      return profileImage.url;
-    }
-    
-    console.log('❌ Profile image format not recognized:', profileImage);
-    return null;
-  }, []);
 
 
   const promotedEvents = [
@@ -543,112 +549,13 @@ export default function EventManagementPage() {
       <div className="min-h-screen bg-gray-50">
         
         {/* Header */}
-<header className="bg-white shadow-md border-b">
-  <div className="max-w-7xl mx-auto px-6">
-    <div className="flex items-center h-16">
-      {/* Logo */}
-      <div className="flex-shrink-0">
-        <Logo absolute={true} />
-      </div>
-
-      {/* Search Bar - Right after logo */}
-      <div className="flex-1 max-w-xl ml-24">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <input
-            type="text"
-            placeholder="Search Speaker"
-            className="w-full pl-10 pr-10 py-2.5 border border-blue-400 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-blue-600 text-sm bg-white"
-          />
-          <button className="absolute right-3 top-1/2 transform -translate-y-1/2 hover:opacity-70 transition-opacity">
-            <img 
-              src="/vector1.png" 
-              alt="Filter" 
-              className="w-4 h-4"
-            />
-          </button>
-        </div>
-      </div>
-
-      {/* Navigation - Right aligned */}
-      <nav className="flex items-center space-x-8 ml-auto">
-        <button 
-          onClick={() => router.push('/profile')}
-          className="text-gray-900 hover:text-[#FF6B35] font-medium text-sm transition-colors duration-200 hover:scale-105"
-        >
-          About
-        </button>
-        <button 
-          onClick={() => router.push('/newuser')}
-          className="text-gray-900 hover:text-[#FF6B35] font-medium text-sm transition-colors duration-200 hover:scale-105"
-        >
-          Speaker
-        </button>
-        <button 
-          onClick={() => router.push('/events_page')}
-          className="text-gray-900 hover:text-[#FF6B35] font-medium text-sm transition-colors duration-200 hover:scale-105"
-        >
-          Events
-        </button>
-        
-        {/* Conditional rendering based on authentication */}
-        {isAuthenticated && (user || currentUserData?.user) ? (
-          <button className="w-40 h-10 cursor-pointer flex items-center justify-between">
-            <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
-              {getProfileImageUrl(user?.profileImageUrl || currentUserData?.user?.profileImageUrl) ? (
-                <img
-                  src={getProfileImageUrl(user?.profileImageUrl || currentUserData?.user?.profileImageUrl) || ''}
-                  alt="profile"
-                  className="w-full h-full object-cover object-center"
-                  onError={(e) => {
-                    // Fallback to initials if image fails to load
-                    e.currentTarget.style.display = "none";
-                    const nextElement = e.currentTarget.nextElementSibling as HTMLElement;
-                    if (nextElement) {
-                      nextElement.style.display = "flex";
-                    }
-                  }}
-                />
-              ) : null}
-              <div
-                className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold text-sm"
-                style={{
-                  display: getProfileImageUrl(user?.profileImageUrl || currentUserData?.user?.profileImageUrl) ? "none" : "flex",
-                }}
-              >
-                {(user?.firstName && user?.lastName 
-                  ? `${user.firstName} ${user.lastName}` 
-                  : currentUserData?.user?.firstName && currentUserData?.user?.lastName
-                  ? `${currentUserData.user.firstName} ${currentUserData.user.lastName}`
-                  : "User")
-                  .split(" ")
-                  .map((n) => n[0])
-                  .join("")
-                  .toUpperCase()
-                  .slice(0, 2)}
-              </div>
-            </div>
-            <h2 className="text-sm font-medium">
-              {user?.firstName && user?.lastName 
-                ? `${user.firstName} ${user.lastName}` 
-                : currentUserData?.user?.firstName && currentUserData?.user?.lastName
-                ? `${currentUserData.user.firstName} ${currentUserData.user.lastName}`
-                : "User"}
-            </h2>
-            <IoIosArrowDown className="cursor-pointer w-4 h-4" />
-          </button>
-        ) : (
-          <button 
-            onClick={() => window.location.href = '/signup/login'}
-            className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2.5 rounded-full font-medium text-sm transition-colors"
-          >
-            Login
-          </button>
-        )}
-      </nav>
-    </div>
-  </div>
-</header>
+        <Navbar 
+          user={user || undefined}
+          currentUserData={currentUserData}
+          isAuthenticated={isAuthenticated}
+          forceHomepageStyle={true}
+          getProfileImageUrl={getProfileImageUrl}
+        />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="grid grid-cols-12 gap-4">
@@ -788,7 +695,7 @@ export default function EventManagementPage() {
                               postId: post._id,
                               user: post.user,
                               userProfileImage: post.userProfileImage,
-                              userProfileImageUrl: post.user?.profileImageUrl,
+                              userProfileImageUrl: post.user?.profileImage,
                               userName: post.userName,
                               media: post.media,
                               mediaCount: post.media?.length || 0,
@@ -798,7 +705,7 @@ export default function EventManagementPage() {
                             // Get real comments from the post data
                             const postComments = post.comments || [];
                             
-                            const profileImageUrl = getProfileImageUrl(post.userProfileImage || post.user?.profileImageUrl);
+                            const profileImageUrl = getProfileImageUrl(post.userProfileImage || (post.user as any)?.profileImageUrl || post.user?.profileImage);
                             const authorName = post.userName || `${post.user?.firstName} ${post.user?.lastName}`;
                             
                             return (
@@ -886,16 +793,16 @@ export default function EventManagementPage() {
                                             {(viewingAllComments.has(post._id) ? postComments : postComments.slice(0, 3)).map((comment: { userName?: string; content: string; createdAt: string; userProfileImage?: any; userProfileImageUrl?: string; user?: any }, index: number) => {
                                               // Debug comment data
                                               console.log('🔍 Comment Debug:', {
-                                                commentId: comment._id || index,
+                                                commentId: (comment as any)._id || index,
                                                 userName: comment.userName,
                                                 userProfileImage: comment.userProfileImage,
                                                 userProfileImageUrl: comment.userProfileImageUrl,
                                                 user: comment.user,
-                                                userProfileImageFromUser: comment.user?.profileImageUrl
+                                                userProfileImageFromUser: comment.user?.profileImage
                                               });
                                               
                                               // Get profile image from multiple sources: userProfileImageUrl (new), userProfileImage (old), or user.profileImageUrl (populated)
-                                              const profileImageUrl = getProfileImageUrl(comment.userProfileImageUrl || comment.userProfileImage || comment.user?.profileImageUrl);
+                                              const profileImageUrl = getProfileImageUrl(comment.userProfileImageUrl || comment.userProfileImage || comment.user?.profileImageUrl || comment.user?.profileImage);
                                               const displayName = comment.userName || `${comment.user?.firstName} ${comment.user?.lastName}`;
                                               
                                               return (
@@ -971,9 +878,9 @@ export default function EventManagementPage() {
                                     {isAuthenticated ? (
                             <div className="flex items-center space-x-2">
                                         <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center flex-shrink-0">
-                                          {getProfileImageUrl(user?.profileImageUrl || currentUserData?.user?.profileImageUrl) ? (
+                                          {getProfileImageUrl(user?.profileImageUrl || currentUserData?.user?.profileImageUrl || user?.profileImage || currentUserData?.user?.profileImage) ? (
                                             <img
-                                              src={getProfileImageUrl(user?.profileImageUrl || currentUserData?.user?.profileImageUrl) || ''}
+                                              src={getProfileImageUrl(user?.profileImageUrl || currentUserData?.user?.profileImageUrl || user?.profileImage || currentUserData?.user?.profileImage) || ''}
                                               alt="profile"
                                               className="w-full h-full object-cover object-center"
                                               onError={(e) => {
@@ -989,7 +896,7 @@ export default function EventManagementPage() {
                                           <div
                                             className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold text-xs"
                                             style={{
-                                              display: getProfileImageUrl(user?.profileImageUrl || currentUserData?.user?.profileImageUrl) ? "none" : "flex",
+                                              display: getProfileImageUrl(user?.profileImageUrl || currentUserData?.user?.profileImageUrl || user?.profileImage || currentUserData?.user?.profileImage) ? "none" : "flex",
                                             }}
                                           >
                                             {(user?.firstName && user?.lastName 

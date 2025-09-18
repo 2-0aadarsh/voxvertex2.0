@@ -1,0 +1,324 @@
+"use client";
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Search,
+  User,
+  BarChart3,
+  MessageSquare,
+  Calendar,
+  FileText,
+  CreditCard,
+  AlertTriangle,
+  HelpCircle,
+  Settings,
+} from "lucide-react";
+import { IoIosArrowDown } from "react-icons/io";
+import Logo from "./Logo";
+
+interface NavbarProps {
+  showSearch?: boolean;
+  className?: string;
+  user?: { firstName?: string; lastName?: string; whoAreYou?: string; profileImage?: any; profileImageUrl?: string; email?: string };
+  currentUserData?: { user?: { firstName?: string; lastName?: string; whoAreYou?: string; profileImage?: any; profileImageUrl?: string; email?: string } };
+  isAuthenticated?: boolean;
+  activeTab?: string;
+  onTabClick?: (tab: string) => void;
+  forceHomepageStyle?: boolean;
+  getProfileImageUrl?: (url: string | null | undefined) => string | null;
+}
+
+const Navbar: React.FC<NavbarProps> = ({
+  showSearch = true,
+  className = "",
+  user,
+  currentUserData,
+  isAuthenticated = false,
+  activeTab = "profile",
+  onTabClick,
+  forceHomepageStyle = false,
+  getProfileImageUrl,
+}) => {
+  const router = useRouter();
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+
+  // Helper function to get profile image URL
+  const getProfileImage = (profileImage: any) => {
+    console.log('🔍 Navbar Profile Image Debug:', {
+      profileImage,
+      type: typeof profileImage,
+      hasData: profileImage?.data ? 'yes' : 'no',
+      hasContentType: profileImage?.contentType ? 'yes' : 'no',
+      hasUrl: profileImage?.url ? 'yes' : 'no',
+      hasGetProfileImageUrl: !!getProfileImageUrl
+    });
+    
+    if (!profileImage) return null;
+    
+    // If getProfileImageUrl function is provided, use it
+    if (getProfileImageUrl) {
+      const result = getProfileImageUrl(profileImage);
+      console.log('✅ Using getProfileImageUrl function, result:', result);
+      return result;
+    }
+    
+    // Handle string URLs
+    if (typeof profileImage === 'string') {
+      if (profileImage.startsWith('http')) return profileImage;
+      return `https://res.cloudinary.com/demo/image/fetch/${profileImage}`;
+    }
+    
+    // Handle object with data and contentType (Buffer)
+    if (typeof profileImage === 'object' && profileImage.data && profileImage.contentType) {
+      const dataUrl = `data:${profileImage.contentType};base64,${profileImage.data.toString('base64')}`;
+      console.log('✅ Created data URL from Buffer');
+      return dataUrl;
+    }
+    
+    // Handle object with url property
+    if (typeof profileImage === 'object' && profileImage.url) {
+      if (profileImage.url.startsWith('http')) return profileImage.url;
+      return `https://res.cloudinary.com/demo/image/fetch/${profileImage.url}`;
+    }
+    
+    console.log('❌ No valid profile image format found');
+    return null;
+  };
+
+  // Helper function to get user initials
+  const getUserInitials = () => {
+    const firstName = user?.firstName || currentUserData?.user?.firstName;
+    const lastName = user?.lastName || currentUserData?.user?.lastName;
+    
+    if (firstName && lastName) {
+      return `${firstName} ${lastName}`.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
+    }
+    return "User";
+  };
+
+  // Helper function to get full name
+  const getFullName = () => {
+    const firstName = user?.firstName || currentUserData?.user?.firstName;
+    const lastName = user?.lastName || currentUserData?.user?.lastName;
+    
+    if (firstName && lastName) {
+      return `${firstName} ${lastName}`;
+    }
+    return "User";
+  };
+
+  const navigationItems = [
+    { id: "profile", label: "Profile", icon: User },
+    { id: "dashboard", label: "Dashboard", icon: BarChart3 },
+    { id: "messages", label: "Messages", icon: MessageSquare },
+    { id: "bookings", label: "Bookings", icon: Calendar },
+    { id: "events", label: "Events", icon: FileText },
+    { id: "payments", label: "Payments", icon: CreditCard },
+    { id: "dispute", label: "Dispute", icon: AlertTriangle },
+    { id: "support", label: "Support", icon: HelpCircle },
+    { id: "settings", label: "Settings", icon: Settings },
+  ];
+
+  if (user && !forceHomepageStyle) {
+    // Speaker/Organizer sidebar navigation
+    return (
+      <div
+        className={`bg-white shadow-lg h-screen w-64 fixed left-0 top-0 ${className}`}
+      >
+        {/* Logo */}
+        <div className="p-6 border-b border-gray-200">
+          <Logo />
+        </div>
+
+        {/* Navigation Menu */}
+        <nav className="mt-6">
+          {navigationItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => onTabClick?.(item.id)}
+                className={`w-full flex items-center space-x-3 px-6 py-3 text-left transition-colors ${
+                  isActive
+                    ? "bg-orange-50 text-orange-600 border-r-2 border-orange-500"
+                    : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                }`}
+              >
+                <Icon className="w-5 h-5" />
+                <span className="font-medium">{item.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* User Info at Bottom */}
+        <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-gray-200">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center">
+              <User className="w-5 h-5 text-gray-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-900 truncate">
+                {user.firstName} {user.lastName}
+              </p>
+              <p className="text-xs text-gray-500 truncate">{user.email || 'No email'}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Public homepage navigation
+  return (
+    <header className={`bg-white shadow-md border-b ${className}`}>
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="flex items-center h-16">
+          {/* Logo */}
+          <div className="flex-shrink-0">
+            <Logo absolute={true} />
+          </div>
+
+          {/* Search Bar - Right after logo */}
+          {showSearch && (
+            <div className="flex-1 max-w-xl ml-24">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="Search Speaker"
+                  className="w-full pl-10 pr-10 py-2.5 border border-blue-400 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-blue-600 text-sm bg-white"
+                />
+                <button className="absolute right-3 top-1/2 transform -translate-y-1/2 hover:opacity-70 transition-opacity">
+                  <img 
+                    src="/vector1.png" 
+                    alt="Filter" 
+                    className="w-4 h-4"
+                  />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Navigation - Right aligned */}
+          <nav className="flex items-center space-x-8 ml-auto">
+            <button 
+              onClick={() => router.push('/about')}
+              className="text-gray-900 hover:text-[#FF6B35] font-medium text-sm transition-colors duration-200 hover:scale-105"
+            >
+              About
+            </button>
+            <button 
+              onClick={() => router.push('/speaker')}
+              className="text-gray-900 hover:text-[#FF6B35] font-medium text-sm transition-colors duration-200 hover:scale-105"
+            >
+              Speaker
+            </button>
+            <button 
+              onClick={() => router.push('/events_page')}
+              className="text-gray-900 hover:text-[#FF6B35] font-medium text-sm transition-colors duration-200 hover:scale-105"
+            >
+              Events
+            </button>
+            
+            {/* Conditional rendering based on authentication */}
+            {isAuthenticated && (user || currentUserData?.user) ? (
+              <div className="relative">
+                <button 
+                  onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+                  className="w-40 h-10 cursor-pointer flex items-center justify-between"
+                >
+                  {(() => {
+                    const profileImageUrl = getProfileImage(user?.profileImageUrl || currentUserData?.user?.profileImageUrl || user?.profileImage || currentUserData?.user?.profileImage);
+                    return (
+                      <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
+                        {profileImageUrl ? (
+                          <img
+                            src={profileImageUrl}
+                            alt="profile"
+                            className="w-full h-full object-cover object-center"
+                            onError={(e) => {
+                              // Fallback to initials if image fails to load
+                              e.currentTarget.style.display = "none";
+                              const nextElement = e.currentTarget.nextElementSibling as HTMLElement;
+                              if (nextElement) {
+                                nextElement.style.display = "flex";
+                              }
+                            }}
+                          />
+                        ) : null}
+                        <div
+                          className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold text-sm"
+                          style={{
+                            display: profileImageUrl ? "none" : "flex",
+                          }}
+                        >
+                          {getUserInitials()}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                  <h2 className="text-sm font-medium">
+                    {getFullName()}
+                  </h2>
+                  <IoIosArrowDown className="cursor-pointer w-4 h-4" />
+                </button>
+
+                {/* Profile Dropdown */}
+                {showProfileDropdown && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
+                    <button
+                      onClick={() => {
+                        if (user?.whoAreYou === 'Organizer' || currentUserData?.user?.whoAreYou === 'Organizer') {
+                          router.push('/newuser');
+                        } else {
+                          router.push('/speakerUser');
+                        }
+                        setShowProfileDropdown(false);
+                      }}
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      Profile
+                    </button>
+                    <button
+                      onClick={() => {
+                        router.push('/dashboard');
+                        setShowProfileDropdown(false);
+                      }}
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      Dashboard
+                    </button>
+                    <button
+                      onClick={() => {
+                        // Add logout functionality here
+                        localStorage.removeItem('userData');
+                        localStorage.removeItem('accessToken');
+                        localStorage.removeItem('refreshToken');
+                        window.location.href = '/home';
+                        setShowProfileDropdown(false);
+                      }}
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button 
+                onClick={() => window.location.href = '/signup/login'}
+                className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2.5 rounded-full font-medium text-sm transition-colors"
+              >
+                Login
+              </button>
+            )}
+          </nav>
+        </div>
+      </div>
+    </header>
+  );
+};
+
+export default Navbar;
