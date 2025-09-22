@@ -473,13 +473,17 @@ export interface TimeSlot {
 
 export interface EventType {
   category: 'Corporate & Professional Events' | 'Educational & Training Formats' | 'Specialized & Niche Events';
-  subTypes: string[];
+  events: {
+    name: string;
+    price: number;
+    currency: string;
+  }[];
 }
 
 export interface Availability {
   _id: string;
   userId: string;
-  dates: string[]; // Array of dates
+  date: string; // Single date per document
   eventTypes: EventType[];
   modes: ('Online' | 'Offline' | 'Hybrid')[];
   timeSlots: TimeSlot[];
@@ -590,7 +594,7 @@ export interface CreateCalendarEventRequest {
 }
 
 export interface CreateAvailabilityRequest {
-  dates: string[];
+  dates: string[]; // Array of dates to create separate documents for
   eventTypes: EventType[];
   modes: ('Online' | 'Offline' | 'Hybrid')[];
   timeSlots: TimeSlot[];

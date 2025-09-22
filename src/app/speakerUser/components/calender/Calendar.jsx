@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
 import {
   startOfMonth,
   endOfMonth,
@@ -13,11 +13,32 @@ import {
 import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { useGetAvailabilitiesQuery } from "@/store/slices/availabilitySlice";
 import { useGetCurrentUserQuery } from "@/store/slices/authSlice";
+import dynamic from "next/dynamic";
 
-import CalendarHeader from "./CalendarHeader";
-import DatesGrid from "./DatesGrid";
-import AvailabilityModal from "../modals/AvailabilityModal";
-import WeekDays from "./WeekDays";
+// Dynamic imports for Calendar sub-components
+const CalendarHeader = dynamic(() => import("./CalendarHeader"), {
+  loading: () => (
+    <div className="h-[76px] bg-[#FF6B35] animate-pulse rounded-t-2xl"></div>
+  ),
+  ssr: false,
+});
+
+const DatesGrid = dynamic(() => import("./DatesGrid"), {
+  loading: () => (
+    <div className="h-96 bg-gray-100 animate-pulse rounded-lg"></div>
+  ),
+  ssr: false,
+});
+
+const AvailabilityModal = dynamic(() => import("../modals/AvailabilityModal"), {
+  loading: () => null, // Modal doesn't need loading state when closed
+  ssr: false,
+});
+
+const WeekDays = dynamic(() => import("./WeekDays"), {
+  loading: () => <div className="h-8 bg-gray-100 animate-pulse rounded"></div>,
+  ssr: false,
+});
 
 const Calendar = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -103,11 +124,17 @@ const Calendar = () => {
   ]);
 
   return (
-    <div className="w-[1151px] h-[959px] bg-white shadow-lg  rounded-2xl flex flex-col">
-      <CalendarHeader
-        multiSelect={multiSelect}
-        setMultiSelect={setMultiSelect}
-      />
+    <div className="w-[1151px] h-[959px] bg-white shadow-lg rounded-2xl flex flex-col">
+      <Suspense
+        fallback={
+          <div className="h-[76px] bg-[#FF6B35] animate-pulse rounded-t-2xl"></div>
+        }
+      >
+        <CalendarHeader
+          multiSelect={multiSelect}
+          setMultiSelect={setMultiSelect}
+        />
+      </Suspense>
 
       <div className="flex-1 bg-[#ffffff] border border-[#FF6B35]/50 rounded-b-2xl p-6">
         <div className="flex items-center justify-between mb-6">
@@ -130,21 +157,33 @@ const Calendar = () => {
           </button>
         </div>
 
-        <WeekDays startDate={startDate} />
+        <Suspense
+          fallback={
+            <div className="h-8 bg-gray-100 animate-pulse rounded"></div>
+          }
+        >
+          <WeekDays startDate={startDate} />
+        </Suspense>
 
-        <DatesGrid
-          modalOpen={modalOpen}
-          startDate={startDate}
-          endDate={endDate}
-          monthStart={monthStart}
-          selectedDate={selectedDate}
-          setSelectedDate={setSelectedDate}
-          multiSelect={multiSelect}
-          selectedDates={selectedDates}
-          setSelectedDates={setSelectedDates}
-          onDateClick={handleDateClick}
-          availabilityData={availabilityData}
-        />
+        <Suspense
+          fallback={
+            <div className="h-96 bg-gray-100 animate-pulse rounded-lg"></div>
+          }
+        >
+          <DatesGrid
+            modalOpen={modalOpen}
+            startDate={startDate}
+            endDate={endDate}
+            monthStart={monthStart}
+            selectedDate={selectedDate}
+            setSelectedDate={setSelectedDate}
+            multiSelect={multiSelect}
+            selectedDates={selectedDates}
+            setSelectedDates={setSelectedDates}
+            onDateClick={handleDateClick}
+            availabilityData={availabilityData}
+          />
+        </Suspense>
 
         {multiSelect && (
           <div className="mt-6 flex justify-end">
@@ -158,13 +197,15 @@ const Calendar = () => {
         )}
       </div>
 
-      <AvailabilityModal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        dates={selectedDates}
-        resetDates={resetSelectedDates}
-        refreshAvailability={refetchAvailability} // ✅ pass Redux refetch down
-      />
+      <Suspense fallback={null}>
+        <AvailabilityModal
+          isOpen={modalOpen}
+          onClose={() => setModalOpen(false)}
+          dates={selectedDates}
+          resetDates={resetSelectedDates}
+          refreshAvailability={refetchAvailability} // ✅ pass Redux refetch down
+        />
+      </Suspense>
     </div>
   );
 };

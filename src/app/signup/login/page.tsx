@@ -1,12 +1,18 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Eye, EyeOff, AlertCircle, CheckCircle2 } from 'lucide-react'
-import ImageCarousel from '../components/ImageCarousel'
 import { useAuth } from '@/store/hooks'
 import { useLoginMutation } from '@/store/slices/authSlice'
+import dynamic from 'next/dynamic'
+
+// Dynamic import for ImageCarousel
+const ImageCarousel = dynamic(() => import('../components/ImageCarousel'), {
+  loading: () => <div className="flex items-center justify-center h-full bg-gray-100"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div></div>,
+  ssr: false
+});
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -144,7 +150,9 @@ export default function LoginPage() {
       <div className="h-screen flex overflow-hidden">
   
         <div className="hidden lg:flex lg:w-1/2 relative">
-          <ImageCarousel />
+          <Suspense fallback={<div className="flex items-center justify-center h-full bg-gray-100"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div></div>}>
+            <ImageCarousel />
+          </Suspense>
         </div>
 
         <div className="w-full lg:w-1/2 bg-white flex flex-col justify-center items-center px-12">
@@ -170,7 +178,9 @@ export default function LoginPage() {
     <div className="h-screen flex overflow-hidden">
 
       <div className="hidden lg:flex lg:w-1/2 relative">
-        <ImageCarousel />
+        <Suspense fallback={<div className="flex items-center justify-center h-full bg-gray-100"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div></div>}>
+          <ImageCarousel />
+        </Suspense>
       </div>
  
       <div className="w-full lg:w-1/2 bg-white flex flex-col justify-center items-center px-12">

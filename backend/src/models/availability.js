@@ -110,7 +110,7 @@ const eventTypeSchema = new mongoose.Schema({
     ],
     required: false
   },
-  subTypes: [{
+  events: [{
     name: {
       type: String,
       required: true
@@ -134,11 +134,11 @@ const availabilitySchema = new mongoose.Schema({
     required: true
   },
 
-  // allow multiple dates for same availability
-  dates: [{
+  // Single date per document for better querying and management
+  date: {
     type: Date,
     required: true
-  }],
+  },
 
   eventTypes: [eventTypeSchema],
 
@@ -160,9 +160,11 @@ const availabilitySchema = new mongoose.Schema({
   }
 });
 
-// Ensure a user doesn't duplicate the same date inside "dates"
+// Ensure unique combination of userId and date
+availabilitySchema.index({ userId: 1, date: 1 }, { unique: true });
+
+// Update timestamp on save
 availabilitySchema.pre('save', function(next) {
-  this.dates = [...new Set(this.dates.map(d => d.toISOString()))].map(d => new Date(d));
   this.updatedAt = Date.now();
   next();
 });

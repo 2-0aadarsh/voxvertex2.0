@@ -245,27 +245,28 @@ import Availability from '../models/availability.js';
 // Note: normalizeDate function removed as it's no longer needed with UTC date handling
 
 // Get availability for a specific month
-// export const getAvailability = async (req, res) => {
-//   try {
-//     const { year, month } = req.params;
-//     const userId = req.user._id;
+export const getAvailability = async (req, res) => {
+  try {
+    const { year, month } = req.params;
+    const userId = req.user._id;
 
-//     const startDate = new Date(Number(year), Number(month) - 1, 1);
-//     const endDate = new Date(Number(year), Number(month), 0);
-//     startDate.setHours(0,0,0,0);
-//     endDate.setHours(23,59,59,999);
+    // Create date range for the month
+    const startDate = new Date(Number(year), Number(month) - 1, 1);
+    const endDate = new Date(Number(year), Number(month), 0);
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setHours(23, 59, 59, 999);
 
-//     const availability = await Availability.find({
-//       userId,
-//       date: { $gte: startDate, $lte: endDate }
-//     }).sort({ date: 1 });
+    const availability = await Availability.find({
+      userId,
+      date: { $gte: startDate, $lte: endDate }
+    }).sort({ date: 1 });
 
-//     res.status(200).json({ success: true, data: availability });
-//   } catch (error) {
-//     console.error('Error fetching availability:', error);
-//     res.status(500).json({ success: false, message: 'Failed to fetch availability' });
-//   }
-// };
+    res.status(200).json({ success: true, data: availability });
+  } catch (error) {
+    console.error('Error fetching availability:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch availability' });
+  }
+};
 
 // Get availability for a specific speaker (for organizers to view)
 export const getSpeakerAvailability = async (req, res) => {
@@ -280,42 +281,45 @@ export const getSpeakerAvailability = async (req, res) => {
       });
     }
 
-    // Fetch availability document for this speaker
-    const availabilityDoc = await Availability.findOne({ userId: speakerId });
+    // Build query for date range
+    let query = { userId: speakerId };
+    
+    if (startDate && endDate) {
+      const startUTC = new Date(startDate + "T00:00:00.000Z");
+      const endUTC = new Date(endDate + "T23:59:59.999Z");
+      query.date = { $gte: startUTC, $lte: endUTC };
+    } else {
+      // Default: only return future dates
+      const todayUTC = new Date();
+      todayUTC.setUTCHours(0, 0, 0, 0);
+      query.date = { $gte: todayUTC };
+    }
 
-    if (!availabilityDoc) {
+    // Fetch availability documents for this speaker
+    const availabilityDocs = await Availability.find(query).sort({ date: 1 });
+
+    if (!availabilityDocs || availabilityDocs.length === 0) {
       return res.status(404).json({
         success: false,
         message: "No availability found for this speaker",
       });
     }
 
-    // Convert dates array to JS Date objects
-    let availableDates = availabilityDoc.dates.map(d => new Date(d));
-
-    // Filter dates
-    if (startDate && endDate) {
-      const startUTC = new Date(startDate + "T00:00:00.000Z");
-      const endUTC = new Date(endDate + "T23:59:59.999Z");
-      availableDates = availableDates.filter(
-        d => d >= startUTC && d <= endUTC
-      );
-    } else {
-      // Default: only return future dates
-      const todayUTC = new Date();
-      todayUTC.setUTCHours(0, 0, 0, 0);
-      availableDates = availableDates.filter(d => d >= todayUTC);
-    }
+    // Extract dates and group by common availability settings
+    const availableDates = availabilityDocs.map(doc => doc.date);
+    
+    // Get common settings (assuming all dates have same settings for now)
+    const commonSettings = availabilityDocs[0];
 
     return res.status(200).json({
       success: true,
       data: {
-        _id: availabilityDoc._id,
-        speakerId: availabilityDoc.userId,
-        dates: availableDates.sort((a, b) => a - b), // sort ascending
-        eventTypes: availabilityDoc.eventTypes,
-        modes: availabilityDoc.modes,
-        timeSlots: availabilityDoc.timeSlots,
+        speakerId: speakerId,
+        dates: availableDates,
+        eventTypes: commonSettings.eventTypes,
+        modes: commonSettings.modes,
+        timeSlots: commonSettings.timeSlots,
+        count: availabilityDocs.length
       },
     });
   } catch (error) {
@@ -328,26 +332,7 @@ export const getSpeakerAvailability = async (req, res) => {
 };
 
 
-// Get availability for authenticated user
-export const getAvailability = async (req, res, next) => {
-  try {
-    const { year, month } = req.params;
-    const userId = req.user._id; // Get user from JWT authentication
-    
-    // Create date range in UTC to match stored dates
-    const start = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0));
-    const end = new Date(Date.UTC(year, month, 0, 23, 59, 59));
-
-    const availability = await Availability.find({
-      userId: userId, // Filter by authenticated user
-      dates: { $gte: start, $lte: end },
-    });
-
-    res.status(200).json({ success: true, data: availability });
-  } catch (err) {
-    next(err);
-  }
-};
+// Get availability for authenticated user (duplicate function - keeping the updated one above)
 
 
 // Get availability for a date range (query: startDate, endDate)
@@ -356,15 +341,14 @@ export const getAvailabilityByDateRange = async (req, res) => {
     const { startDate, endDate } = req.query;
     const userId = req.user._id; // Get user from JWT authentication
 
-    // Query availability where date is within range for authenticated user
-    // Convert query dates to UTC to match stored dates
-    const startUTC = new Date(startDate + 'T00:00:00.000Z');
-    const endUTC = new Date(endDate + 'T23:59:59.999Z');
+    // Convert query dates to proper Date objects
+    const start = new Date(startDate + 'T00:00:00.000Z');
+    const end = new Date(endDate + 'T23:59:59.999Z');
     
     const availabilities = await Availability.find({
       userId: userId, // Filter by authenticated user
-      dates: { $elemMatch: { $gte: startUTC, $lte: endUTC } },
-    }).sort({ "dates": 1 });
+      date: { $gte: start, $lte: end },
+    }).sort({ date: 1 });
 
     return res.status(200).json({ 
       success: true,
@@ -409,8 +393,7 @@ export const getAvailabilityById = async (req, res) => {
   }
 };
 
-// Set availability for single or multiple dates
-
+// Set availability for single or multiple dates - creates separate documents per date
 export const setAvailability = async (req, res, next) => {
   try {
     // ✅ Only speakers can set availability
@@ -427,41 +410,63 @@ export const setAvailability = async (req, res, next) => {
       return res.status(400).json({ message: "At least one date is required" });
     }
 
-    // Upsert (create/update) a single Availability entry for this speaker
-    const availability = await Availability.findOneAndUpdate(
-      { userId }, // ✅ ensures only this speaker's record is modified
-      {
-        $addToSet: {
-          dates: {
-            $each: dates.map(d => {
-              if (typeof d === "string" && d.match(/^\d{4}-\d{2}-\d{2}$/)) {
-                const [year, month, day] = d.split("-").map(Number);
-                return new Date(Date.UTC(year, month - 1, day, 0, 0, 0)); // store as UTC
-              }
-              return new Date(d);
-            }),
-          },
-        },
-        $set: {
-          eventTypes,
-          modes,
-          timeSlots,
-          updatedAt: new Date(),
-        },
-        $setOnInsert: {
-          createdAt: new Date(),
-          userId,
-        },
-      },
-      { new: true, upsert: true }
-    );
+    // Prepare documents for each date
+    const availabilityDocuments = dates.map(dateStr => {
+      let date;
+      if (typeof dateStr === "string" && dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        const [year, month, day] = dateStr.split("-").map(Number);
+        date = new Date(Date.UTC(year, month - 1, day, 0, 0, 0)); // store as UTC
+      } else {
+        date = new Date(dateStr);
+      }
 
-    console.log("✅ Availability saved successfully:", availability);
+      return {
+        userId,
+        date,
+        eventTypes,
+        modes,
+        timeSlots,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+    });
+
+    // Use bulkWrite to handle multiple documents efficiently
+    const bulkOps = availabilityDocuments.map(doc => ({
+      updateOne: {
+        filter: { userId: doc.userId, date: doc.date },
+        update: {
+          $set: {
+            eventTypes: doc.eventTypes,
+            modes: doc.modes,
+            timeSlots: doc.timeSlots,
+            updatedAt: doc.updatedAt
+          },
+          $setOnInsert: {
+            createdAt: doc.createdAt
+          }
+        },
+        upsert: true
+      }
+    }));
+
+    const result = await Availability.bulkWrite(bulkOps);
+
+    console.log("✅ Availability saved successfully:", {
+      matched: result.matchedCount,
+      modified: result.modifiedCount,
+      upserted: result.upsertedCount
+    });
 
     return res.status(200).json({
       success: true,
-      message: "Availability updated successfully",
-      data: availability,
+      message: `Availability updated for ${dates.length} date(s)`,
+      data: {
+        matched: result.matchedCount,
+        modified: result.modifiedCount,
+        upserted: result.upsertedCount,
+        dates: dates
+      },
     });
   } catch (error) {
     console.error("Error setting availability:", error);
@@ -482,10 +487,17 @@ export const deleteAvailability = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Dates array is required' });
     }
 
+    // Normalize dates to UTC midnight for consistent comparison
     const normalizedDates = dates.map(d => {
-      const nd = new Date(d);
-      nd.setHours(0,0,0,0);
-      return nd;
+      let date;
+      if (typeof d === "string" && d.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        const [year, month, day] = d.split("-").map(Number);
+        date = new Date(Date.UTC(year, month - 1, day, 0, 0, 0));
+      } else {
+        date = new Date(d);
+        date.setHours(0, 0, 0, 0);
+      }
+      return date;
     });
 
     const result = await Availability.deleteMany({
@@ -495,7 +507,8 @@ export const deleteAvailability = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: `Deleted ${result.deletedCount} availability entries`
+      message: `Deleted ${result.deletedCount} availability entries`,
+      deletedCount: result.deletedCount
     });
   } catch (error) {
     console.error('Error deleting availability:', error);

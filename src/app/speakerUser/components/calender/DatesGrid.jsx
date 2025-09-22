@@ -1,5 +1,6 @@
 /* eslint-disable react/prop-types */
 import { addDays, format, isSameMonth, isSameDay } from "date-fns";
+import { memo } from "react";
 
 // helper to compare dates only (yyyy-MM-dd)
 const formatDateOnly = (date) => {
@@ -12,45 +13,45 @@ const formatDateOnly = (date) => {
   return `${year}-${month}-${day}`;
 };
 
-const DatesGrid = ({
-  startDate,
-  endDate,
-  monthStart,
-  selectedDate,
-  multiSelect,
-  selectedDates,
-  availabilityData,
-  onDateClick, // use the handler passed from Calendar
-}) => {
-  const rows = [];
-  let days = [];
-  let day = startDate;
+const DatesGrid = memo(
+  ({
+    startDate,
+    endDate,
+    monthStart,
+    selectedDate,
+    multiSelect,
+    selectedDates,
+    availabilityData,
+    onDateClick, // use the handler passed from Calendar
+  }) => {
+    const rows = [];
+    let days = [];
+    let day = startDate;
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-  while (day <= endDate) {
-    for (let i = 0; i < 7; i++) {
-      const cloneDay = day;
-      const inCurrentMonth = isSameMonth(day, monthStart);
+    while (day <= endDate) {
+      for (let i = 0; i < 7; i++) {
+        const cloneDay = day;
+        const inCurrentMonth = isSameMonth(day, monthStart);
 
-      const isSelected =
-        (multiSelect && selectedDates.some((d) => isSameDay(d, cloneDay))) ||
-        (!multiSelect && selectedDate && isSameDay(cloneDay, selectedDate));
+        const isSelected =
+          (multiSelect && selectedDates.some((d) => isSameDay(d, cloneDay))) ||
+          (!multiSelect && selectedDate && isSameDay(cloneDay, selectedDate));
 
-      // Only check availability if the day is in the current month
-      const dayAvailability =
-        inCurrentMonth &&
-        availabilityData.find((a) =>
-          a.dates.some((d) => {
+        // Only check availability if the day is in the current month
+        const dayAvailability =
+          inCurrentMonth &&
+          availabilityData.find((a) => {
             // Compare dates properly by converting both to YYYY-MM-DD format
-            const storedDateStr = formatDateOnly(d); // UTC date from database
+            const storedDateStr = formatDateOnly(a.date); // UTC date from database
             const localDateStr = format(cloneDay, "yyyy-MM-dd"); // Local date from calendar
 
             // Debug logging
             if (process.env.NODE_ENV === "development") {
               console.log("Date comparison:", {
-                storedDate: d,
+                storedDate: a.date,
                 storedDateStr,
                 localDate: cloneDay,
                 localDateStr,
@@ -59,14 +60,13 @@ const DatesGrid = ({
             }
 
             return storedDateStr === localDateStr;
-          })
-        );
+          });
 
-      days.push(
-        <div
-          key={day}
-          onClick={() => inCurrentMonth && onDateClick(cloneDay)}
-          className={`
+        days.push(
+          <div
+            key={day}
+            onClick={() => inCurrentMonth && onDateClick(cloneDay)}
+            className={`
             flex flex-col items-start justify-start p-2 rounded-xl cursor-pointer transition
             ${inCurrentMonth ? "border border-[#FF6B35]" : "border-none"}
             ${
@@ -80,33 +80,36 @@ const DatesGrid = ({
                 : "text-gray-400"
             }
           `}
-          style={{ height: "105px", width: "135px" }}
-        >
-          {inCurrentMonth ? format(day, "d") : ""}
+            style={{ height: "105px", width: "135px" }}
+          >
+            {inCurrentMonth ? format(day, "d") : ""}
 
-          {/* Availability slot(s) */}
-          {dayAvailability && (
-            <div className="mt-2 bg-[#FF6B35]/10 text-[#FF6B35] text-xs px-2 py-1 rounded-md">
-              {dayAvailability.timeSlots
-                .map((slot) => `${slot.startTime} - ${slot.endTime}`)
-                .join(", ")}
-            </div>
-          )}
+            {/* Availability slot(s) */}
+            {dayAvailability && (
+              <div className="mt-2 bg-[#FF6B35]/10 text-[#FF6B35] text-xs px-2 py-1 rounded-md">
+                {dayAvailability.timeSlots
+                  .map((slot) => `${slot.startTime} - ${slot.endTime}`)
+                  .join(", ")}
+              </div>
+            )}
+          </div>
+        );
+
+        day = addDays(day, 1);
+      }
+
+      rows.push(
+        <div className="grid grid-cols-7 gap-4" key={day}>
+          {days}
         </div>
       );
-
-      day = addDays(day, 1);
+      days = [];
     }
 
-    rows.push(
-      <div className="grid grid-cols-7 gap-4" key={day}>
-        {days}
-      </div>
-    );
-    days = [];
+    return <div className="mt-6 space-y-4">{rows}</div>;
   }
+);
 
-  return <div className="mt-6 space-y-4">{rows}</div>;
-};
+DatesGrid.displayName = "DatesGrid";
 
 export default DatesGrid;

@@ -1,15 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 const Logo = ({ className = "", absolute = false }) => {
   const [imageError, setImageError] = useState(false);
-  const router = useRouter();
-
-  const handleLogoClick = () => {
-    router.push("/home");
-  };
 
   const handleImageError = () => {
     setImageError(true);
@@ -20,7 +15,7 @@ const Logo = ({ className = "", absolute = false }) => {
     : `w-[88px] h-[50px] bg-cover bg-center cursor-pointer bg-no-repeat hover:opacity-80 transition-opacity ${className}`;
 
   return (
-    <div className={baseClasses} onClick={handleLogoClick}>
+    <Link href="/home" className={baseClasses}>
       {!imageError ? (
         <img
           src="/logo.svg"
@@ -41,7 +36,7 @@ const Logo = ({ className = "", absolute = false }) => {
           </span>
         </div>
       )}
-    </div>
+    </Link>
   );
 };
 

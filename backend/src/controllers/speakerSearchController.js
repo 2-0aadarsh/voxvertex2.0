@@ -1,5 +1,4 @@
 import EnhancedUser from '../models/enhancedUser.js';
-import EnhancedProfile from '../models/enhancedProfile.js';
 import Availability from '../models/availability.js';
 
 /**
@@ -222,7 +221,8 @@ export const searchSpeakersWithFilters = async (req, res) => {
       // Availability filters
       availabilityDate,
       eventTypes,
-      subTypes,
+      events,
+      subTypes, // Backward compatibility - maps to events
       minFee,
       maxFee,
       deliveryModes,
@@ -233,9 +233,9 @@ export const searchSpeakersWithFilters = async (req, res) => {
       expertise,
       topics,
       
-      // Trust & Verification
-      identityVerified,
-      credentialsVerified
+      // Trust & Verification (for future use)
+      // identityVerified,
+      // credentialsVerified
     } = req.query;
 
     console.log('🔍 Parsed availabilityDate:', availabilityDate);
@@ -293,17 +293,37 @@ export const searchSpeakersWithFilters = async (req, res) => {
       const trimmedExpertise = expertiseArray.map(exp => exp.trim());
       console.log('🎯 Expertise before trimming:', expertiseArray);
       console.log('🎯 Expertise after trimming:', trimmedExpertise);
-      searchConditions.areaOfExpertise = { $in: trimmedExpertise };
+      
+      // Search in both areaOfExpertise AND roleSpecificData.activities
+      // Priority: activities first, then areaOfExpertise
+      const expertiseConditions = [
+        { 'roleSpecificData.activities': { $in: trimmedExpertise } },
+        { areaOfExpertise: { $in: trimmedExpertise } }
+      ];
+      
+      // If there's already a $or condition (from text search), combine them
+      if (searchConditions.$or) {
+        // Combine existing $or with expertise $or using $and
+        const existingOr = searchConditions.$or;
+        delete searchConditions.$or;
+        searchConditions.$and = [
+          { $or: existingOr },
+          { $or: expertiseConditions }
+        ];
+      } else {
+        searchConditions.$or = expertiseConditions;
+      }
     }
 
     if (topics) {
       const topicsArray = Array.isArray(topics) ? topics : [topics];
-      // Trim whitespace and newlines from topics
-      const trimmedTopics = topicsArray.map(topic => topic.trim());
-      console.log('🎯 Topics before trimming:', topicsArray);
-      console.log('🎯 Topics after trimming:', trimmedTopics);
-      searchConditions['roleSpecificData.activities'] = { $in: trimmedTopics };
+      // Trim whitespace and newlines from topics and convert to lowercase for industry matching
+      const trimmedTopics = topicsArray.map(topic => topic.trim().toLowerCase());
+      console.log('🎯 Topics (industry categories) before trimming:', topicsArray);
+      console.log('🎯 Topics (industry categories) after trimming:', trimmedTopics);
+      searchConditions['roleSpecificData.industry'] = { $in: trimmedTopics };
     }
+
 
     // Get all speakers matching basic criteria first
     const allSpeakers = await EnhancedUser.find(searchConditions)
@@ -311,7 +331,7 @@ export const searchSpeakersWithFilters = async (req, res) => {
       .sort({ createdAt: -1 });
 
     // If no availability filters, return basic results
-    if (!availabilityDate && !eventTypes && !subTypes && !minFee && !maxFee && !deliveryModes) {
+    if (!availabilityDate && !eventTypes && !events && !subTypes && !minFee && !maxFee && !deliveryModes) {
       const skip = (parseInt(page) - 1) * parseInt(limit);
       const paginatedSpeakers = allSpeakers.slice(skip, skip + parseInt(limit));
       const totalCount = allSpeakers.length;
@@ -410,14 +430,14 @@ export const searchSpeakersWithFilters = async (req, res) => {
       
       // If multiple dates, use $or to match any of them
       if (dateRanges.length === 1) {
-        availabilityConditions.dates = {
+        availabilityConditions.date = {
           $gte: new Date(dateRanges[0].startOfDay),
           $lte: new Date(dateRanges[0].endOfDay)
         };
       } else {
         // Multiple dates - find records that have dates within any of the ranges
         availabilityConditions.$or = dateRanges.map(range => ({
-          dates: {
+          date: {
             $gte: new Date(range.startOfDay),
             $lte: new Date(range.endOfDay)
           }
@@ -425,24 +445,26 @@ export const searchSpeakersWithFilters = async (req, res) => {
       }
     }
 
-    // Filter by event types
+    // Filter by event types (categories like "Corporate & Professional Events")
     if (eventTypes) {
       const eventTypesArray = Array.isArray(eventTypes) ? eventTypes : [eventTypes];
       // Trim whitespace and newlines from event types
       const trimmedEventTypes = eventTypesArray.map(type => type.trim());
-      console.log('🎯 Event types before trimming:', eventTypesArray);
-      console.log('🎯 Event types after trimming:', trimmedEventTypes);
+      console.log('🎯 Event types (categories) before trimming:', eventTypesArray);
+      console.log('🎯 Event types (categories) after trimming:', trimmedEventTypes);
       availabilityConditions['eventTypes.category'] = { $in: trimmedEventTypes };
     }
 
-    // Filter by sub types
-    if (subTypes) {
-      const subTypesArray = Array.isArray(subTypes) ? subTypes : [subTypes];
-      // Trim whitespace and newlines from sub types
-      const trimmedSubTypes = subTypesArray.map(type => type.trim());
-      console.log('🎯 Sub types before trimming:', subTypesArray);
-      console.log('🎯 Sub types after trimming:', trimmedSubTypes);
-      availabilityConditions['eventTypes.subTypes.name'] = { $in: trimmedSubTypes };
+    // Filter by events (specific event names like "Conferences & Summits")
+    // Support both 'events' and 'subTypes' parameters for backward compatibility
+    const eventsToFilter = events || subTypes;
+    if (eventsToFilter) {
+      const eventsArray = Array.isArray(eventsToFilter) ? eventsToFilter : [eventsToFilter];
+      // Trim whitespace and newlines from events
+      const trimmedEvents = eventsArray.map(event => event.trim());
+      console.log('🎯 Events (specific names) before trimming:', eventsArray);
+      console.log('🎯 Events (specific names) after trimming:', trimmedEvents);
+      availabilityConditions['eventTypes.events.name'] = { $in: trimmedEvents };
     }
 
     // Filter by delivery modes
@@ -459,11 +481,11 @@ export const searchSpeakersWithFilters = async (req, res) => {
     if (minFee || maxFee) {
       const feeConditions = {};
       if (minFee) {
-        feeConditions['eventTypes.subTypes.price'] = { $gte: parseInt(minFee) };
+        feeConditions['eventTypes.events.price'] = { $gte: parseInt(minFee) };
       }
       if (maxFee) {
-        feeConditions['eventTypes.subTypes.price'] = { 
-          ...feeConditions['eventTypes.subTypes.price'],
+        feeConditions['eventTypes.events.price'] = { 
+          ...feeConditions['eventTypes.events.price'],
           $lte: parseInt(maxFee) 
         };
       }
@@ -493,16 +515,29 @@ export const searchSpeakersWithFilters = async (req, res) => {
     }
 
     console.log('🔍 Final availability conditions:', JSON.stringify(availabilityConditions, null, 2));
+    console.log('🔍 Query parameters received:', {
+      availabilityDate,
+      eventTypes,
+      events,
+      subTypes,
+      minFee,
+      maxFee,
+      deliveryModes,
+      yearsOfExperience,
+      location,
+      expertise,
+      topics
+    });
 
     // For debugging: Get all availability records to see what we have
     const allAvailabilityRecords = await Availability.find({})
-      .select('userId dates eventTypes modes timeSlots');
+      .select('userId date eventTypes modes timeSlots');
     console.log('🔍 All availability records in database:', allAvailabilityRecords.length);
     allAvailabilityRecords.forEach((record, index) => {
       console.log(`📅 Record ${index + 1}:`, {
         _id: record._id,
         userId: record.userId,
-        dates: record.dates.map(d => d.toISOString()),
+        date: record.date ? record.date.toISOString() : null,
         eventTypes: record.eventTypes
       });
     });
@@ -523,8 +558,7 @@ export const searchSpeakersWithFilters = async (req, res) => {
     console.log('🔍 Direct availability record check:', {
       _id: directAvailabilityCheck?._id,
       userId: directAvailabilityCheck?.userId,
-      dates: directAvailabilityCheck?.dates?.map(d => d.toISOString()),
-      datesCount: directAvailabilityCheck?.dates?.length
+      date: directAvailabilityCheck?.date ? directAvailabilityCheck.date.toISOString() : null
     });
 
     // Get availability records matching the criteria
@@ -535,7 +569,7 @@ export const searchSpeakersWithFilters = async (req, res) => {
         select: 'firstName lastName email profileImageUrl bio professionalTitle location areaOfExpertise yearsOfExperience roleSpecificData isProfileComplete createdAt role',
         match: { role: 'speaker' } // Only populate if user is a speaker
       })
-      .select('userId eventTypes modes timeSlots dates');
+      .select('userId eventTypes modes timeSlots date');
 
     console.log('🔍 Availability records found:', availabilityRecords.length);
     console.log('🔍 Sample availability record:', availabilityRecords[0]);
@@ -611,7 +645,7 @@ export const searchSpeakersWithFilters = async (req, res) => {
         isProfileComplete: speaker.isProfileComplete,
         createdAt: speaker.createdAt,
         availability: {
-          dates: availabilityRecords.flatMap(record => record.dates),
+          dates: availabilityRecords.map(record => record.date),
           eventTypes: availabilityRecords.flatMap(record => record.eventTypes),
           modes: [...new Set(availabilityRecords.flatMap(record => record.modes))],
           timeSlots: availabilityRecords.flatMap(record => record.timeSlots)
@@ -638,6 +672,7 @@ export const searchSpeakersWithFilters = async (req, res) => {
           filters: {
             availabilityDate,
             eventTypes: Array.isArray(eventTypes) ? eventTypes : (eventTypes ? [eventTypes] : []),
+            events: Array.isArray(events) ? events : (events ? [events] : []),
             subTypes: Array.isArray(subTypes) ? subTypes : (subTypes ? [subTypes] : []),
             minFee: minFee ? parseInt(minFee) : null,
             maxFee: maxFee ? parseInt(maxFee) : null,
@@ -677,6 +712,7 @@ export const searchSpeakersWithFilters = async (req, res) => {
           filters: {
             availabilityDate,
             eventTypes: Array.isArray(eventTypes) ? eventTypes : (eventTypes ? [eventTypes] : []),
+            events: Array.isArray(events) ? events : (events ? [events] : []),
             subTypes: Array.isArray(subTypes) ? subTypes : (subTypes ? [subTypes] : []),
             minFee: minFee ? parseInt(minFee) : null,
             maxFee: maxFee ? parseInt(maxFee) : null,
@@ -723,7 +759,7 @@ export const searchSpeakersWithFilters = async (req, res) => {
         isProfileComplete: speaker.isProfileComplete,
         createdAt: speaker.createdAt,
         availability: {
-          dates: speakerAvailability.flatMap(record => record.dates),
+          dates: speakerAvailability.map(record => record.date),
           eventTypes: speakerAvailability.flatMap(record => record.eventTypes),
           modes: [...new Set(speakerAvailability.flatMap(record => record.modes))],
           timeSlots: speakerAvailability.flatMap(record => record.timeSlots)
@@ -751,7 +787,7 @@ export const searchSpeakersWithFilters = async (req, res) => {
         filters: {
           availabilityDate,
           eventTypes: Array.isArray(eventTypes) ? eventTypes : (eventTypes ? [eventTypes] : []),
-          subTypes: Array.isArray(subTypes) ? subTypes : (subTypes ? [subTypes] : []),
+          events: Array.isArray(events) ? events : (events ? [events] : []),
           minFee: minFee ? parseInt(minFee) : null,
           maxFee: maxFee ? parseInt(maxFee) : null,
           deliveryModes: Array.isArray(deliveryModes) ? deliveryModes : (deliveryModes ? [deliveryModes] : []),
@@ -780,27 +816,27 @@ export const searchSpeakersWithFilters = async (req, res) => {
  */
 export const getAvailableEventTypes = async (req, res) => {
   try {
-    // Get all unique event types and sub types from availability records
+    // Get all unique event types and events from availability records
     const eventTypesData = await Availability.aggregate([
       { $unwind: '$eventTypes' },
-      { $unwind: '$eventTypes.subTypes' },
+      { $unwind: '$eventTypes.events' },
       {
         $group: {
           _id: {
             category: '$eventTypes.category',
-            subType: '$eventTypes.subTypes.name'
+            event: '$eventTypes.events.name'
           },
-          minPrice: { $min: '$eventTypes.subTypes.price' },
-          maxPrice: { $max: '$eventTypes.subTypes.price' },
+          minPrice: { $min: '$eventTypes.events.price' },
+          maxPrice: { $max: '$eventTypes.events.price' },
           count: { $sum: 1 }
         }
       },
       {
         $group: {
           _id: '$_id.category',
-          subTypes: {
+          events: {
             $push: {
-              name: '$_id.subType',
+              name: '$_id.event',
               minPrice: '$minPrice',
               maxPrice: '$maxPrice',
               count: '$count'

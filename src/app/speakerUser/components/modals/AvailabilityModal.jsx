@@ -199,6 +199,10 @@ const AvailabilityModal = ({
 
       console.log("Availability created successfully:", result);
 
+      // Show success message with number of dates created
+      const datesCount = dates?.length || 0;
+      console.log(`✅ Created availability for ${datesCount} date(s)`);
+
       // Try to refresh calendar data using Redux refetch
       if (typeof refreshAvailability === "function") {
         try {

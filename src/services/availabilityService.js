@@ -192,7 +192,7 @@ export const deleteAvailability = async (dates) => {
  * Helper function to format availability data for the modal
  * @param {Object} formData - Form data from the modal
  * @param {Date[]} dates - Selected dates
- * @returns {Object} - Formatted availability data
+ * @returns {Object} - Formatted availability data for separate documents per date
  */
 export const formatAvailabilityData = (formData, dates) => {
   const EVENT_CATEGORIES = [
@@ -244,16 +244,16 @@ export const formatAvailabilityData = (formData, dates) => {
 
   // Format event types with price information
   const eventTypes = EVENT_CATEGORIES.map((cat) => {
-    const selectedSubTypes = formData.categories.filter((c) => cat.options.includes(c));
+    const selectedEvents = formData.categories.filter((c) => cat.options.includes(c));
     
-    if (selectedSubTypes.length === 0) return null;
+    if (selectedEvents.length === 0) return null;
 
     return {
       category: cat.title,
-      subTypes: selectedSubTypes.map((subType) => {
-        const price = formData.prices?.[subType] ?? 0;
+      events: selectedEvents.map((event) => {
+        const price = formData.prices?.[event] ?? 0;
         return {
-          name: subType,
+          name: event,
           price: price,
           currency: 'INR'
         };
@@ -261,24 +261,29 @@ export const formatAvailabilityData = (formData, dates) => {
     };
   }).filter(Boolean);
 
+  // Format dates as YYYY-MM-DD strings for backend processing
+  const formattedDates = dates.map(d => {
+    const date = new Date(d);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  });
+
+  // Format time slots
+  const formattedTimeSlots = TIME_SLOTS.filter((slot) =>
+    formData.slots.includes(slot.label)
+  ).map((slot) => ({
+    slot: slot.label,
+    startTime: slot.time.split(" - ")[0],
+    endTime: slot.time.split(" - ")[1],
+  }));
+
   return {
-    dates: dates.map(d => {
-      // Create a date string in YYYY-MM-DD format to avoid timezone issues
-      const date = new Date(d);
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    }),
+    dates: formattedDates,
     eventTypes,
     modes: formData.modes,
-    timeSlots: TIME_SLOTS.filter((slot) =>
-      formData.slots.includes(slot.label)
-    ).map((slot) => ({
-      slot: slot.label,
-      startTime: slot.time.split(" - ")[0],
-      endTime: slot.time.split(" - ")[1],
-    })),
+    timeSlots: formattedTimeSlots,
   };
 };
 

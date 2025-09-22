@@ -1,7 +1,4 @@
 
 export default function SpeakerUserPage() {
-  return (
-    <div className="">
-    </div>
-  );
+  return null;
 }

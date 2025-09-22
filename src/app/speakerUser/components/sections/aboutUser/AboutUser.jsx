@@ -1,15 +1,34 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense, memo } from "react";
 import { BsGraphUpArrow } from "react-icons/bs";
 import { CiStar } from "react-icons/ci";
 import { FiPhone, FiMail, FiMapPin } from "react-icons/fi";
 import { useAuth, useProfile } from "@/store/hooks";
 import { useGetCurrentUserQuery } from "@/store/slices/authSlice";
+import dynamic from "next/dynamic";
 
-import HeaderSection from "./HeaderSection";
-import InfoCard from "./InfoCard";
-import ContactCard from "./ContactCard";
+// Dynamic imports for AboutUser sub-components
+const HeaderSection = dynamic(() => import("./HeaderSection"), {
+  loading: () => (
+    <div className="h-48 bg-[#FF6B35] animate-pulse rounded-t-lg"></div>
+  ),
+  ssr: false,
+});
+
+const InfoCard = dynamic(() => import("./InfoCard"), {
+  loading: () => (
+    <div className="h-24 bg-[#FFF1EB] animate-pulse rounded-xl"></div>
+  ),
+  ssr: false,
+});
+
+const ContactCard = dynamic(() => import("./ContactCard"), {
+  loading: () => (
+    <div className="h-16 bg-[#FFF1EB] animate-pulse rounded-xl"></div>
+  ),
+  ssr: false,
+});
 
 // Custom inline SVG as a React component
 const EventIcon = (props) => (
@@ -33,7 +52,7 @@ const EventIcon = (props) => (
   </svg>
 );
 
-const AboutUser = () => {
+const AboutUser = memo(() => {
   // Get user data from Redux store
   const auth = useAuth();
   const profile = useProfile();
@@ -189,29 +208,51 @@ const AboutUser = () => {
 
   return (
     <div className="w-full max-w-[1154px] h-auto bg-[#FFFDFB] shadow-md rounded-lg mx-auto">
-      <HeaderSection
-        name={userData.name}
-        role={userData.role}
-        description={userData.description}
-        domains={userData.domains}
-        profilePic={userData.profilePic}
-      />
+      <Suspense
+        fallback={
+          <div className="h-48 bg-[#FF6B35] animate-pulse rounded-t-lg"></div>
+        }
+      >
+        <HeaderSection
+          name={userData.name}
+          role={userData.role}
+          description={userData.description}
+          domains={userData.domains}
+          profilePic={userData.profilePic}
+        />
+      </Suspense>
 
       {/* Info Cards */}
       <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 p-4 lg:p-8">
         {userData.stats.map((stat, idx) => (
-          <InfoCard key={idx} {...stat} />
+          <Suspense
+            key={idx}
+            fallback={
+              <div className="h-24 bg-[#FFF1EB] animate-pulse rounded-xl"></div>
+            }
+          >
+            <InfoCard {...stat} />
+          </Suspense>
         ))}
       </div>
 
       {/* Contact Cards */}
       <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 px-4 lg:px-6 pb-6">
         {userData.contacts.map((contact, idx) => (
-          <ContactCard key={idx} {...contact} />
+          <Suspense
+            key={idx}
+            fallback={
+              <div className="h-16 bg-[#FFF1EB] animate-pulse rounded-xl"></div>
+            }
+          >
+            <ContactCard {...contact} />
+          </Suspense>
         ))}
       </div>
     </div>
   );
-};
+});
+
+AboutUser.displayName = "AboutUser";
 
 export default AboutUser;

@@ -404,3 +404,4 @@ The negotiation system is fully integrated with the messaging system:
 5. **Audit Trail**: All proposals and responses are logged with timestamps
 
 
+

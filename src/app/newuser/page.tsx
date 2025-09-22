@@ -1,7 +1,4 @@
 
-export default function Home() {
-  return (
-    <div className="">
-    </div>
-  );
+export default function NewUserPage() {
+  return null;
 }

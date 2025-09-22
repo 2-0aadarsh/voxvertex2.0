@@ -1,15 +1,32 @@
 'use client';
-import React, { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { Heart, MessageCircle, Calendar, MapPin } from 'lucide-react';
-import BottomHalf from "./components/BottomHalf";
 import {  CreditCard, Monitor, UserCheck, Grid3X3, Target, Clipboard } from 'lucide-react';
-import Navbar from '@/components/Navbar';
 import { useAuth, useAppDispatch } from '@/store/hooks';
 import { useGetCurrentUserQuery } from '@/store/slices/authSlice';
 import { useGetFeedPostsQuery, useToggleFeedPostLikeMutation, useTestConnectionQuery, useTestDatabaseQuery, useDebugPostsQuery, useTestUserLikesQuery, useAddCommentMutation, feedApi } from '@/store/slices/feedSlice';
-import ImageCarousel from './components/ImageCarousel';
-import CustomVerticalScrollbarV2 from '@/components/CustomVerticalScrollbarV2';
+import dynamic from 'next/dynamic';
+
+// Dynamic imports with loading states and prefetching
+const BottomHalf = dynamic(() => import("./components/BottomHalf"), {
+  loading: () => <div className="flex items-center justify-center h-32"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div></div>,
+  ssr: false
+});
+
+const Navbar = dynamic(() => import('@/components/Navbar'), {
+  loading: () => <div className="h-16 bg-white border-b border-gray-200 flex items-center justify-center"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500"></div></div>,
+  ssr: false
+});
+
+const ImageCarousel = dynamic(() => import('./components/ImageCarousel'), {
+  loading: () => <div className="flex items-center justify-center h-48 bg-gray-100 rounded-lg"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div></div>,
+  ssr: false
+});
+
+const CustomVerticalScrollbarV2 = dynamic(() => import('@/components/CustomVerticalScrollbarV2'), {
+  loading: () => <div className="h-32 bg-gray-50 rounded-lg flex items-center justify-center"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500"></div></div>,
+  ssr: false
+});
 
 
 export default function EventManagementPage() {
@@ -265,7 +282,7 @@ export default function EventManagementPage() {
           : currentUserData?.user?.firstName && currentUserData?.user?.lastName
           ? `${currentUserData.user.firstName} ${currentUserData.user.lastName}`
           : "You",
-        userProfileImage: user?.profileImageUrl || currentUserData?.user?.profileImageUrl || user?.profileImage || currentUserData?.user?.profileImage,
+        userProfileImageUrl: user?.profileImageUrl || currentUserData?.user?.profileImageUrl || user?.profileImage || currentUserData?.user?.profileImage,
         user: user?._id || currentUserData?.user?._id || 'unknown',
         likes: [],
         likesCount: 0,
@@ -549,13 +566,15 @@ export default function EventManagementPage() {
       <div className="min-h-screen bg-gray-50">
         
         {/* Header */}
-        <Navbar 
-          user={user || undefined}
-          currentUserData={currentUserData}
-          isAuthenticated={isAuthenticated}
-          forceHomepageStyle={true}
-          getProfileImageUrl={getProfileImageUrl}
-        />
+        <Suspense fallback={<div className="h-16 bg-white border-b border-gray-200 flex items-center justify-center"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500"></div></div>}>
+          <Navbar 
+            user={user || undefined}
+            currentUserData={currentUserData}
+            isAuthenticated={isAuthenticated}
+            forceHomepageStyle={true}
+            getProfileImageUrl={getProfileImageUrl}
+          />
+        </Suspense>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="grid grid-cols-12 gap-4">
@@ -748,10 +767,12 @@ export default function EventManagementPage() {
                                 </p>
                                 
                                 {post.media && post.media.length > 0 && (
-                                  <ImageCarousel 
-                                    media={post.media} 
-                                    alt={`${authorName}'s post`}
-                                  />
+                                  <Suspense fallback={<div className="flex items-center justify-center h-48 bg-gray-100 rounded-lg"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div></div>}>
+                                    <ImageCarousel 
+                                      media={post.media} 
+                                      alt={`${authorName}'s post`}
+                                    />
+                                  </Suspense>
                                 )}
                                 
                                 <div className="flex items-center space-x-4 text-xs text-gray-400">
@@ -783,12 +804,13 @@ export default function EventManagementPage() {
                                     {/* Existing Comments Display */}
                                     {postComments && postComments.length > 0 ? (
                                       <div className="mb-3">
-                                        <CustomVerticalScrollbarV2 
-                                          maxHeight="200px"
-                                          scrollbarColor="#FF6B35"
-                                          trackColor="rgba(255,107,53,0.06)"
-                                          showArrows={true}
-                                        >
+                                        <Suspense fallback={<div className="h-32 bg-gray-50 rounded-lg flex items-center justify-center"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500"></div></div>}>
+                                          <CustomVerticalScrollbarV2 
+                                            maxHeight="200px"
+                                            scrollbarColor="#FF6B35"
+                                            trackColor="rgba(255,107,53,0.06)"
+                                            showArrows={true}
+                                          >
                                           <div className="space-y-2 pr-8">
                                             {(viewingAllComments.has(post._id) ? postComments : postComments.slice(0, 3)).map((comment: { userName?: string; content: string; createdAt: string; userProfileImage?: any; userProfileImageUrl?: string; user?: any }, index: number) => {
                                               // Debug comment data
@@ -849,7 +871,8 @@ export default function EventManagementPage() {
                             );
                                             })}
                                           </div>
-                                        </CustomVerticalScrollbarV2>
+                                          </CustomVerticalScrollbarV2>
+                                        </Suspense>
                                         
                                         {/* View all comments button */}
                                         {postComments.length > 3 && (
@@ -1164,7 +1187,9 @@ export default function EventManagementPage() {
         </div>
       </div>
 
-      <BottomHalf />
+      <Suspense fallback={<div className="flex items-center justify-center h-32"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div></div>}>
+        <BottomHalf />
+      </Suspense>
 
       <style jsx>{`
         .feature-card {

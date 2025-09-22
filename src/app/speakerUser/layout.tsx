@@ -2,16 +2,59 @@
 
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { useEffect } from "react";
-import ProfileHeader from "./components/header/ProfileHeader"
-import Sidebar from "./components/sidebar/Sidebar";
-import AboutUser from "./components/sections/aboutUser/AboutUser"
-import Post from "./components/sections/posts/Posts"
-import WorkExperience from "./components/sections/workExperience/WorkExperience"
-import Education from "./components/sections/education/Education"
-import AwardsAndCertifications from "./components/sections/awardsAndCertifications/AwardsAndCertifications"
-import FeaturedVideos from "./components/sections/featuredVideos/FeaturedVideos"
-import Calendar from "./components/calender/Calendar"
+import { useEffect, Suspense } from "react";
+import dynamic from "next/dynamic";
+
+// Dynamic imports for better performance
+const ProfileHeader = dynamic(() => import("./components/header/ProfileHeader"), {
+  loading: () => <div className="h-32 bg-white border-b border-gray-200 animate-pulse"></div>,
+  ssr: false
+});
+
+const Sidebar = dynamic(() => import("./components/sidebar/Sidebar"), {
+  loading: () => <div className="w-64 bg-gray-100 animate-pulse h-screen"></div>,
+  ssr: false
+});
+
+const AboutUser = dynamic(() => import("./components/sections/aboutUser/AboutUser"), {
+  loading: () => <div className="bg-white p-6 animate-pulse h-64"></div>,
+  ssr: false
+});
+
+const Post = dynamic(() => import("./components/sections/posts/Posts"), {
+  loading: () => <div className="bg-white p-6 animate-pulse h-64"></div>,
+  ssr: false
+});
+
+const WorkExperience = dynamic(() => import("./components/sections/workExperience/WorkExperience"), {
+  loading: () => <div className="bg-white p-6 animate-pulse h-64"></div>,
+  ssr: false
+});
+
+const Education = dynamic(() => import("./components/sections/education/Education"), {
+  loading: () => <div className="bg-white p-6 animate-pulse h-64"></div>,
+  ssr: false
+});
+
+const AwardsAndCertifications = dynamic(() => import("./components/sections/awardsAndCertifications/AwardsAndCertifications"), {
+  loading: () => <div className="bg-white p-6 animate-pulse h-64"></div>,
+  ssr: false
+});
+
+const FeaturedVideos = dynamic(() => import("./components/sections/featuredVideos/FeaturedVideos"), {
+  loading: () => <div className="bg-white p-6 animate-pulse h-64"></div>,
+  ssr: false
+});
+
+const Calendar = dynamic(() => import("./components/calender/Calendar"), {
+  loading: () => <div className="bg-white p-6 animate-pulse h-64"></div>,
+  ssr: false
+});
+
+const FeedbackReviews = dynamic(() => import("@/components/feedbackReviews/FeedbackReviews"), {
+  loading: () => <div className="bg-white p-6 animate-pulse h-64"></div>,
+  ssr: false
+});
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -40,18 +83,48 @@ export default function SpeakerUserLayout({
 
   return (
     <div className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-      <ProfileHeader />
+      <Suspense fallback={<div className="h-32 bg-white border-b border-gray-200 animate-pulse"></div>}>
+        <ProfileHeader />
+      </Suspense>
+      
       <div className="flex flex-col lg:flex-row items-stretch justify-between min-h-screen">
-        <Sidebar />
+        <Suspense fallback={<div className="w-64 bg-gray-100 animate-pulse h-screen"></div>}>
+          <Sidebar />
+        </Suspense>
+        
         <div className="w-full bg-[#fffbf5]">
           <main className="flex flex-col items-center justify-between gap-5 py-5 px-4 lg:px-0">
-            <AboutUser />
-            <Calendar />
-            <Post />
-            <WorkExperience />
-            <Education />
-            <AwardsAndCertifications />
-            <FeaturedVideos />
+            <Suspense fallback={<div className="bg-white p-6 animate-pulse h-64"></div>}>
+              <AboutUser />
+            </Suspense>
+
+            <Suspense fallback={<div className="bg-white p-6 animate-pulse h-64"></div>}>
+              <Calendar />
+            </Suspense>
+
+            <Suspense fallback={<div className="bg-white p-6 animate-pulse h-64"></div>}>
+              <Post />
+            </Suspense>
+            
+            <Suspense fallback={<div className="bg-white p-6 animate-pulse h-64"></div>}>
+              <WorkExperience />
+            </Suspense>
+            
+            <Suspense fallback={<div className="bg-white p-6 animate-pulse h-64"></div>}>
+              <Education />
+            </Suspense>
+            
+            <Suspense fallback={<div className="bg-white p-6 animate-pulse h-64"></div>}>
+              <AwardsAndCertifications />
+            </Suspense>
+            
+            <Suspense fallback={<div className="bg-white p-6 animate-pulse h-64"></div>}>
+              <FeaturedVideos />
+            </Suspense>
+            
+            <Suspense fallback={<div className="bg-white p-6 animate-pulse h-64"></div>}>
+              <FeedbackReviews />
+            </Suspense>
           </main>
         </div>
       </div>

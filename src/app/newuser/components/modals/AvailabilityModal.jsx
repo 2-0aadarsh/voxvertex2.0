@@ -80,7 +80,6 @@ const TIME_SLOTS = [
   { label: "Night", time: "21:00 - 23:00" },
 ];
 
-
 /**
  * NOTE: added `refreshAvailability` prop.
  * Calendar.jsx should pass its fetchAvailability function here.
@@ -116,13 +115,31 @@ const AvailabilityModal = ({
 
   const handleSubmit = async () => {
     try {
+      // Format event types with price information
+      const eventTypes = EVENT_CATEGORIES.map((cat) => {
+        const selectedEvents = formData.categories.filter((c) =>
+          cat.options.includes(c)
+        );
+
+        if (selectedEvents.length === 0) return null;
+
+        return {
+          category: cat.title,
+          events: selectedEvents.map((event) => {
+            const price = formData.prices?.[event] ?? 0;
+            return {
+              name: event,
+              price: price,
+              currency: "INR",
+            };
+          }),
+        };
+      }).filter(Boolean);
+
       // ensure dates are serialized to ISO strings
       const payload = {
         dates: (dates || []).map((d) => new Date(d).toISOString()),
-        eventTypes: EVENT_CATEGORIES.map((cat) => ({
-          category: cat.title,
-          subTypes: formData.categories.filter((c) => cat.options.includes(c)),
-        })).filter((et) => et.subTypes.length > 0),
+        eventTypes,
         modes: formData.modes,
         timeSlots: TIME_SLOTS.filter((slot) =>
           formData.slots.includes(slot.label)

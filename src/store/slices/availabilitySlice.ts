@@ -169,22 +169,20 @@ export const selectAvailabilityError = (state: { availability: AvailabilityState
 
 // Filtered selectors
 export const selectAvailabilitiesByDate = (state: { availability: AvailabilityState }, date: string) =>
-  state.availability.availabilities.filter(availability => 
-    availability.dates.some(d => {
-      // Handle UTC dates stored at midnight
-      const storedDate = new Date(d);
-      const targetDate = new Date(date);
-      
-      // Compare UTC dates to avoid timezone issues
-      return storedDate.getUTCFullYear() === targetDate.getFullYear() &&
-             storedDate.getUTCMonth() === targetDate.getMonth() &&
-             storedDate.getUTCDate() === targetDate.getDate();
-    })
-  );
+  state.availability.availabilities.filter(availability => {
+    // Handle UTC dates stored at midnight
+    const storedDate = new Date(availability.date);
+    const targetDate = new Date(date);
+    
+    // Compare UTC dates to avoid timezone issues
+    return storedDate.getUTCFullYear() === targetDate.getFullYear() &&
+           storedDate.getUTCMonth() === targetDate.getMonth() &&
+           storedDate.getUTCDate() === targetDate.getDate();
+  });
 
 export const selectAvailabilitiesByMode = (state: { availability: AvailabilityState }, mode: string) =>
   state.availability.availabilities.filter(availability => 
-    availability.modes.includes(mode as any)
+    availability.modes.includes(mode as 'Online' | 'Offline' | 'Hybrid')
   );
 
 export default availabilitySlice.reducer;

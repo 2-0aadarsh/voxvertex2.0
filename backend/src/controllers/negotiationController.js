@@ -799,3 +799,164 @@ export const getNegotiationStatsAdmin = async (req, res) => {
     });
   }
 };
+
+// Direct negotiation initiation (creates conversation + negotiation + proposal in one call)
+export const initiateNegotiation = async (req, res) => {
+  try {
+    const currentUserId = req.user._id;
+    const { speakerId, amount, currency = 'USD', topic, message, eventId } = req.body;
+
+    // Validate required fields
+    if (!speakerId || !amount || !topic) {
+      return res.status(400).json({
+        success: false,
+        message: 'Speaker ID, amount, and topic are required'
+      });
+    }
+
+    // Check if user is organizer
+    if (req.user.role !== 'organizer') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only organizers can initiate negotiations'
+      });
+    }
+
+    // Verify speaker exists and is a speaker
+    const speaker = await EnhancedUser.findById(speakerId);
+    if (!speaker || speaker.role !== 'speaker') {
+      return res.status(404).json({
+        success: false,
+        message: 'Speaker not found or invalid role'
+      });
+    }
+
+    // Check if conversation already exists between these users
+    let conversation = await Conversation.findBetweenUsers(currentUserId, speakerId);
+    
+    if (!conversation) {
+      // Create new conversation
+      conversation = new Conversation({
+        participants: [
+          {
+            user: currentUserId,
+            role: 'organizer',
+            joinedAt: new Date(),
+            lastReadAt: new Date(),
+            isActive: true
+          },
+          {
+            user: speakerId,
+            role: 'speaker',
+            joinedAt: new Date(),
+            lastReadAt: new Date(),
+            isActive: true
+          }
+        ],
+        type: 'direct',
+        status: 'active',
+        context: {
+          topic: topic,
+          eventId: eventId || null
+        }
+      });
+      await conversation.save();
+    }
+
+    // Check if negotiation already exists for this conversation
+    const existingNegotiation = await Negotiation.findByConversation(conversation._id);
+    if (existingNegotiation && existingNegotiation.status === 'active') {
+      return res.status(400).json({
+        success: false,
+        message: 'An active negotiation already exists for this conversation'
+      });
+    }
+
+    // Create negotiation
+    const negotiation = new Negotiation({
+      conversation: conversation._id,
+      organizer: currentUserId,
+      speaker: speakerId,
+      event: eventId || null,
+      topic: topic,
+      currentProposal: {
+        amount: amount,
+        currency: currency,
+        proposedBy: currentUserId,
+        proposedAt: new Date(),
+        message: message || '',
+        status: 'pending'
+      },
+      proposals: [{
+        amount: amount,
+        currency: currency,
+        proposedBy: currentUserId,
+        proposedAt: new Date(),
+        message: message || '',
+        status: 'pending'
+      }],
+      status: 'active'
+    });
+
+    await negotiation.save();
+
+    // Create initial proposal message
+    const proposalMessage = new Message({
+      content: message || `New negotiation proposal: ${currency} ${amount} for ${topic}`,
+      messageType: 'negotiation_proposal',
+      sender: currentUserId,
+      conversation: conversation._id,
+      metadata: {
+        negotiationId: negotiation._id,
+        amount: amount,
+        currency: currency,
+        proposalType: 'initial'
+      }
+    });
+
+    await proposalMessage.save();
+
+    // Update conversation's last message
+    conversation.lastMessage = {
+      content: proposalMessage.content,
+      sender: currentUserId,
+      timestamp: new Date(),
+      messageType: 'negotiation_proposal'
+    };
+    await conversation.save();
+
+    // Populate the response
+    await negotiation.populate([
+      { path: 'organizer', select: 'firstName lastName email role' },
+      { path: 'speaker', select: 'firstName lastName email role' },
+      { path: 'event', select: 'title date' },
+      { path: 'conversation', select: 'participants type status' }
+    ]);
+
+    res.status(201).json({
+      success: true,
+      message: 'Negotiation initiated successfully',
+      negotiation: negotiation,
+      conversation: {
+        id: conversation._id,
+        participants: conversation.participants,
+        type: conversation.type,
+        status: conversation.status
+      },
+      message: {
+        id: proposalMessage._id,
+        content: proposalMessage.content,
+        messageType: proposalMessage.messageType,
+        timestamp: proposalMessage.createdAt
+      }
+    });
+
+  } catch (error) {
+    console.error('Error initiating negotiation:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+};

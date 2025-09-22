@@ -1,15 +1,28 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Suspense } from "react";
 import { RiEditBoxFill } from "react-icons/ri";
 import { MdOutlineCameraAlt } from "react-icons/md";
 import { motion } from "framer-motion";
-import EditProfile from "./EditProfile";
-import ProfilePictureModal from "@/components/ProfilePictureModal";
 import { useAuth } from "../../../../../store/hooks";
 import { useAppDispatch } from "../../../../../store/hooks";
 import { updateUser } from "../../../../../store/slices/authSlice";
 import { toast } from "react-hot-toast";
+import dynamic from "next/dynamic";
+
+// Dynamic imports for heavy components
+const EditProfile = dynamic(() => import("./EditProfile"), {
+  loading: () => null, // Modal doesn't need loading state when closed
+  ssr: false,
+});
+
+const ProfilePictureModal = dynamic(
+  () => import("@/components/ProfilePictureModal"),
+  {
+    loading: () => null, // Modal doesn't need loading state when closed
+    ssr: false,
+  }
+);
 
 const HeaderSection = ({ name, role, description, domains, profilePic }) => {
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
@@ -377,20 +390,24 @@ const HeaderSection = ({ name, role, description, domains, profilePic }) => {
       </motion.div>
 
       {/* Edit Profile Modal */}
-      <EditProfile
-        isOpen={isEditProfileOpen}
-        onClose={handleCloseEditProfile}
-      />
+      <Suspense fallback={null}>
+        <EditProfile
+          isOpen={isEditProfileOpen}
+          onClose={handleCloseEditProfile}
+        />
+      </Suspense>
 
       {/* Profile Picture Modal */}
-      <ProfilePictureModal
-        isOpen={isProfilePictureModalOpen}
-        onClose={handleCloseProfilePictureModal}
-        profilePic={auth.user?.profileImageUrl || fallbackImage}
-        onImageUpload={handleImageUpload}
-        onImageRemove={handleImageRemove}
-        isUploading={isUploading}
-      />
+      <Suspense fallback={null}>
+        <ProfilePictureModal
+          isOpen={isProfilePictureModalOpen}
+          onClose={handleCloseProfilePictureModal}
+          profilePic={auth.user?.profileImageUrl || fallbackImage}
+          onImageUpload={handleImageUpload}
+          onImageRemove={handleImageRemove}
+          isUploading={isUploading}
+        />
+      </Suspense>
     </>
   );
 };

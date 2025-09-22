@@ -110,21 +110,26 @@ export const getSpeakers = async (req, res) => {
     // Execute aggregation
     let speakers = await EnhancedProfile.aggregate(pipeline);
 
-    // Get availability data for each speaker
-    for (let speaker of speakers) {
-      const availability = await Availability.findOne({ userId: speaker.userData._id }).lean();
-      speaker.availability = availability;
-    }
-
     // Filter by availability date if provided
     if (availabilityDate) {
       const targetDate = new Date(availabilityDate);
-      speakers = speakers.filter(speaker => {
-        if (!speaker.availability || !speaker.availability.dates) return false;
-        return speaker.availability.dates.some(date => 
-          new Date(date).toDateString() === targetDate.toDateString()
-        );
-      });
+      const availableSpeakers = await Availability.find({ 
+        date: { 
+          $gte: new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate()),
+          $lt: new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate() + 1)
+        }
+      }).select('userId').lean();
+      
+      const availableUserIds = availableSpeakers.map(av => av.userId.toString());
+      speakers = speakers.filter(speaker => 
+        availableUserIds.includes(speaker.userData._id.toString())
+      );
+    }
+
+    // Get availability data for each speaker (for display purposes)
+    for (let speaker of speakers) {
+      const availability = await Availability.findOne({ userId: speaker.userData._id }).lean();
+      speaker.availability = availability;
     }
 
     // Calculate pagination info

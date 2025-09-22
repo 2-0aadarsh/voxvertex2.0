@@ -11,7 +11,8 @@ import {
   getNegotiationStats,
   getAllNegotiationsAdmin,
   getNegotiationAdmin,
-  getNegotiationStatsAdmin
+  getNegotiationStatsAdmin,
+  initiateNegotiation
 } from '../controllers/negotiationController.js';
 
 const router = express.Router();
@@ -20,6 +21,7 @@ const router = express.Router();
 router.use(authenticateJWT);
 
 // Negotiation Management
+router.post('/initiate', initiateNegotiation); // Direct negotiation initiation
 router.post('/conversations/:conversationId/negotiations', createNegotiation);
 router.get('/conversations/:conversationId/negotiations', getNegotiation);
 
