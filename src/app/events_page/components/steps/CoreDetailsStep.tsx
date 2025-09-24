@@ -1,119 +1,258 @@
+import React from 'react'
+import { Calendar } from 'lucide-react'
+
 interface CoreDetailsStepProps {
   formData: {
     eventName: string
     startDate: string
     endDate: string
     eventMode: 'offline' | 'online' | 'hybrid'
+    format: string
     location: string
+    eventUrl: string
   }
   onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void
 }
 
 export default function CoreDetailsStep({ formData, onInputChange }: CoreDetailsStepProps) {
+  const formatOptions = [
+    "Conferences & Summits",
+    "Seminars", 
+    "Keynote Speeches",
+    "Fireside Chats",
+    "Town Halls & Open Forums",
+    "Leadership Retreats",
+    "Networking Events",
+    "Trade Shows & Expos",
+    "Product Launches",
+    "Sales Kick-Offs (SKOs)",
+    "Award Ceremonies & Galas",
+    "Workshops & Masterclasses",
+    "Corporate Training",
+    "Guest Lectures",
+    "TED-Style Talks",
+    "1:1 Sessions",
+    "Mentorship Session",
+    "Pitch Competitions & Startup Showcases",
+    "Hackathons & Innovations Jams",
+    "Charity & Fundraising Events"
+  ]
+
   return (
-    <div className="space-y-6">
-      <div>
-        <label htmlFor="eventName" className="block text-sm font-medium text-gray-700 mb-2">
-          Event Name *
-        </label>
-        <input
-          type="text"
-          id="eventName"
-          name="eventName"
-          value={formData.eventName}
-          onChange={onInputChange}
-          required
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-          placeholder="Enter event name"
-        />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-2">
-            Start Date *
-          </label>
+    <div className="w-full bg-white rounded-lg p-8">
+      <div className="w-full space-y-8">
+        {/* Event Title */}
+        <div className="relative">
           <input
-            type="date"
-            id="startDate"
-            name="startDate"
-            value={formData.startDate}
+            type="text"
+            id="eventName"
+            name="eventName"
+            value={formData.eventName}
             onChange={onInputChange}
             required
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35] bg-white peer"
+            placeholder="Enter event name"
           />
-        </div>
-        <div>
-          <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 mb-2">
-            End Date *
+          <label 
+            htmlFor="eventName" 
+            className="absolute -top-2 left-3 bg-white px-1 text-sm font-medium pointer-events-none" 
+            style={{ color: '#FF6B35' }}
+          >
+            Event Title *
           </label>
-          <input
-            type="date"
-            id="endDate"
-            name="endDate"
-            value={formData.endDate}
+        </div>
+
+        {/* Start Date and End Date */}
+        <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="relative w-full">
+            <input
+              type="date"
+              id="startDate"
+              name="startDate"
+              value={formData.startDate}
+              onChange={onInputChange}
+              required
+              className="w-full px-4 py-2 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35] bg-white [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-3 [&::-webkit-calendar-picker-indicator]:w-5 [&::-webkit-calendar-picker-indicator]:h-5 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+            />
+            <label 
+              htmlFor="startDate" 
+              className="absolute -top-2 left-3 bg-white px-1 text-sm font-medium pointer-events-none" 
+              style={{ color: '#FF6B35' }}
+            >
+              Start Date *
+            </label>
+            <div className="absolute right-3 top-2 text-gray-400 pointer-events-none">
+              <Calendar className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="relative w-full">
+            <input
+              type="date"
+              id="endDate"
+              name="endDate"
+              value={formData.endDate}
+              onChange={onInputChange}
+              required
+              className="w-full px-4 py-2 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35] bg-white [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-3 [&::-webkit-calendar-picker-indicator]:w-5 [&::-webkit-calendar-picker-indicator]:h-5 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+            />
+            <label 
+              htmlFor="endDate" 
+              className="absolute -top-2 left-3 bg-white px-1 text-sm font-medium pointer-events-none" 
+              style={{ color: '#FF6B35' }}
+            >
+              End Date *
+            </label>
+            <div className="absolute right-3 top-2 text-gray-400 pointer-events-none">
+              <Calendar className="w-5 h-5" />
+            </div>
+          </div>
+        </div>
+
+        {/* Event Mode */}
+        <div className="relative w-full">
+          <select
+            name="eventMode"
+            value={formData.eventMode}
             onChange={onInputChange}
             required
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-          />
+            className="w-full px-4 py-2 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35] bg-white appearance-none"
+          >
+            <option value="">Choose</option>
+            <option value="offline">Offline</option>
+            <option value="online">Online</option>
+            <option value="hybrid">Hybrid</option>
+          </select>
+          <label 
+            className="absolute -top-2 left-3 bg-white px-1 text-sm font-medium pointer-events-none" 
+            style={{ color: '#FF6B35' }}
+          >
+            Event Mode *
+          </label>
+          <div className="absolute right-3 top-2 text-gray-400 pointer-events-none">
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
+          </div>
         </div>
-      </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Event Mode *
-        </label>
-        <div className="space-y-2">
-          <label className="flex items-center">
-            <input
-              type="radio"
-              name="eventMode"
-              value="offline"
-              checked={formData.eventMode === 'offline'}
-              onChange={onInputChange}
-              className="mr-2"
-            />
-            <span>Offline</span>
+        {/* Format */}
+        <div className="relative w-full">
+          <select
+            id="format"
+            name="format"
+            value={formData.format}
+            onChange={onInputChange}
+            required
+            className="w-full px-4 py-2 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35] bg-white appearance-none"
+          >
+            <option value="">Choose</option>
+            {formatOptions.map((option, index) => (
+              <option key={index} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+          <label 
+            htmlFor="format" 
+            className="absolute -top-2 left-3 bg-white px-1 text-sm font-medium pointer-events-none" 
+            style={{ color: '#FF6B35' }}
+          >
+            Format *
           </label>
-          <label className="flex items-center">
-            <input
-              type="radio"
-              name="eventMode"
-              value="online"
-              checked={formData.eventMode === 'online'}
-              onChange={onInputChange}
-              className="mr-2"
-            />
-            <span>Online</span>
-          </label>
-          <label className="flex items-center">
-            <input
-              type="radio"
-              name="eventMode"
-              value="hybrid"
-              checked={formData.eventMode === 'hybrid'}
-              onChange={onInputChange}
-              className="mr-2"
-            />
-            <span className="text-orange-600 font-medium">Hybrid</span>
-          </label>
+          <div className="absolute right-3 top-2 text-gray-400 pointer-events-none">
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
+          </div>
         </div>
-      </div>
 
-      <div>
-        <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-2">
-          Location *
-        </label>
-        <input
-          type="text"
-          id="location"
-          name="location"
-          value={formData.location}
-          onChange={onInputChange}
-          required
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-          placeholder="Enter event location"
-        />
+        {/* Dynamic Location/URL fields based on Event Mode */}
+        {formData.eventMode === 'offline' && (
+          <div className="relative w-full">
+            <input
+              type="text"
+              id="location"
+              name="location"
+              value={formData.location}
+              onChange={onInputChange}
+              required
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35] bg-white"
+              placeholder="Enter event location"
+            />
+            <label 
+              htmlFor="location" 
+              className="absolute -top-2 left-3 bg-white px-1 text-sm font-medium pointer-events-none" 
+              style={{ color: '#FF6B35' }}
+            >
+              Location *
+            </label>
+          </div>
+        )}
+
+        {formData.eventMode === 'online' && (
+          <div className="relative w-full">
+            <input
+              type="url"
+              id="eventUrl"
+              name="eventUrl"
+              value={formData.eventUrl}
+              onChange={onInputChange}
+              required
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35] bg-white"
+              placeholder="Enter event URL"
+            />
+            <label 
+              htmlFor="eventUrl" 
+              className="absolute -top-2 left-3 bg-white px-1 text-sm font-medium pointer-events-none" 
+              style={{ color: '#FF6B35' }}
+            >
+              Event URL *
+            </label>
+          </div>
+        )}
+
+        {formData.eventMode === 'hybrid' && (
+          <div className="w-full space-y-6">
+            <div className="relative w-full">
+              <input
+                type="text"
+                id="location"
+                name="location"
+                value={formData.location}
+                onChange={onInputChange}
+                required
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35] bg-white"
+                placeholder="Enter event location"
+              />
+              <label 
+                htmlFor="location" 
+                className="absolute -top-2 left-3 bg-white px-1 text-sm font-medium pointer-events-none" 
+                style={{ color: '#FF6B35' }}
+              >
+                Location *
+              </label>
+            </div>
+            <div className="relative w-full">
+              <input
+                type="url"
+                id="eventUrl"
+                name="eventUrl"
+                value={formData.eventUrl}
+                onChange={onInputChange}
+                required
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35] bg-white"
+                placeholder="Enter event URL"
+              />
+              <label 
+                htmlFor="eventUrl" 
+                className="absolute -top-2 left-3 bg-white px-1 text-sm font-medium pointer-events-none" 
+                style={{ color: '#FF6B35' }}
+              >
+                Event URL *
+              </label>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

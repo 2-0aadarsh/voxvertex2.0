@@ -1,182 +1,569 @@
-import { Calendar, Plus } from 'lucide-react'
-
-interface TicketType {
-  name: string
-  price: string
-  quantity: string
-}
+import { Calendar, Plus, X, Trash2 } from 'lucide-react'
+import { useState } from 'react'
 
 interface TicketingStepProps {
   formData: {
-    ticketTypes: TicketType[]
+    ticketTypes: Array<{
+      name: string
+      price: string
+      quantity: string
+      features?: string[]
+      discount?: {
+        enabled: boolean
+        name: string
+        type: 'percentage' | 'fixed'
+        value: string
+        maxUses: string
+        startDate: string
+        endDate: string
+        code: string
+        description: string
+      }
+    }>
   }
   onFormDataUpdate: (data: any) => void
 }
 
 export default function TicketingStep({ formData, onFormDataUpdate }: TicketingStepProps) {
+  const [newFeatureText, setNewFeatureText] = useState('')
+  const [showFeatureInput, setShowFeatureInput] = useState<{[key: number]: boolean}>({})
+
+  const ticketCount = formData.ticketTypes?.length || 0
+  const isCompressed = ticketCount > 1
+
   const addTicketTier = () => {
+    const currentTickets = formData.ticketTypes || []
+    const newTicket = {
+      name: '',
+      price: '',
+      quantity: '',
+      features: [],
+      discount: {
+        enabled: true,
+        name: 'Name',
+        type: 'percentage' as const,
+        value: '0',
+        maxUses: '50',
+        startDate: '',
+        endDate: '',
+        code: 'XXJKQNI',
+        description: ''
+      }
+    }
     onFormDataUpdate({
-      ticketTypes: [
-        ...formData.ticketTypes,
-        { name: `Ticket Tier ${formData.ticketTypes.length + 1}`, price: '', quantity: '' }
-      ]
+      ticketTypes: [...currentTickets, newTicket]
     })
   }
 
   const removeTicketTier = (index: number) => {
+    const currentTickets = formData.ticketTypes || []
     onFormDataUpdate({
-      ticketTypes: formData.ticketTypes.filter((_, i) => i !== index)
+      ticketTypes: currentTickets.filter((_, i) => i !== index)
     })
   }
 
-  const updateTicketTier = (index: number, field: keyof TicketType, value: string) => {
-    const newTickets = [...formData.ticketTypes]
-    newTickets[index][field] = value
+  const updateTicketTier = (index: number, field: string, value: any) => {
+    const currentTickets = formData.ticketTypes || []
+    const newTickets = [...currentTickets]
+    
+    if (field.includes('discount.')) {
+      const discountField = field.split('.')[1]
+      if (!newTickets[index].discount) {
+        newTickets[index].discount = {
+          enabled: false,
+          name: '',
+          type: 'percentage',
+          value: '',
+          maxUses: '',
+          startDate: '',
+          endDate: '',
+          code: '',
+          description: ''
+        }
+      }
+      (newTickets[index].discount as any)[discountField] = value
+    } else {
+      (newTickets[index] as any)[field] = value
+    }
+    
     onFormDataUpdate({ ticketTypes: newTickets })
   }
 
-  return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-medium text-gray-900 mb-2">Ticketing</h3>
-        <p className="text-gray-600 mb-6">Ticket tiers and pricing</p>
-      </div>
+  const addFeature = (ticketIndex: number, featureText?: string) => {
+    const textToAdd = featureText || newFeatureText
+    if (!textToAdd.trim()) return
+    
+    const currentTickets = formData.ticketTypes || []
+    const newTickets = [...currentTickets]
+    
+    if (!newTickets[ticketIndex].features) {
+      newTickets[ticketIndex].features = []
+    }
+    
+    newTickets[ticketIndex].features!.push(textToAdd)
+    onFormDataUpdate({ ticketTypes: newTickets })
+    setNewFeatureText('')
+    setShowFeatureInput(prev => ({ ...prev, [ticketIndex]: false }))
+  }
 
-      {/* Ticket Tiers Section */}
-      <div>
-        <div className="flex justify-between items-center mb-4">
-          <label className="block text-sm font-medium text-gray-700">
+  const removeFeature = (ticketIndex: number, featureIndex: number) => {
+    const currentTickets = formData.ticketTypes || []
+    const newTickets = [...currentTickets]
+    
+    if (newTickets[ticketIndex].features) {
+      newTickets[ticketIndex].features!.splice(featureIndex, 1)
+    }
+    
+    onFormDataUpdate({ ticketTypes: newTickets })
+  }
+
+  const calculateDiscountedPrice = (price: string, discountType: string, discountValue: string) => {
+    const originalPrice = parseFloat(price) || 0
+    const discount = parseFloat(discountValue) || 0
+    
+    if (discountType === 'percentage') {
+      return (originalPrice * (1 - discount / 100)).toFixed(2)
+    } else {
+      return (originalPrice - discount).toFixed(2)
+    }
+  }
+
+  const generateDiscountCode = (ticketIndex: number) => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+    let result = ''
+    for (let i = 0; i < 7; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length))
+    }
+    updateTicketTier(ticketIndex, 'discount.code', result)
+  }
+
+  const toggleFeatureInput = (ticketIndex: number) => {
+    setShowFeatureInput(prev => ({ ...prev, [ticketIndex]: !prev[ticketIndex] }))
+  }
+
+  const incrementQuantity = (ticketIndex: number) => {
+    const currentTickets = formData.ticketTypes || []
+    const currentQuantity = parseInt(currentTickets[ticketIndex].quantity) || 0
+    updateTicketTier(ticketIndex, 'quantity', (currentQuantity + 1).toString())
+  }
+
+  const decrementQuantity = (ticketIndex: number) => {
+    const currentTickets = formData.ticketTypes || []
+    const currentQuantity = parseInt(currentTickets[ticketIndex].quantity) || 0
+    if (currentQuantity > 0) {
+      updateTicketTier(ticketIndex, 'quantity', (currentQuantity - 1).toString())
+    }
+  }
+
+  return (
+    <div className="space-y-6 pl-3 pr-3">
+      <div className="border border-gray-300 rounded-lg bg-white">
+        <div className="flex justify-between items-center p-6 border-b border-gray-200">
+          <label className="block text-md font-medium text-[#FF6B35]">
             Ticket Tiers
           </label>
           <button
             type="button"
             onClick={addTicketTier}
-            className="text-orange-500 text-sm font-medium hover:text-orange-600 flex items-center space-x-1"
+            className="text-[#FF6B35] border-2 border-[#FF6B35] rounded-lg px-4 py-1 text-sm font-medium hover:text-orange-600 flex items-center space-x-1"
           >
             <span>+ Add Ticket Tier</span>
           </button>
         </div>
 
-        {/* No tickets state */}
-        {formData.ticketTypes.length === 0 && (
-          <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-            <div className="text-gray-500 mb-4">
-              <Calendar className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-              <p>No ticket tiers added yet</p>
-              <p className="text-sm">Click "Add Ticket Tier" to create your first ticket type</p>
+        <div className="p-6">
+          {(!formData.ticketTypes || formData.ticketTypes.length === 0) && (
+            <div className="text-center py-12">
+              <div className="text-gray-500 mb-4">
+                <Calendar className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                <p>No ticket tiers added yet</p>
+                <p className="text-sm">Click "Add Ticket Tier" to create your first ticket type</p>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Ticket Tiers List */}
-        <div className="space-y-4">
-          {formData.ticketTypes.map((ticket, index) => (
-            <div key={index} className="border border-gray-200 rounded-lg p-6 bg-white">
-              <div className="flex justify-between items-start mb-4">
-                <h4 className="font-medium text-gray-900">{ticket.name}</h4>
-                <button
-                  type="button"
-                  onClick={() => removeTicketTier(index)}
-                  className="text-red-500 hover:text-red-700 text-sm"
-                >
-                  ✕
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Ticket Name
-                  </label>
-                  <input
-                    type="text"
-                    value={ticket.name}
-                    onChange={(e) => updateTicketTier(index, 'name', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                    placeholder="e.g., General Admission"
-                  />
+          <div className="space-y-4">
+            {formData.ticketTypes?.map((ticket, index) => (
+              <div key={index} className="border border-[#FF6B35] rounded-lg p-6 bg-orange-50">
+                <div className="flex justify-between items-start mb-6">
+                  <h3 className="text-lg font-medium text-[#FF6B35] bg-orange-50">Ticket Tier {index + 1}</h3>
+                  <button
+                    type="button"
+                    onClick={() => removeTicketTier(index)}
+                    className="w-8 h-8 bg-orange-50 rounded text-red-500 flex items-center justify-center hover:text-red-700 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Price ($)
-                  </label>
-                  <input
-                    type="number"
-                    value={ticket.price}
-                    onChange={(e) => updateTicketTier(index, 'price', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                    placeholder="0.00"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Quantity
-                  </label>
-                  <input
-                    type="number"
-                    value={ticket.quantity}
-                    onChange={(e) => updateTicketTier(index, 'quantity', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                    placeholder="Available tickets"
-                  />
-                </div>
-              </div>
-
-              {/* Additional ticket options */}
-              <div className="mt-4 pt-4 border-t border-gray-100">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Early Bird Discount (%)
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={ticket.name}
+                      onChange={(e) => updateTicketTier(index, 'name', e.target.value)}
+                      className="w-full px-3 py-2 border border-[#FF6B35] rounded-lg bg-white focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35] text-gray-900 placeholder-gray-400"
+                      placeholder="Eg. Early Bird"
+                    />
+                    <label className="absolute -top-2 left-3 bg-orange-50 px-1 text-xs font-medium text-[#FF6B35]">
+                      Ticket Name *
                     </label>
+                  </div>
+
+                  <div className="relative">
                     <input
                       type="number"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                      value={ticket.price}
+                      onChange={(e) => updateTicketTier(index, 'price', e.target.value)}
+                      className="w-full px-3 py-2 border border-[#FF6B35] rounded-lg bg-white focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35] text-gray-900 placeholder-gray-400"
                       placeholder="0"
                     />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Sale End Date
+                    <label className="absolute -top-2 left-3 bg-orange-50 px-1 text-xs font-medium text-[#FF6B35]">
+                      Price($) *
                     </label>
-                    <input
-                      type="date"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                    />
+                  </div>
+
+                  <div className="relative">
+                    <div className="relative">
+                      <input
+                        type="number"
+                        value={ticket.quantity}
+                        onChange={(e) => updateTicketTier(index, 'quantity', e.target.value)}
+                        className="w-full px-3 py-2 pr-3 border border-[#FF6B35] rounded-lg bg-white focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35] text-gray-900 placeholder-gray-400"
+                        placeholder="50"
+                      />
+            
+                    </div>
+                    <label className="absolute -top-2 left-3 bg-orange-50 px-1 text-xs font-medium text-[#FF6B35]">
+                      Quantity *
+                    </label>
                   </div>
                 </div>
-                
-                <div className="mt-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Ticket Description
-                  </label>
-                  <textarea
-                    rows={2}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 resize-none"
-                    placeholder="What's included with this ticket..."
-                  />
+                {isCompressed ? (
+                  <div className="mb-6">
+                    <div className="flex justify-between items-center mb-4">
+                      <label className="block text-sm font-medium text-[#FF6B35]">
+                        What's Included
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => toggleFeatureInput(index)}
+                        className="px-3 py-1 border border-[#FF6B35] text-[#FF6B35] text-sm rounded hover:bg-orange-50"
+                      >
+                        + Add Feature
+                      </button>
+                    </div>
+                    {showFeatureInput[index] && (
+                      <div className="mb-4 relative">
+                        <input
+                          type="text"
+                          value={newFeatureText}
+                          onChange={(e) => setNewFeatureText(e.target.value)}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              addFeature(index)
+                            }
+                          }}
+                          className="w-full px-3 py-2 border border-[#FF6B35] rounded-lg bg-white focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35] text-gray-900 placeholder-gray-400"
+                          placeholder="Eg. VIP Seating, Meet & greet with speakers"
+                          autoFocus
+                        />
+                        <div className="flex gap-2 mt-2">
+                          <button
+                            type="button"
+                            onClick={() => addFeature(index)}
+                            className="px-3 py-1 bg-[#FF6B35] text-white text-sm rounded hover:bg-[#e55a2b]"
+                          >
+                            Add
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => toggleFeatureInput(index)}
+                            className="px-3 py-1 border border-gray-300 text-gray-600 text-sm rounded hover:bg-gray-50"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    {!showFeatureInput[index] && (
+                      <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg bg-white">
+                        <p className="text-gray-400 mb-1">No features added yet</p>
+                        <p className="text-gray-400 text-sm">Click "Add Feature" to specify what's included with this ticket</p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="mb-6">
+                    <div className="flex justify-between items-center mb-4">
+                      <label className="block text-sm font-medium text-[#FF6B35]">
+                        What's Included
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => toggleFeatureInput(index)}
+                        className="px-3 py-1 border border-[#FF6B35] text-[#FF6B35] text-sm rounded hover:bg-orange-50"
+                      >
+                        + Add Feature
+                      </button>
+                    </div>
+
+                    {showFeatureInput[index] && (
+                      <div className="mb-4 relative">
+                        <input
+                          type="text"
+                          value={newFeatureText}
+                          onChange={(e) => setNewFeatureText(e.target.value)}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              addFeature(index)
+                            }
+                          }}
+                          className="w-full px-3 py-2 border border-[#FF6B35] rounded-lg bg-white focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35] text-gray-900 placeholder-gray-400"
+                          placeholder="Eg. VIP Seating, Meet & greet with speakers"
+                          autoFocus
+                        />
+                        <div className="flex gap-2 mt-2">
+                          <button
+                            type="button"
+                            onClick={() => addFeature(index)}
+                            className="px-3 py-1 bg-[#FF6B35] text-white text-sm rounded hover:bg-[#e55a2b]"
+                          >
+                            Add
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => toggleFeatureInput(index)}
+                            className="px-3 py-1 border border-gray-300 text-gray-600 text-sm rounded hover:bg-gray-50"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="space-y-3 mb-4">
+                      {ticket.features?.map((feature, featureIndex) => (
+                        <div key={featureIndex} className="flex items-center space-x-3">
+                          <div className="w-5 h-5 bg-orange-50 rounded-full text-green-500 flex items-center justify-center text-xs flex-shrink-0">✓</div>
+                          <div className="flex items-center justify-between bg-white p-2 rounded-lg border border-[#FF6B35] flex-1">
+                            <span className="text-sm text-gray-700">{feature}</span>
+                            <button
+                              type="button"
+                              onClick={() => removeFeature(index, featureIndex)}
+                              className="text-red-500 hover:text-red-700 ml-2"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {(!ticket.features || ticket.features.length === 0) && !showFeatureInput[index] && (
+                      <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg bg-white">
+                        <p className="text-gray-400 mb-1">No features added yet</p>
+                        <p className="text-gray-400 text-sm">Click "Add Feature" to add ticket features</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="border-t border-orange-200 pt-6">
+                  <div className="flex justify-between items-center mb-6">
+                    <label className="block text-sm font-medium text-[#FF6B35]">
+                      Discount
+                    </label>
+                    <div className="flex items-center">
+                      <span className="text-sm text-gray-600 mr-3">Enabled</span>
+                      <div 
+                        className={`w-12 h-6 rounded-full p-1 cursor-pointer transition-colors ${ticket.discount?.enabled ? 'bg-[#FF6B35]' : 'bg-gray-300'}`}
+                        onClick={() => updateTicketTier(index, 'discount.enabled', !(ticket.discount?.enabled || false))}
+                      >
+                        <div className={`w-4 h-4 bg-white rounded-full transition-transform ${ticket.discount?.enabled ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {isCompressed && ticket.discount?.enabled && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="relative">
+                        <select
+                          value={ticket.discount?.type || 'percentage'}
+                          onChange={(e) => updateTicketTier(index, 'discount.type', e.target.value)}
+                          className="w-full px-3 py-2 border border-[#FF6B35] rounded-md bg-white focus:ring-2 focus:ring-[#FF6B35] text-gray-900"
+                        >
+                          <option value="percentage">percentage (%)</option>
+                          <option value="fixed">fixed</option>
+                        </select>
+                        <label className="absolute -top-2 left-3 bg-orange-50 px-1 text-xs font-medium text-[#FF6B35]">
+                          Discount (%)
+                        </label>
+                      </div>
+                      <div className="relative">
+                        <div className="bg-white p-3 rounded-md border border-[#FF6B35] flex justify-between items-center">
+                          <span className="text-sm text-gray-600">Price Preview</span>
+                          <span className="text-lg font-semibold text-gray-900">
+                            $ {ticket.price || '100.00'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {!isCompressed && ticket.discount?.enabled && (
+                    <div className="space-y-6 mt-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={ticket.discount?.name || ''}
+                            onChange={(e) => updateTicketTier(index, 'discount.name', e.target.value)}
+                            className="w-full px-3 py-1.5 border border-[#FF6B35] rounded bg-white focus:ring-2 focus:ring-[#FF6B35] text-gray-900 placeholder-gray-400"
+                            placeholder="Name"
+                          />
+                          <label className="absolute -top-2 left-3 bg-orange-50 px-1 text-xs font-medium text-[#FF6B35]">
+                            Discount name*
+                          </label>
+                        </div>
+                        <div className="relative">
+                          <select
+                            value={ticket.discount?.type || 'percentage'}
+                            onChange={(e) => updateTicketTier(index, 'discount.type', e.target.value)}
+                            className="w-full px-3 py-1.5 border border-[#FF6B35] rounded bg-white focus:ring-2 focus:ring-[#FF6B35] text-gray-900"
+                          >
+                            <option value="percentage">percentage (%)</option>
+                            <option value="fixed">fixed</option>
+                          </select>
+                          <label className="absolute -top-2 left-3 bg-orange-50 px-1 text-xs font-medium text-[#FF6B35]">
+                            Discount Type*
+                          </label>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="relative">
+                          <div className="relative">
+                            <input
+                              type="number"
+                              value={ticket.discount?.value || ''}
+                              onChange={(e) => updateTicketTier(index, 'discount.value', e.target.value)}
+                              className="w-full px-3 py-1.5 pr-3 border border-[#FF6B35] rounded bg-white focus:ring-2 focus:ring-[#FF6B35] text-gray-900 placeholder-gray-400"
+                              placeholder="0"
+                            />
+                            
+                          </div>
+                          <label className="absolute -top-2 left-3 bg-orange-50 px-1 text-xs font-medium text-[#FF6B35]">
+                            Discount Value*
+                          </label>
+                        </div>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            value={ticket.discount?.maxUses || ''}
+                            onChange={(e) => updateTicketTier(index, 'discount.maxUses', e.target.value)}
+                            className="w-full px-3 py-1.5 border border-[#FF6B35] rounded bg-white focus:ring-2 focus:ring-[#FF6B35] text-gray-900 placeholder-gray-400"
+                            placeholder="50"
+                          />
+                          <label className="absolute -top-2 left-3 bg-orange-50 px-1 text-xs font-medium text-[#FF6B35]">
+                            Max Uses(Optional)
+                          </label>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="relative">
+                          <div className="relative">
+                            <input
+                              type="date"
+                              value={ticket.discount?.startDate || ''}
+                              onChange={(e) => updateTicketTier(index, 'discount.startDate', e.target.value)}
+                              className="w-full px-3 py-1.5 pr-3 border border-[#FF6B35] rounded bg-white focus:ring-2 focus:ring-[#FF6B35] text-gray-900 placeholder-gray-400"
+                              placeholder="dd-MM-YY"
+                            />
+                            
+                          </div>
+                          <label className="absolute -top-2 left-3 bg-orange-50 px-1 text-xs font-medium text-[#FF6B35]">
+                            Start Date*
+                          </label>
+                        </div>
+                        <div className="relative">
+                          <div className="relative">
+                            <input
+                              type="date"
+                              value={ticket.discount?.endDate || ''}
+                              onChange={(e) => updateTicketTier(index, 'discount.endDate', e.target.value)}
+                              className="w-full px-3 py-1.5 pr-3 border border-[#FF6B35] rounded bg-white focus:ring-2 focus:ring-[#FF6B35] text-gray-900 placeholder-gray-400"
+                              placeholder="dd-MM-YY"
+                            />
+                          </div>
+                          <label className="absolute -top-2 left-3 bg-orange-50 px-1 text-xs font-medium text-[#FF6B35]">
+                            End Date*
+                          </label>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-4">
+                        <div className="flex-1 relative">
+                          <input
+                            type="text"
+                            value={ticket.discount?.code || ''}
+                            onChange={(e) => updateTicketTier(index, 'discount.code', e.target.value)}
+                            className="w-full px-3 py-1.5 border border-[#FF6B35] rounded bg-white focus:ring-2 focus:ring-[#FF6B35] text-gray-900 placeholder-gray-400"
+                            placeholder="sdghjkl"
+                          />
+                          <label className="absolute -top-2 left-3 bg-orange-50 px-1 text-xs font-medium text-[#FF6B35]">
+                            Discount code*
+                          </label>
+                        </div>
+                        <div className="flex items-end">
+                          <button
+                            type="button"
+                            onClick={() => generateDiscountCode(index)}
+                            className="px-7 py-1 bg-orange-50 border-2 border-[#FF6B35] text-[#FF6B35] rounded-lg hover:bg-orange-100 transition-colors whitespace-nowrap"
+                          >
+                            Generate
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="relative">
+                        <textarea
+                          value={ticket.discount?.description || ''}
+                          onChange={(e) => updateTicketTier(index, 'discount.description', e.target.value)}
+                          rows={4}
+                          className="w-full px-3 py-2 border border-[#FF6B35] rounded bg-white focus:ring-2 focus:ring-[#FF6B35] resize-none text-gray-900 placeholder-gray-400"
+                          placeholder="Add a description for this discount..."
+                        />
+                        <label className="absolute -top-2 left-3 bg-orange-50 px-1 text-xs font-medium text-[#FF6B35]">
+                          Description
+                        </label>
+                      </div>
+
+                      <div className="bg-white p-4 rounded-lg border border-[#FF6B35]">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600">Price Preview:</span>
+                          <div className="text-right">
+                            <span className="text-lg font-semibold text-gray-900">
+                              ${calculateDiscountedPrice(ticket.price, ticket.discount?.type || 'percentage', ticket.discount?.value || '0')}
+                            </span>
+                            {parseFloat(ticket.discount?.value || '0') > 0 && (
+                              <div className="text-sm text-gray-500">
+                                <span className="line-through">${ticket.price}</span>
+                                <span className="ml-2 text-green-600">
+                                  Save {ticket.discount?.type === 'percentage' ? `${ticket.discount?.value}%` : `$${ticket.discount?.value}`}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-
-        {/* Add first ticket button if none exist */}
-        {formData.ticketTypes.length === 0 && (
-          <button
-            type="button"
-            onClick={() => {
-              onFormDataUpdate({
-                ticketTypes: [{ name: 'General Admission', price: '', quantity: '' }]
-              })
-            }}
-            className="w-full py-4 border-2 border-dashed border-orange-300 rounded-lg text-orange-600 font-medium hover:bg-orange-50 transition-colors"
-          >
-            + Add Your First Ticket Tier
-          </button>
-        )}
       </div>
     </div>
   )

@@ -2,7 +2,29 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, Filter, Plus, Eye, Edit, Trash2, Calendar, Users, DollarSign } from 'lucide-react'
+import { 
+  Search, 
+  Filter, 
+  Plus, 
+  Eye, 
+  Edit, 
+  Trash2, 
+  Calendar, 
+  Users, 
+  DollarSign,
+  User, 
+  BarChart3, 
+  MessageCircle, 
+  CalendarDays, 
+  CreditCard, 
+  AlertTriangle, 
+  HelpCircle, 
+  Settings,
+  Bell,
+  LogOut,
+  ChevronDown,
+  X
+} from 'lucide-react'
 import Link from 'next/link'
 import Logo from '@/components/Logo'
 import { useAuth } from '@/store/hooks'
@@ -22,6 +44,9 @@ export default function EventManagement() {
   const [events, setEvents] = useState<Event[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('All Statuses')
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [eventToDelete, setEventToDelete] = useState<Event | null>(null)
+  const [deleteConfirmation, setDeleteConfirmation] = useState('')
   
   // Router and authentication hooks
   const router = useRouter()
@@ -111,209 +136,171 @@ export default function EventManagement() {
     return matchesSearch && matchesStatus
   })
 
+  const menuItems = [
+    { icon: User, label: 'Profile', active: false },
+    { icon: BarChart3, label: 'Dashboard', active: false },
+    { icon: MessageCircle, label: 'Messages', active: false },
+    { icon: Calendar, label: 'Bookings', active: false },
+    { icon: CalendarDays, label: 'Events', active: true },
+    { icon: CreditCard, label: 'Payments', active: false },
+    { icon: AlertTriangle, label: 'Dispute', active: false },
+  ];
+
+  const bottomMenuItems = [
+    { icon: HelpCircle, label: 'Support' },
+    { icon: Settings, label: 'Settings' },
+  ];
+
+  const handleDeleteClick = (event: Event) => {
+    setEventToDelete(event)
+    setShowDeleteModal(true)
+  }
+
+  const handleDeleteConfirm = () => {
+    if (deleteConfirmation === 'DELETE' && eventToDelete) {
+      setEvents(events.filter(e => e.id !== eventToDelete.id))
+      setShowDeleteModal(false)
+      setEventToDelete(null)
+      setDeleteConfirmation('')
+    }
+  }
+
+  const handleDeleteCancel = () => {
+    setShowDeleteModal(false)
+    setEventToDelete(null)
+    setDeleteConfirmation('')
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-md border-b">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex items-center h-16">
-            {/* Logo */}
-            <div className="flex-shrink-0">
-              <Logo absolute={true} />
-            </div>
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-[#FF6B35]/20 z-40"></div>
+      )}
+      {/* Sidebar */}
+      <div className="fixed left-0 top-0 bottom-0 w-64 bg-white border-r border-gray-200">
+        <div className="p-4 h-full flex flex-col">
+          {/* Main Menu */}
+          <div className="space-y-1 flex-1">
+            {menuItems.map((item, index) => {
+              const IconComponent = item.icon;
+              return (
+                <div
+                  key={index}
+                  className={`flex items-center space-x-3 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
+                    item.active
+                      ? 'bg-[#FF6B35]/10 text-[#FF6B35]'
+                      : 'text-gray-600 hover:bg-[#FF6B35]/5 hover:text-[#FF6B35]'
+                  }`}
+                >
+                  <IconComponent size={16} />
+                  <span className="text-sm font-medium">{item.label}</span>
+                </div>
+              );
+            })}
+          </div>
 
-            {/* Search Bar - Right after logo */}
-            <div className="flex-1 max-w-xl ml-24">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <input
-                  type="text"
-                  placeholder="Search Events"
-                  className="w-full pl-10 pr-10 py-2.5 border border-blue-400 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-blue-600 text-sm bg-white"
-                />
-                <button className="absolute right-3 top-1/2 transform -translate-y-1/2 hover:opacity-70 transition-opacity">
-                  <img 
-                    src="/vector1.png" 
-                    alt="Filter" 
-                    className="w-4 h-4"
-                  />
-                </button>
+          <div className="space-y-1 mb-4">
+            {bottomMenuItems.map((item, index) => {
+              const IconComponent = item.icon;
+              return (
+                <div
+                  key={index}
+                  className="flex items-center space-x-3 px-3 py-2 rounded-lg cursor-pointer text-gray-600 hover:bg-[#FF6B35]/5 hover:text-[#FF6B35] transition-colors"
+                >
+                  <IconComponent size={16} />
+                  <span className="text-sm font-medium">{item.label}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* User Profile with Logout */}
+          <div className="flex items-center justify-between p-3 border-t border-gray-200">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+                <User size={16} className="text-gray-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 truncate hover:text-[#FF6B35] transition-colors cursor-pointer">John Doe</p>
+                <p className="text-xs text-gray-500 truncate hover:text-[#FF6B35] transition-colors cursor-pointer">John@gmail.com</p>
               </div>
             </div>
-
-            {/* Navigation - Right aligned */}
-            <nav className="flex items-center space-x-8 ml-auto">
-              <button 
-                onClick={() => router.push('/profile')}
-                className="text-gray-900 hover:text-[#FF6B35] font-medium text-sm transition-colors duration-200 hover:scale-105"
-              >
-                About
-              </button>
-              <button 
-                onClick={() => router.push('/newuser')}
-                className="text-gray-900 hover:text-[#FF6B35] font-medium text-sm transition-colors duration-200 hover:scale-105"
-              >
-                Speaker
-              </button>
-              <button 
-                onClick={() => router.push('/events_page')}
-                className="text-[#FF6B35] font-medium text-sm transition-colors duration-200 hover:scale-105"
-              >
-                Events
-              </button>
-              
-              {/* Conditional rendering based on authentication */}
-              {isAuthenticated && (user || currentUserData?.user) ? (
-                <button className="w-40 h-10 cursor-pointer flex items-center justify-between">
-                  <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
-                    {getProfileImageUrl(user?.profileImageUrl || currentUserData?.user?.profileImageUrl) ? (
-                      <img
-                        src={getProfileImageUrl(user?.profileImageUrl || currentUserData?.user?.profileImageUrl) || ''}
-                        alt="profile"
-                        className="w-full h-full object-cover object-center"
-                        onError={(e) => {
-                          // Fallback to initials if image fails to load
-                          e.currentTarget.style.display = "none";
-                          const nextElement = e.currentTarget.nextElementSibling as HTMLElement;
-                          if (nextElement) {
-                            nextElement.style.display = "flex";
-                          }
-                        }}
-                      />
-                    ) : null}
-                    <div
-                      className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold text-sm"
-                      style={{
-                        display: getProfileImageUrl(user?.profileImageUrl || currentUserData?.user?.profileImageUrl) ? "none" : "flex",
-                      }}
-                    >
-                      {(user?.firstName && user?.lastName 
-                        ? `${user.firstName} ${user.lastName}` 
-                        : currentUserData?.user?.firstName && currentUserData?.user?.lastName
-                        ? `${currentUserData.user.firstName} ${currentUserData.user.lastName}`
-                        : "User")
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")
-                        .toUpperCase()
-                        .slice(0, 2)}
-                    </div>
-                  </div>
-                  <h2 className="text-sm font-medium">
-                    {user?.firstName && user?.lastName 
-                      ? `${user.firstName} ${user.lastName}` 
-                      : currentUserData?.user?.firstName && currentUserData?.user?.lastName
-                      ? `${currentUserData.user.firstName} ${currentUserData.user.lastName}`
-                      : "User"}
-                  </h2>
-                  <IoIosArrowDown className="cursor-pointer w-4 h-4" />
-                </button>
-              ) : (
-                <button 
-                  onClick={() => router.push('/signup/login')}
-                  className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2.5 rounded-full font-medium text-sm transition-colors"
-                >
-                  Login
-                </button>
-              )}
-            </nav>
+            <button className="p-1.5 text-red-500 hover:text-[#FF6B35] hover:bg-[#FF6B35]/5 rounded-md transition-colors">
+              <LogOut size={14} />
+            </button>
           </div>
         </div>
-      </header>
+      </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex">
-          {/* Sidebar */}
-          <aside className="w-64 bg-white rounded-lg shadow-sm p-6 mr-8">
-            <nav className="space-y-2">
-              <Link href="/dashboard" className="flex items-center space-x-3 text-gray-700 hover:text-orange-600 py-2 px-3 rounded-lg">
-                <Users className="w-5 h-5" />
-                <span>Profile</span>
-              </Link>
-              <Link href="/dashboard" className="flex items-center space-x-3 text-gray-700 hover:text-orange-600 py-2 px-3 rounded-lg">
-                <Calendar className="w-5 h-5" />
-                <span>Dashboard</span>
-              </Link>
-              <div className="flex items-center space-x-3 text-gray-700 hover:text-orange-600 py-2 px-3 rounded-lg">
-                <Users className="w-5 h-5" />
-                <span>Messages</span>
+      {/* Main Content */}
+      <div className="ml-64 bg-orange-50 min-h-screen">
+        <div className="bg-white border-b border-gray-200 px-4 py-2">
+          <div className="flex justify-end">
+            <div className="flex items-center space-x-4">
+              <Bell size={16} className="text-gray-400 cursor-pointer hover:text-gray-600" />
+              <div className="flex items-center space-x-3">
+                <div className="text-right">
+                  <p className="text-sm font-medium text-gray-900">John Doe</p>
+                  <p className="text-xs text-gray-500">Senior Product Manager</p>
+                </div>
+                <div className="w-8 h-8 bg-[#FF6B35]/50 rounded-full text-black text-xs flex items-center justify-center font-medium">
+                  A
+                </div>
               </div>
-              <div className="flex items-center space-x-3 text-gray-700 hover:text-orange-600 py-2 px-3 rounded-lg">
-                <Calendar className="w-5 h-5" />
-                <span>Bookings</span>
-              </div>
-              <div className="flex items-center space-x-3 text-orange-600 bg-orange-50 py-2 px-3 rounded-lg font-medium">
-                <Calendar className="w-5 h-5" />
-                <span>Events</span>
-              </div>
-              <div className="flex items-center space-x-3 text-gray-700 hover:text-orange-600 py-2 px-3 rounded-lg">
-                <DollarSign className="w-5 h-5" />
-                <span>Payments</span>
-              </div>
-              <div className="flex items-center space-x-3 text-gray-700 hover:text-orange-600 py-2 px-3 rounded-lg">
-                <Users className="w-5 h-5" />
-                <span>Dispute</span>
-              </div>
-              <div className="flex items-center space-x-3 text-gray-700 hover:text-orange-600 py-2 px-3 rounded-lg">
-                <Users className="w-5 h-5" />
-                <span>Support</span>
-              </div>
-              <div className="flex items-center space-x-3 text-gray-700 hover:text-orange-600 py-2 px-3 rounded-lg">
-                <Users className="w-5 h-5" />
-                <span>Settings</span>
-              </div>
-            </nav>
-          </aside>
-
-          {/* Main Content */}
-          <main className="flex-1 bg-white rounded-lg shadow-sm p-8">
-            {/* Page Header */}
-            <div className="flex justify-between items-center mb-8">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">Event Management</h1>
-                <p className="text-gray-600 mt-1">View, create, and manage all your events.</p>
-              </div>
-              <Link 
-                href="/events_page/create"
-                className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg font-medium flex items-center space-x-2"
-              >
-                <Plus className="w-5 h-5" />
-                <span>Create Event</span>
-              </Link>
             </div>
+          </div>
+        </div>
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex justify-between items-center mb-8">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Event Management</h1>
+              <p className="text-gray-600 mt-1">View, create, and manage all your events.</p>
+            </div>
+            <Link 
+              href="/events_page/create"
+              className="bg-[#FF6B35] hover:bg-orange-600 text-white px-10 py-2 rounded-lg font-medium flex items-center space-x-2"
+            >
+              <Calendar className="w-5 h-5" />
+              <span>Create Event</span>
+            </Link>
+          </div>
+
+          {/* Main Content Card */}
+          <main className="bg-white rounded-lg shadow-sm p-8">
 
             {/* Search and Filter */}
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <div className="relative w-64">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#FF6B35] w-5 h-5" />
                 <input
                   type="text"
                   placeholder="Search Events..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  className="w-full pl-10 pr-4 py-2 bg-[#FF6B35]/10 border border-[#FF6B35] rounded-lg focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35]"
                 />
               </div>
-              <div className="relative">
+              <div className="relative w-40">
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 w-full focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35]"
                 >
                   <option>All Statuses</option>
                   <option>Published</option>
                   <option>Draft</option>
                   <option>Postponed</option>
                 </select>
-                <Filter className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+                <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
               </div>
             </div>
 
             {/* Events Table */}
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto border border-gray-200 rounded-lg">
               <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-200">
+                <thead className="bg-[#FF6B35]/15">
+                  <tr>
                     <th className="text-left py-4 px-4 font-medium text-gray-700">Event Title</th>
                     <th className="text-left py-4 px-4 font-medium text-gray-700">Date</th>
                     <th className="text-left py-4 px-4 font-medium text-gray-700">Status</th>
@@ -337,14 +324,14 @@ export default function EventManagement() {
                       <td className="py-4 px-4 text-gray-600">{event.attendees}</td>
                       <td className="py-4 px-4 text-gray-600">{event.revenue}</td>
                       <td className="py-4 px-4">
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-1">
                           <button className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50">
                             <Eye className="w-4 h-4" />
                           </button>
-                          <button className="p-2 text-gray-400 hover:text-green-600 rounded-lg hover:bg-green-50">
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          <button className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50">
+                          <button 
+                            onClick={() => handleDeleteClick(event)}
+                            className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50"
+                          >
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
@@ -368,9 +355,9 @@ export default function EventManagement() {
                 </p>
                 <Link 
                   href="/events_page/create"
-                  className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg font-medium inline-flex items-center space-x-2"
+                  className="bg-[#FF6B35] hover:bg-orange-600 text-white px-6 py-3 rounded-lg font-medium inline-flex items-center space-x-2"
                 >
-                  <Plus className="w-5 h-5" />
+                  <Calendar className="w-5 h-5" />
                   <span>Create Your First Event</span>
                 </Link>
               </div>
@@ -378,6 +365,87 @@ export default function EventManagement() {
           </main>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && eventToDelete && (
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl mx-4">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                  <AlertTriangle className="w-6 h-6 text-red-600" />
+                </div>
+                <h2 className="text-xl font-semibold text-[#FF6B35]">Delete Event</h2>
+              </div>
+              <button 
+                onClick={handleDeleteCancel}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="mb-6">
+              <p className="text-gray-600 mb-4">
+                Are you sure you want to delete "{eventToDelete.title}"? This action cannot be undone and will permanently remove the event and all associated data.
+              </p>
+
+              {/* Warning Box */}
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                <div className="flex items-start space-x-2">
+                  <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h3 className="text-sm font-medium text-yellow-800 mb-2">Warning:</h3>
+                    <ul className="text-sm text-red-600 space-y-1">
+                      <li>• All event data will be permanently deleted</li>
+                      <li>• Attendee registrations will be lost</li>
+                      <li>• Payment records will remain but be orphaned</li>
+                      <li>• This action cannot be reversed</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* Confirmation Input */}
+              <div>
+                <p className="text-sm text-gray-600 mb-2">
+                  To confirm deletion, type DELETE in the field below:
+                </p>
+                <input
+                  type="text"
+                  value={deleteConfirmation}
+                  onChange={(e) => setDeleteConfirmation(e.target.value)}
+                  placeholder="Type DELETE to Confirm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35]"
+                />
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={handleDeleteCancel}
+                className="px-4 py-2 text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteConfirm}
+                disabled={deleteConfirmation !== 'DELETE'}
+                className={`px-4 py-2 rounded-lg font-medium ${
+                  deleteConfirmation === 'DELETE'
+                    ? 'bg-[#FF6B35] hover:bg-orange-600 text-white'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                Delete Event
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
