@@ -24,6 +24,7 @@ interface Speaker {
   tags: string[];
   specialization: string;
   avatar?: string;
+  bio?: string;
 }
 
 interface SpeakerCardProps {
@@ -280,7 +281,7 @@ const SpeakerCard: React.FC<SpeakerCardProps> = ({ speaker = {
           {/* Middle Section */}
           <div className="mb-4">
             <p className="text-sm text-black mb-3 leading-relaxed">
-              Leading AI researcher with 15+ years of experience in deep learning and neural networks.
+              {speaker.bio || "Leading AI researcher with 15+ years of experience in deep learning and neural networks."}
             </p>
 
             {/* Location */}
@@ -298,24 +299,31 @@ const SpeakerCard: React.FC<SpeakerCardProps> = ({ speaker = {
 
           {/* Tags */}
           <div className="mb-8">
-            <div className="flex flex-wrap gap-2 mb-2">
-              <span className="border border-orange-300 text-orange-600 px-3 py-1 rounded-full text-xs">
-                Conferences & Summits
-              </span>
-              <span className="border border-orange-300 text-orange-600 px-3 py-1 rounded-full text-xs">
-                Seminars
-              </span>
-              <span className="border border-orange-300 text-orange-600 px-3 py-1 rounded-full text-xs">
-                Keynote Speeches
-              </span>
-            </div>
             <div className="flex flex-wrap gap-2">
-              <span className="border border-orange-300 text-orange-600 px-3 py-1 rounded-full text-xs">
-                Conferences & Summits
-              </span>
-              <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs">
-                +1 more
-              </span>
+              {speaker.tags && speaker.tags.length > 0 ? (
+                speaker.tags.slice(0, 3).map((tag, index) => (
+                  <span key={index} className="border border-orange-300 text-orange-600 px-3 py-1 rounded-full text-xs">
+                    {tag}
+                  </span>
+                ))
+              ) : (
+                <>
+                  <span className="border border-orange-300 text-orange-600 px-3 py-1 rounded-full text-xs">
+                    Conferences & Summits
+                  </span>
+                  <span className="border border-orange-300 text-orange-600 px-3 py-1 rounded-full text-xs">
+                    Seminars
+                  </span>
+                  <span className="border border-orange-300 text-orange-600 px-3 py-1 rounded-full text-xs">
+                    Keynote Speeches
+                  </span>
+                </>
+              )}
+              {speaker.tags && speaker.tags.length > 3 && (
+                <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs">
+                  +{speaker.tags.length - 3} more
+                </span>
+              )}
             </div>
           </div>
 
@@ -411,7 +419,7 @@ const SpeakerCard: React.FC<SpeakerCardProps> = ({ speaker = {
 
         {/* Desc */}
         <p className="text-xs text-black mb-4 leading-relaxed">
-          Leading AI researcher with 15+ years of experience in deep learning and neural networks.
+          {speaker.bio || "Leading AI researcher with 15+ years of experience in deep learning and neural networks."}
         </p>
 
         {/* Location, Price */}
@@ -428,21 +436,31 @@ const SpeakerCard: React.FC<SpeakerCardProps> = ({ speaker = {
 
         {/* Tags Sec */}
         <div className="mb-14">
-          <div className="flex flex-wrap gap-1 mb-1">
-            <span className="border border-orange-300 text-orange-600 px-2 py-0.5 rounded-full text-xs">
-              Conferences & Summits
-            </span>
-            <span className="border border-orange-300 text-orange-600 px-2 py-0.5 rounded-full text-xs">
-              Seminars
-            </span>
-          </div>
           <div className="flex flex-wrap gap-1">
-            <span className="border border-orange-300 text-orange-600 px-2 py-0.5 rounded-full text-xs">
-              Keynote Speeches
-            </span>
-            <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-xs">
-              +1 more
-            </span>
+            {speaker.tags && speaker.tags.length > 0 ? (
+              speaker.tags.slice(0, 3).map((tag, index) => (
+                <span key={index} className="border border-orange-300 text-orange-600 px-2 py-0.5 rounded-full text-xs">
+                  {tag}
+                </span>
+              ))
+            ) : (
+              <>
+                <span className="border border-orange-300 text-orange-600 px-2 py-0.5 rounded-full text-xs">
+                  Conferences & Summits
+                </span>
+                <span className="border border-orange-300 text-orange-600 px-2 py-0.5 rounded-full text-xs">
+                  Seminars
+                </span>
+                <span className="border border-orange-300 text-orange-600 px-2 py-0.5 rounded-full text-xs">
+                  Keynote Speeches
+                </span>
+              </>
+            )}
+            {speaker.tags && speaker.tags.length > 3 && (
+              <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-xs">
+                +{speaker.tags.length - 3} more
+              </span>
+            )}
           </div>
         </div>
 

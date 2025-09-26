@@ -74,7 +74,7 @@ const Sidebar = () => {
     {
       icon: <IoCalendarOutline />,
       label: "Bookings",
-      href: "/bookings",
+      href: "/speakers",
     },
     {
       icon: <CalendarDays />,

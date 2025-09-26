@@ -28,6 +28,7 @@ import awardsReducer from './slices/awardsSlice';
 import videosReducer from './slices/videosSlice';
 import calendarReducer from './slices/calendarSlice';
 import availabilityReducer from './slices/availabilitySlice';
+import speakersReducer from './slices/speakersSlice';
 
 // Persist configuration
 const persistConfig = {
@@ -46,7 +47,8 @@ const persistConfig = {
     'awards', 
     'videos', 
     'calendar',
-    'availability'
+    'availability',
+    'speakers'
   ],
 };
 
@@ -74,6 +76,7 @@ const rootReducer = combineReducers({
   videos: videosReducer,
   calendar: calendarReducer,
   availability: availabilityReducer,
+  speakers: speakersReducer,
 });
 
 // Persisted reducer
@@ -141,6 +144,7 @@ export const resetStore = () => {
   store.dispatch({ type: 'videos/resetVideos' });
   store.dispatch({ type: 'calendar/resetCalendar' });
   store.dispatch({ type: 'availability/resetAvailability' });
+  store.dispatch({ type: 'speakers/resetSpeakers' });
   
   // Reset API cache
   store.dispatch(baseApi.util.resetApiState());
@@ -157,7 +161,8 @@ export const invalidateUserData = () => {
       'Education', 
       'Award', 
       'Video', 
-      'CalendarEvent'
+      'CalendarEvent',
+      'Speaker'
     ])
   );
 };
@@ -191,6 +196,7 @@ export {
   videosReducer,
   calendarReducer,
   availabilityReducer,
+  speakersReducer,
   
   // API
   baseApi,

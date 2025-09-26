@@ -464,6 +464,124 @@ export interface CalendarState extends LoadingState {
   };
 }
 
+// Speaker Types
+export interface Speaker {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  fullName: string;
+  email: string;
+  mobileNo?: string;
+  profileImageUrl?: string;
+  bio?: string;
+  professionalTitle?: string;
+  location?: string;
+  areaOfExpertise?: string[];
+  yearsOfExperience?: number;
+  roleSpecificData?: {
+    industry?: string;
+    activities?: string[];
+    socialLinks?: {
+      linkedin?: string;
+      twitter?: string;
+      website?: string;
+      portfolio?: string;
+    };
+  };
+  isProfileComplete: boolean;
+  createdAt: string;
+  updatedAt: string;
+  // Availability information (when fetched with filters)
+  availability?: {
+    dates: string[];
+    eventTypes: any[];
+    modes: string[];
+    timeSlots: any[];
+  };
+  // Rating and booking information (for marketplace display)
+  rating?: number;
+  totalBookings?: number;
+  priceRange?: {
+    min: number;
+    max: number;
+    currency: string;
+  };
+}
+
+// Enhanced Speaker interface for processed data
+export interface ProcessedSpeaker {
+  id: string;
+  name: string;
+  title: string;
+  rating: number;
+  bookings: number;
+  location: string;
+  price: number;
+  priceRange: {
+    min: number;
+    max: number;
+    currency: string;
+  };
+  tags: string[];
+  specializations: string[];
+  specialization: string;
+  avatar?: string;
+  bio?: string;
+  yearsOfExperience: number;
+  isProfileComplete: boolean;
+  
+  // Additional details for enhanced display
+  firstName: string;
+  lastName: string;
+  email: string;
+  mobileNo?: string;
+  industry?: string;
+  activities: string[];
+  socialLinks?: {
+    linkedin?: string;
+    twitter?: string;
+    website?: string;
+    portfolio?: string;
+  };
+  createdAt: string;
+  availability?: {
+    dates: string[];
+    eventTypes: any[];
+    modes: string[];
+    timeSlots: any[];
+  };
+  
+  // Raw speaker data for detailed view
+  rawData: Speaker;
+}
+
+export interface SpeakerFilters {
+  searchQuery: string;
+  location: string;
+  expertise: string[];
+  yearsOfExperience: number;
+  availabilityDate: string;
+  eventTypes: string[];
+  priceRange: {
+    min: number;
+    max: number;
+  };
+}
+
+export interface SpeakersState extends LoadingState {
+  speakers: Speaker[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    hasMore: boolean;
+  };
+  filters: SpeakerFilters;
+  lastFetchTime: number;
+  searchSuggestions: Speaker[];
+  availableEventTypes: any[];
+}
+
 // Availability Types (for Speakers)
 export interface TimeSlot {
   slot: 'Morning' | 'Afternoon' | 'Evening' | 'Night';
@@ -508,6 +626,7 @@ export interface RootState {
   videos: VideosState;
   calendar: CalendarState;
   availability: AvailabilityState;
+  speakers: SpeakersState;
 }
 
 // API Request Types
