@@ -9,22 +9,35 @@ import User from "../models/user.js";
 
 export const getAllSpeakerProfiles = async (req, res) => {
   try {
-    const profiles = await Profile.find();
-      if (!profiles || profiles.length === 0) {
+    const profiles = await EnhancedProfile.find()
+      .populate({
+        path: "user",
+        match: { role: "speaker" }, // ✅ Only users with speaker role
+        select: "firstName lastName email role"
+      });
+
+    // Remove profiles with no matching user (null after match)
+    const filteredProfiles = profiles.filter(profile => profile.user !== null);
+
+    if (!filteredProfiles.length) {
       return res.status(404).json({ message: "No speaker profiles found" });
     }
 
-    const formattedProfiles = profiles.map(profile => ({
-      username: profile.userName || "Unknown", // ✅ directly use userName field
-      bio: profile.bio,
-      about: profile.about,
+    const formattedProfiles = filteredProfiles.map(profile => ({
+      username: profile.user?.firstName
+        ? `${profile.user.firstName} ${profile.user.lastName}`.trim()
+        : "Unknown",
+      email: profile.user?.email || null,
+      role: profile.user?.role || "N/A",
+      bio: profile.bio || null,
+      about: profile.about || null,
       skills: profile.skills,
       experience: profile.experience,
       education: profile.education,
       awards: profile.awards,
-      videos: profile.videos
+      videos: profile.featuredVideos || []
     }));
-    
+
     return res.status(200).json(formattedProfiles);
   } catch (error) {
     console.error("Error fetching speaker profiles:", error);
@@ -37,75 +50,56 @@ export const getAllSpeakerProfiles = async (req, res) => {
 
 export const createSpeakerBooking = async (req, res) => {
   try {
-    const organizerId = req.user._id; // ✅ from authenticateJWT
+    const organizerId = req.user._id;
+
+    // Destructure request body
     const {
       speakerId,
       date,
       timeSlot,
-      eventName,
-      eventType,
-      location,
-      expectedAttendees,
-      amount,
-      specialRequirement,
-      personalMessage
+      eventDetails,
+      compensationAndArrangements
     } = req.body;
-    console.log("🔎 Received speakerId (should be user._id):", speakerId);
-      // ✅ Parse timeSlot into start & end
-    // let startTime, endTime;
-    // if (typeof timeSlot === "string" && timeSlot.includes("-")) {
-    //   [startTime, endTime] = timeSlot.split("-");
-    // } else if (timeSlot?.start && timeSlot?.end) {
-    //   startTime = timeSlot.start;
-    //   endTime = timeSlot.end;
-    // } else {
-    //   return res.status(400).json({ success: false, message: "Invalid timeSlot format" });
-    // }
-     const [startTime, endTime] = (timeSlot || "").split("-").map(s => s.trim());
 
+    // Validate event details
+    if (
+      !eventDetails ||
+      !eventDetails.name ||
+      !eventDetails.type ||
+      !eventDetails.location ||
+      !eventDetails.expectedAttendees
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Event name, type, location, and expected attendees are required"
+      });
+    }
+
+    // Parse timeSlot
+    const [startTime, endTime] = (timeSlot || "").split("-").map(s => s.trim());
     if (!startTime || !endTime) {
       return res.status(400).json({
         success: false,
         message: "Invalid timeSlot. Please send in format 'HH:MM-HH:MM'"
       });
     }
-    console.log("Parsed slot:", { startTime, endTime });
 
-    // 1 Validate speaker exists
+    // Validate Speaker
     const speakerProfile = await EnhancedProfile.findOne({ user: speakerId });
-    console.log("🔎 Found speaker profile:", speakerProfile);
-
     if (!speakerProfile) {
       return res.status(404).json({ success: false, message: "Speaker not found" });
     }
 
-    // 2 Check if speaker has availability for that date and time
-   
+    // Check availability for selected date
+    const startOfDay = new Date(date);
+    startOfDay.setUTCHours(0, 0, 0, 0);
+    const endOfDay = new Date(date);
+    endOfDay.setUTCHours(23, 59, 59, 999);
 
-const selectedDate = new Date(date); // date from req.body
-const startOfDay = new Date(selectedDate);
-startOfDay.setUTCHours(0, 0, 0, 0);
-
-const endOfDay = new Date(selectedDate);
-endOfDay.setUTCHours(23, 59, 59, 999);
-
-console.log("Querying Availability for:", {
-  userId: speakerId,
-  startOfDay: new Date(date).setUTCHours(0,0,0,0),
-  endOfDay: new Date(date).setUTCHours(23,59,59,999)
-});
-
-const availability = await Availability.findOne({
-  userId: mongoose.Types.ObjectId.isValid(speakerId)
-    ? new mongoose.Types.ObjectId(speakerId)
-    : speakerId, // ✅ Handles both ObjectId and string
-  dates: {
-    $elemMatch: {
-      $gte: startOfDay,
-      $lte: endOfDay
-    }
-  }
-});
+    const availability = await Availability.findOne({
+      userId: new mongoose.Types.ObjectId(speakerId),
+      dates: { $elemMatch: { $gte: startOfDay, $lte: endOfDay } }
+    });
 
     if (!availability) {
       return res.status(404).json({
@@ -113,18 +107,10 @@ const availability = await Availability.findOne({
         message: "Speaker not available on selected date"
       });
     }
-    console.log("DEBUG: Stored slots =>", availability.timeSlots);
-console.log("DEBUG: Requested slot =>", startTime, endTime);
-console.log("Querying Availability for:", {
-  userId: speakerId,
-  date: startOfDay.toISOString(),
-  endDate: endOfDay.toISOString()
-});
 
-
-    // Check if the requested slot matches any stored slot
+    // Find the slot being booked
     const slotMatch = availability.timeSlots.find(
-      slot => slot.startTime === startTime && slot.endTime === endTime
+      slot => startTime >= slot.startTime && endTime <= slot.endTime
     );
 
     if (!slotMatch) {
@@ -133,59 +119,106 @@ console.log("Querying Availability for:", {
         message: "Selected date/time is not available for this speaker"
       });
     }
-    const count = await Booking.countDocuments(); 
+
+    // Validate compensation
+    if (!compensationAndArrangements || !compensationAndArrangements.primaryCompensation) {
+      return res.status(400).json({
+        success: false,
+        message: "Primary compensation is required"
+      });
+    }
+
+    const { primaryCompensation, travel, lodging, additionalArrangements } = compensationAndArrangements;
+
+    const parsedSpeakerFee = primaryCompensation.speakerFeeAmount
+      ? Number(primaryCompensation.speakerFeeAmount)
+      : 0;
+    const parsedHonorariumFee = primaryCompensation.honorariumFeeAmount
+      ? Number(primaryCompensation.honorariumFeeAmount)
+      : 0;
+
+    if (parsedSpeakerFee <= 0 && parsedHonorariumFee <= 0) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "At least one primary compensation (Speaker Fee or Honorarium Fee) is required"
+      });
+    }
+
+    // Create bookingId
+    const count = await Booking.countDocuments();
     const bookingId = `BK-${String(count + 1).padStart(5, "0")}`;
 
-    // let formattedTimeSlot;
-    // if (typeof timeSlot === "string") {
-    // formattedTimeSlot = timeSlot; // already a string like "10:00-12:00"
-    // } else if (timeSlot?.start && timeSlot?.end) {
-    //     formattedTimeSlot = `${timeSlot.start}-${timeSlot.end}`;
-    // } else {
-    //     formattedTimeSlot = "Not Provided";
-    // }
-
-    // 3️⃣ Create booking
+    // Create Booking
     const booking = new Booking({
-    bookingId,
-    organizer: organizerId,
-    speaker: speakerId,
-    date: new Date(date),
-    timeSlot: `${startTime}-${endTime}`,
-    eventDetails: {
-        name: eventName,
-        type: eventType,
-        location,
-        expectedAttendees
-      },
-    preferences: {
-        amount,
-        specialRequirement,
+      bookingId,
+      organizer: organizerId,
+      speaker: speakerId,
+      date: new Date(date),
+      timeSlot: `${startTime}-${endTime}`,
+      eventDetails: {
+        name: eventDetails.name,
+        type: eventDetails.type,
+        location: eventDetails.location,
+        expectedAttendees: eventDetails.expectedAttendees,
+        specialRequirement: eventDetails.specialRequirement || "",
         personalMessage
+      },
+      compensationAndArrangements: {
+        primaryCompensation: {
+          speakerFeeAmount: parsedSpeakerFee,
+          honorariumFeeAmount: parsedHonorariumFee
+        },
+        travel: {
+          travelMode: travel?.travelMode || "",
+          arrangements: travel?.arrangements || "",
+          offeredAmount: travel?.offeredAmount || 0
+        },
+        lodging: {
+          ...lodging,
+          checkInDate: lodging?.checkInDate ? new Date(lodging.checkInDate) : null,
+          checkOutDate: lodging?.checkOutDate ? new Date(lodging.checkOutDate) : null
+        },
+        additionalArrangements: additionalArrangements || {}
       }
     });
 
     await booking.save();
-       // 4️⃣ Remove booked timeSlot from availability
-    availability.timeSlots = availability.timeSlots.filter(
-      slot => !(slot.start === timeSlot.start && slot.end === timeSlot.end)
-    );
 
-    // If there are no more time slots, remove that date as well
-    if (availability.timeSlots.length === 0) {
-      availability.dates = availability.dates.filter(d => d !== date);
+    // --- Hybrid availability update logic (date + partial time split) ---
+    const bookedDateISO = startOfDay.toISOString();
+    const newTimeSlots = [];
+
+    for (let slot of availability.timeSlots) {
+      if (slot.startTime === slotMatch.startTime && slot.endTime === slotMatch.endTime) {
+        // Partial slot before booking
+        if (startTime > slot.startTime) {
+          newTimeSlots.push({ ...slot, endTime: startTime });
+        }
+        // Partial slot after booking
+        if (endTime < slot.endTime) {
+          newTimeSlots.push({ ...slot, startTime: endTime });
+        }
+      } else {
+        newTimeSlots.push(slot); // unaffected slots
+      }
     }
 
-    await availability.save();
+    availability.timeSlots = newTimeSlots;
 
-    console.log("Updated availability after booking:", availability);
+    // Remove booked date if no slots left
+    if (availability.timeSlots.length === 0) {
+      availability.dates = availability.dates.filter(d => d.toISOString() !== bookedDateISO);
+    }
+
+    // Save updated availability
+    await availability.save();
 
     return res.status(201).json({
       success: true,
       message: "Booking created successfully",
       booking
     });
-
   } catch (error) {
     console.error("Booking creation error:", error);
     return res.status(500).json({
@@ -195,6 +228,12 @@ console.log("Querying Availability for:", {
     });
   }
 };
+
+
+
+
+
+
 
 
 

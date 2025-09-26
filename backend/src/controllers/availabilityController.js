@@ -410,47 +410,34 @@ export const setAvailability = async (req, res, next) => {
       return res.status(400).json({ message: "At least one date is required" });
     }
 
-    // Prepare documents for each date
-    const availabilityDocuments = dates.map(dateStr => {
-      let date;
-      if (typeof dateStr === "string" && dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
-        const [year, month, day] = dateStr.split("-").map(Number);
-        date = new Date(Date.UTC(year, month - 1, day, 0, 0, 0)); // store as UTC
-      } else {
-        date = new Date(dateStr);
-      }
-
-      return {
-        userId,
-        date,
-        eventTypes,
-        modes,
-        timeSlots,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-    });
-
-    // Use bulkWrite to handle multiple documents efficiently
-    const bulkOps = availabilityDocuments.map(doc => ({
-      updateOne: {
-        filter: { userId: doc.userId, date: doc.date },
-        update: {
-          $set: {
-            eventTypes: doc.eventTypes,
-            modes: doc.modes,
-            timeSlots: doc.timeSlots,
-            updatedAt: doc.updatedAt
+    // Upsert (create/update) a single Availability entry for this speaker
+    const availability = await Availability.findOneAndUpdate(
+      { userId }, // ✅ ensures only this speaker's record is modified
+      {
+        $addToSet: {
+          dates: {
+            $each: dates.map(d => {
+              if (typeof d === "string" && d.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                const [year, month, day] = d.split("-").map(Number);
+                return new Date(Date.UTC(year, month - 1, day, 0, 0, 0)); // store as UTC
+              }
+              return new Date(d);
+            }),
           },
-          $setOnInsert: {
-            createdAt: doc.createdAt
-          }
         },
-        upsert: true
-      }
-    }));
-
-    const result = await Availability.bulkWrite(bulkOps);
+        $set: {
+          eventTypes,
+          modes,
+          timeSlots,
+          updatedAt: new Date(),
+        },
+        $setOnInsert: {
+          createdAt: new Date(),
+          userId,
+        },
+      },
+      { new: true, upsert: true }
+    );
 
     console.log("✅ Availability saved successfully:", {
       matched: result.matchedCount,
