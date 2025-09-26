@@ -28,8 +28,8 @@ interface Step4Props {
   onClose: () => void;
   onNext: () => void;
   onPrevious: () => void;
-  formData: FormData; // Add formData prop
-  onEdit: (step: number) => void; // Add edit handler
+  formData: FormData; 
+  onEdit: (step: number) => void; 
 }
 
 const Step4: React.FC<Step4Props> = ({ 
@@ -51,8 +51,6 @@ const Step4: React.FC<Step4Props> = ({
   };
 
   const handleEdit = () => {
-    // You might want to specify which step to edit
-    // For now, going back to step 1
     onEdit(1);
   };
 
@@ -120,22 +118,18 @@ const Step4: React.FC<Step4Props> = ({
                 </div>
                 <span className="mt-2 text-sm font-medium text-gray-900 text-center whitespace-nowrap">Event Details</span>
               </div>
-              
-              {/* Line 2 - Orange since step 2 is completed */}
+
               <div className="w-16 h-px bg-[#FF6B35] mx-4"></div>
-              
-              {/* Step 3 - Compensation & Arrangements (completed) */}
+
               <div className="flex flex-col items-center">
                 <div className="w-8 h-8 bg-[#FF6B35] text-white rounded-full flex items-center justify-center text-sm font-medium">
                   3
                 </div>
                 <span className="mt-2 text-sm font-medium text-gray-900 text-center whitespace-nowrap">Compensation & Arrangements</span>
               </div>
-              
-              {/* Line 3 - Orange since step 3 is completed */}
+
               <div className="w-16 h-px bg-[#FF6B35] mx-4"></div>
-              
-              {/* Step 4 - Review & Send (current) */}
+  
               <div className="flex flex-col items-center">
                 <div className="w-8 h-8 bg-[#FF6B35] text-white rounded-full flex items-center justify-center text-sm font-medium">
                   4
