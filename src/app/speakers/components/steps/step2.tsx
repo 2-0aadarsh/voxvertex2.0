@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useGetSpeakerAvailabilityForBookingQuery } from '@/store/slices/bookingSlice';
 
 interface FormData {
   eventName: string;
@@ -24,13 +25,32 @@ interface Step2Props {
   onPrevious?: () => void;
   formData: FormData;
   updateFormData: (data: Partial<FormData>) => void;
+  speakerId?: string;
 }
 
-const Step2: React.FC<Step2Props> = ({ isVisible, onClose, onNext, formData, updateFormData }) => {
+const Step2: React.FC<Step2Props> = ({ isVisible, onClose, onNext, formData, updateFormData, speakerId }) => {
   const [selectedDate, setSelectedDate] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [currentMonth, setCurrentMonth] = useState(new Date());
+
+  // Debug logging
+  console.log('🔍 Step2 Debug:', {
+    speakerId,
+    isVisible,
+    skipCondition: !speakerId || !isVisible,
+    willSkip: !speakerId || !isVisible
+  });
+
+  // Fetch speaker availability
+  const {
+    data: availabilityData,
+    isLoading: isLoadingAvailability,
+    error: availabilityError,
+  } = useGetSpeakerAvailabilityForBookingQuery(
+    { speakerId: speakerId || '' },
+    { skip: !speakerId || !isVisible }
+  );
 
   // Sync with formData when component mounts or when editing
   useEffect(() => {
@@ -50,6 +70,24 @@ const Step2: React.FC<Step2Props> = ({ isVisible, onClose, onNext, formData, upd
   };
 
   const handleNext = () => {
+    // Validation
+    if (!selectedDate) {
+      alert('Please select an available date');
+      return;
+    }
+    if (!startTime) {
+      alert('Please select a start time');
+      return;
+    }
+    if (!endTime) {
+      alert('Please select an end time');
+      return;
+    }
+    if (startTime >= endTime) {
+      alert('End time must be after start time');
+      return;
+    }
+
     const duration = calculateDuration(startTime, endTime);
     
     // Save data to parent state
@@ -101,8 +139,21 @@ const Step2: React.FC<Step2Props> = ({ isVisible, onClose, onNext, formData, upd
     return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   };
 
+  // Check if a date is available
+  const isDateAvailable = (day: number): boolean => {
+    if (!availabilityData?.data?.dates) return false;
+    
+    const dateString = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const date = new Date(dateString);
+    
+    return availabilityData.data.dates.some(availableDate => {
+      const availableDateObj = new Date(availableDate);
+      return availableDateObj.toDateString() === date.toDateString();
+    });
+  };
+
   const handleDateSelect = (day: number) => {
-    if (day) {
+    if (day && isDateAvailable(day)) {
       const dateString = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       setSelectedDate(dateString);
     }
@@ -182,6 +233,36 @@ const Step2: React.FC<Step2Props> = ({ isVisible, onClose, onNext, formData, upd
             <p className="text-gray-600 text-sm">Choose when you need them</p>
           </div>
 
+          {/* Speaker Availability Status
+          {speakerId && (
+            <div className="mb-6">
+              {isLoadingAvailability ? (
+                <div className="flex items-center justify-center py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#FF6B35]"></div>
+                  <span className="ml-3 text-gray-600 text-sm">Loading speaker availability...</span>
+                </div>
+              ) : availabilityError ? (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                  <p className="text-red-600 text-sm">
+                    Unable to load speaker availability. Please try again.
+                  </p>
+                </div>
+              ) : availabilityData?.data ? (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <p className="text-green-700 text-sm">
+                    ✅ Speaker has {availabilityData.data.count} available date(s)
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                  <p className="text-yellow-700 text-sm">
+                    ⚠️ This speaker hasn&apos;t set their availability yet.
+                  </p>
+                </div>
+              )}
+            </div>
+          )} */}
+
           {/* Form Fields */}
           <div className="space-y-6">
             {/* Select Date */}
@@ -223,24 +304,31 @@ const Step2: React.FC<Step2Props> = ({ isVisible, onClose, onNext, formData, upd
 
                   {/* Calendar Days */}
                   <div className="grid grid-cols-7 gap-1">
-                    {days.map((day, index) => (
-                      <button
-                        key={index}
-                        onClick={() => day !== null && handleDateSelect(day)}
-                        disabled={!day}
-                        className={`
-                          text-center text-sm p-2 rounded transition-colors
-                          ${!day ? 'invisible' : ''}
-                          ${day && selectedDate.endsWith(String(day).padStart(2, '0'))
-                            ? 'bg-[#FF6B35] text-white' 
-                            : 'hover:bg-gray-100 text-gray-700'
-                          }
-                          ${day === 7 || day === 22 ? 'bg-green-100 text-green-600' : ''}
-                        `}
-                      >
-                        {day}
-                      </button>
-                    ))}
+                    {days.map((day, index) => {
+                      const isAvailable = day ? isDateAvailable(day) : false;
+                      const isSelected = day && selectedDate.endsWith(String(day).padStart(2, '0'));
+                      
+                      return (
+                        <button
+                          key={index}
+                          onClick={() => day !== null && handleDateSelect(day)}
+                          disabled={!day || !isAvailable}
+                          className={`
+                            text-center text-sm p-2 rounded transition-colors
+                            ${!day ? 'invisible' : ''}
+                            ${isSelected
+                              ? 'bg-[#FF6B35] text-white' 
+                              : isAvailable
+                                ? 'bg-green-100 text-green-700 hover:bg-green-200 cursor-pointer'
+                                : 'text-gray-400 cursor-not-allowed'
+                            }
+                          `}
+                          title={day && !isAvailable ? 'Not available' : ''}
+                        >
+                          {day}
+                        </button>
+                      );
+                    })}
                   </div>
 
                   {/* Calendar Footer */}

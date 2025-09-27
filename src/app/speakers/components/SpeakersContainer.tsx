@@ -9,12 +9,8 @@ import { useAppSelector, useAppDispatch } from '@/store/hooks';
 import {
   useGetSpeakersQuery,
   useSearchSpeakersQuery,
-  useGetSpeakerSuggestionsQuery,
-  useGetAvailableEventTypesQuery,
-  selectSpeakers,
+  useSearchSpeakersWithFiltersQuery,
   selectSpeakersFilters,
-  selectSpeakersLoading,
-  selectSpeakersError,
   setFilters,
   clearFilters,
 } from '@/store/slices/speakersSlice';
@@ -65,9 +61,12 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
   }, [debouncedSearchQuery, filters.searchQuery, dispatch]);
   
   // Determine which query to use
+  const hasActiveSearch = useMemo(() => {
+    return !!(debouncedSearchQuery && debouncedSearchQuery.trim().length > 0);
+  }, [debouncedSearchQuery]);
+
   const hasActiveFilters = useMemo(() => {
     return !!(
-      debouncedSearchQuery ||
       filters.location ||
       filters.expertise?.length ||
       filters.yearsOfExperience ||
@@ -75,7 +74,7 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
       filters.eventTypes?.length ||
       (filters.priceRange.min > 0 || filters.priceRange.max < 10000)
     );
-  }, [debouncedSearchQuery, filters]);
+  }, [filters]);
   
   // API queries
   const {
@@ -84,20 +83,34 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
     error: basicError,
   } = useGetSpeakersQuery(
     { page: 1, limit: 12 },
-    { skip: hasActiveFilters } // Only fetch if no filters
+    { skip: hasActiveSearch } // Only fetch if no search
   );
   
+  const {
+    data: searchSpeakersData,
+    isLoading: isLoadingSearch,
+    error: searchError,
+  } = useSearchSpeakersQuery(
+    {
+      q: debouncedSearchQuery,
+      page: 1,
+      limit: 12,
+    },
+    { skip: !hasActiveSearch } // Only fetch if search is active
+  );
+
   const {
     data: filteredSpeakersData,
     isLoading: isLoadingFiltered,
     error: filteredError,
-  } = useSearchSpeakersQuery(
+  } = useSearchSpeakersWithFiltersQuery(
     {
       q: debouncedSearchQuery,
       page: 1,
       limit: 12,
       location: filters.location,
       expertise: filters.expertise,
+      topics: filters.topics, // Backend expects 'topics' for industry categories
       yearsOfExperience: filters.yearsOfExperience,
       availabilityDate: filters.availabilityDate,
       eventTypes: filters.eventTypes,
@@ -116,16 +129,16 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
   //   { skip: debouncedSearchQuery.length < 2 }
   // );
   
-  // Get available event types for filters
-  const {
-    data: eventTypesData,
-    isLoading: isLoadingEventTypes,
-  } = useGetAvailableEventTypesQuery();
+  // Get available event types for filters (commented out for now)
+  // const {
+  //   data: eventTypesData,
+  //   isLoading: isLoadingEventTypes,
+  // } = useGetAvailableEventTypesQuery();
   
   // Determine which data to use
-  const currentData = hasActiveFilters ? filteredSpeakersData : basicSpeakersData;
-  const currentLoading = hasActiveFilters ? isLoadingFiltered : isLoadingBasic;
-  const currentError = hasActiveFilters ? filteredError : basicError;
+  const currentData = hasActiveFilters ? filteredSpeakersData : (hasActiveSearch ? searchSpeakersData : basicSpeakersData);
+  const currentLoading = hasActiveFilters ? isLoadingFiltered : (hasActiveSearch ? isLoadingSearch : isLoadingBasic);
+  const currentError = hasActiveFilters ? filteredError : (hasActiveSearch ? searchError : basicError);
   
   // Process speakers data with enhanced details
   const processedSpeakers = useMemo(() => {
@@ -157,12 +170,8 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
       const activities = roleSpecificData?.activities || [];
       const socialLinks = roleSpecificData?.socialLinks;
 
-      // Create comprehensive tags array from all available sources
-      const tags = [
-        ...(areaOfExpertise || []),
-        ...(activities || []),
-        ...(industry ? [industry] : [])
-      ].filter((tag, index, arr) => arr.indexOf(tag) === index); // Remove duplicates
+      // Create tags array from areaOfExpertise only
+      const tags = areaOfExpertise || [];
 
       // Create specializations from areaOfExpertise and activities
       const specializations = [
@@ -182,7 +191,7 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
       };
 
       return {
-        id: _id,
+        _id: _id,  // ✅ Fixed: Use _id instead of id
         name: fullName,
         title: professionalTitle || 'Speaker',
         rating: rating,
@@ -210,7 +219,7 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
         availability: availability,
         
         // Raw speaker data for detailed view
-        rawData: speaker
+        rawData: speaker as unknown as Record<string, unknown>
       };
     });
   }, [currentData]);
@@ -235,15 +244,15 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
     }
   }, [processedSpeakers, sortBy]);
   
-  // Handle filter changes
-  const handleFilterChange = (newFilters: Partial<typeof filters>) => {
-    dispatch(setFilters(newFilters));
-  };
+  // Handle filter changes (commented out for now)
+  // const handleFilterChange = (newFilters: Partial<typeof filters>) => {
+  //   dispatch(setFilters(newFilters));
+  // };
   
-  const handleClearFilters = () => {
-    dispatch(clearFilters());
-    setSearchQuery('');
-  };
+  // const handleClearFilters = () => {
+  //   dispatch(clearFilters());
+  //   setSearchQuery('');
+  // };
   
   // Loading state
   if (currentLoading && processedSpeakers.length === 0) {
@@ -265,7 +274,7 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
         </div>
         <h3 className="text-lg font-medium text-gray-900 mb-2">Error loading speakers</h3>
         <p className="text-gray-600 mb-4">
-          {currentError?.message || 'Something went wrong while fetching speakers.'}
+          {'Something went wrong while fetching speakers.'}
         </p>
         <button
           onClick={() => window.location.reload()}
@@ -287,12 +296,14 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 mb-2">
-              {hasActiveFilters ? `Search Results` : 'Speaker Marketplace'}
+              {hasActiveFilters ? `Filtered Results` : hasActiveSearch ? `Search Results` : 'Speaker Marketplace'}
             </h1>
             <p className="text-gray-600">
               {hasActiveFilters 
-                ? `Found ${processedSpeakers.length} speaker(s) matching your criteria`
-                : 'Discover and book expert speakers for your events'
+                ? `Found ${processedSpeakers.length} speaker(s) matching your filters`
+                : hasActiveSearch 
+                  ? `Found ${processedSpeakers.length} speaker(s) matching "${debouncedSearchQuery}"`
+                  : 'Discover and book expert speakers for your events'
               }
             </p>
           </div>
@@ -338,10 +349,13 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
               Filters
             </button>
             
-            {/* Clear Filters */}
-            {hasActiveFilters && (
+            {/* Clear Filters/Search */}
+            {(hasActiveFilters || hasActiveSearch) && (
               <button
-                onClick={handleClearFilters}
+                onClick={() => {
+                  setSearchQuery('');
+                  dispatch(clearFilters());
+                }}
                 className="text-gray-600 hover:text-gray-800 text-sm"
               >
                 Clear all
@@ -376,12 +390,7 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
       <div className={`flex gap-8 ${showFilters ? '' : 'justify-center'}`}>
         {/* Filters Sidebar */}
         {showFilters && (
-          <FiltersSidebar 
-            filters={filters}
-            onFilterChange={handleFilterChange}
-            availableEventTypes={eventTypesData?.data || []}
-            isLoadingEventTypes={isLoadingEventTypes}
-          />
+          <FiltersSidebar />
         )}
         
         {/* Speaker Grid */}
@@ -396,16 +405,21 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
               <h3 className="text-lg font-medium text-gray-900 mb-2">No speakers found</h3>
               <p className="text-gray-600 mb-4">
                 {hasActiveFilters 
-                  ? 'Try adjusting your search criteria or filters.'
-                  : 'No speakers are currently available.'
+                  ? 'No speakers found matching your filters. Try adjusting your criteria.'
+                  : hasActiveSearch 
+                    ? `No speakers found for "${debouncedSearchQuery}". Try different keywords.`
+                    : 'No speakers are currently available.'
                 }
               </p>
-              {hasActiveFilters && (
+              {(hasActiveFilters || hasActiveSearch) && (
                 <button
-                  onClick={handleClearFilters}
+                  onClick={() => {
+                    setSearchQuery('');
+                    dispatch(clearFilters());
+                  }}
                   className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors"
                 >
-                  Clear Filters
+                  Clear All
                 </button>
               )}
             </div>
@@ -413,7 +427,7 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
             <div className={`grid gap-4 ${showFilters ? 'grid-cols-2' : 'grid-cols-3 max-w-6xl mx-auto'}`}>
               {sortedSpeakers.map((speaker) => (
                 <SpeakerCard 
-                  key={speaker.id} 
+                  key={speaker._id} 
                   speaker={speaker} 
                   isCompact={showFilters}
                 />

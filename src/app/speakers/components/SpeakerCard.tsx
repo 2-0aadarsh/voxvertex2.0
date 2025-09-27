@@ -12,23 +12,38 @@ import Step1 from './steps/step1';
 import Step2 from './steps/step2';
 import Step3 from './steps/step3';
 import Step4 from './steps/step4';
+import { Speaker } from '@/store/types';
 
-interface Speaker {
-  id: number;
+// Extended Speaker interface for display purposes
+interface DisplaySpeaker extends Omit<Speaker, 'availability'> {
   name: string;
   title: string;
   rating: number;
   bookings: number;
-  location: string;
   price: number;
+  priceRange: {
+    min: number;
+    max: number;
+    currency: string;
+  };
   tags: string[];
+  specializations: string[];
   specialization: string;
   avatar?: string;
-  bio?: string;
+  industry?: string;
+  activities?: string[];
+  socialLinks?: Record<string, string>;
+  availability?: {
+    dates: string[];
+    eventTypes: any[];
+    modes: string[];
+    timeSlots: any[];
+  };
+  rawData?: Record<string, unknown>;
 }
 
 interface SpeakerCardProps {
-  speaker: Speaker;
+  speaker: DisplaySpeaker;
   isCompact?: boolean;
 }
 
@@ -141,17 +156,7 @@ const TagCard: React.FC<{
   );
 };
 
-const SpeakerCard: React.FC<SpeakerCardProps> = ({ speaker = {
-  id: 1,
-  name: "Sample Speaker",
-  title: "Expert Speaker",
-  rating: 4.8,
-  bookings: 25,
-  location: "New York, NY",
-  price: 5000,
-  tags: ["Technology", "Innovation"],
-  specialization: "Technology"
-}, isCompact = false }) => {
+const SpeakerCard: React.FC<SpeakerCardProps> = ({ speaker, isCompact = false }) => {
   const [isTagCardVisible, setIsTagCardVisible] = useState(false);
   const [isBookingModalVisible, setIsBookingModalVisible] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
@@ -177,6 +182,12 @@ const SpeakerCard: React.FC<SpeakerCardProps> = ({ speaker = {
     specialRequests: '',
     topics: []
   });
+
+  // Ensure speaker prop is provided
+  if (!speaker) {
+    console.error('SpeakerCard: speaker prop is required');
+    return null;
+  }
 
   const handleBookmarkClick = () => {
     setIsTagCardVisible(!isTagCardVisible);
@@ -300,29 +311,19 @@ const SpeakerCard: React.FC<SpeakerCardProps> = ({ speaker = {
           {/* Tags */}
           <div className="mb-8">
             <div className="flex flex-wrap gap-2">
-              {speaker.tags && speaker.tags.length > 0 ? (
-                speaker.tags.slice(0, 3).map((tag, index) => (
-                  <span key={index} className="border border-orange-300 text-orange-600 px-3 py-1 rounded-full text-xs">
-                    {tag}
-                  </span>
-                ))
-              ) : (
+              {speaker.tags && speaker.tags.length > 0 && (
                 <>
-                  <span className="border border-orange-300 text-orange-600 px-3 py-1 rounded-full text-xs">
-                    Conferences & Summits
-                  </span>
-                  <span className="border border-orange-300 text-orange-600 px-3 py-1 rounded-full text-xs">
-                    Seminars
-                  </span>
-                  <span className="border border-orange-300 text-orange-600 px-3 py-1 rounded-full text-xs">
-                    Keynote Speeches
-                  </span>
+                  {speaker.tags.slice(0, 3).map((tag, index) => (
+                    <span key={index} className="border border-orange-300 text-orange-600 px-3 py-1 rounded-full text-xs">
+                      {tag}
+                    </span>
+                  ))}
+                  {speaker.tags.length > 3 && (
+                    <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs">
+                      +{speaker.tags.length - 3} more
+                    </span>
+                  )}
                 </>
-              )}
-              {speaker.tags && speaker.tags.length > 3 && (
-                <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs">
-                  +{speaker.tags.length - 3} more
-                </span>
               )}
             </div>
           </div>
@@ -350,6 +351,7 @@ const SpeakerCard: React.FC<SpeakerCardProps> = ({ speaker = {
           onPrevious={handlePreviousStep}
           formData={formData}
           updateFormData={updateFormData}
+          speakerId={speaker._id}
         />
         <Step1
           isVisible={isBookingModalVisible && currentStep === 2}
@@ -370,10 +372,12 @@ const SpeakerCard: React.FC<SpeakerCardProps> = ({ speaker = {
         <Step4
           isVisible={isBookingModalVisible && currentStep === 4}
           onClose={handleCloseBookingModal}
-          onNext={handleNextStep}
           onPrevious={handlePreviousStep}
           formData={formData}
           onEdit={handleEdit}
+          speakerId={speaker._id}
+          speakerName={speaker.name}
+          speakerExpertise={speaker.areaOfExpertise || []}
         />
       </>
     );
@@ -437,29 +441,19 @@ const SpeakerCard: React.FC<SpeakerCardProps> = ({ speaker = {
         {/* Tags Sec */}
         <div className="mb-14">
           <div className="flex flex-wrap gap-1">
-            {speaker.tags && speaker.tags.length > 0 ? (
-              speaker.tags.slice(0, 3).map((tag, index) => (
-                <span key={index} className="border border-orange-300 text-orange-600 px-2 py-0.5 rounded-full text-xs">
-                  {tag}
-                </span>
-              ))
-            ) : (
+            {speaker.tags && speaker.tags.length > 0 && (
               <>
-                <span className="border border-orange-300 text-orange-600 px-2 py-0.5 rounded-full text-xs">
-                  Conferences & Summits
-                </span>
-                <span className="border border-orange-300 text-orange-600 px-2 py-0.5 rounded-full text-xs">
-                  Seminars
-                </span>
-                <span className="border border-orange-300 text-orange-600 px-2 py-0.5 rounded-full text-xs">
-                  Keynote Speeches
-                </span>
+                {speaker.tags.slice(0, 3).map((tag, index) => (
+                  <span key={index} className="border border-orange-300 text-orange-600 px-2 py-0.5 rounded-full text-xs">
+                    {tag}
+                  </span>
+                ))}
+                {speaker.tags.length > 3 && (
+                  <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-xs">
+                    +{speaker.tags.length - 3} more
+                  </span>
+                )}
               </>
-            )}
-            {speaker.tags && speaker.tags.length > 3 && (
-              <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-xs">
-                +{speaker.tags.length - 3} more
-              </span>
             )}
           </div>
         </div>
@@ -487,6 +481,7 @@ const SpeakerCard: React.FC<SpeakerCardProps> = ({ speaker = {
         onPrevious={handlePreviousStep}
         formData={formData}
         updateFormData={updateFormData}
+        speakerId={speaker._id}
       />
       <Step1
         isVisible={isBookingModalVisible && currentStep === 2}
@@ -507,10 +502,12 @@ const SpeakerCard: React.FC<SpeakerCardProps> = ({ speaker = {
       <Step4
         isVisible={isBookingModalVisible && currentStep === 4}
         onClose={handleCloseBookingModal}
-        onNext={handleNextStep}
         onPrevious={handlePreviousStep}
         formData={formData}
         onEdit={handleEdit}
+        speakerId={speaker._id}
+        speakerName={speaker.name}
+        speakerExpertise={speaker.areaOfExpertise || []}
       />
     </>
   );

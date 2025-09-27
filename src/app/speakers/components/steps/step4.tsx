@@ -1,5 +1,20 @@
-import React from 'react';
-import { X, Edit } from 'lucide-react';
+import React, { useState } from 'react';
+import { 
+  X, 
+  Edit, 
+  MapPin, 
+  Users, 
+  Clock, 
+  Calendar, 
+  DollarSign, 
+  Car,
+  CheckCircle,
+  XCircle,
+  MessageCircle,
+  Loader2
+} from 'lucide-react';
+import { useSelector } from 'react-redux';
+import { selectUser } from '@/store/slices/authSlice';
 
 // Define the data structure for form data
 interface FormData {
@@ -26,24 +41,105 @@ interface FormData {
 interface Step4Props {
   isVisible: boolean;
   onClose: () => void;
-  onNext: () => void;
   onPrevious: () => void;
   formData: FormData; 
-  onEdit: (step: number) => void; 
+  onEdit: (step: number) => void;
+  speakerName?: string;
+  speakerExpertise?: string[];
+  speakerId?: string;
 }
 
 const Step4: React.FC<Step4Props> = ({ 
   isVisible, 
   onClose, 
-  onNext, 
   onPrevious, 
   formData,
-  onEdit 
+  onEdit,
+  speakerName = 'Speaker',
+  speakerExpertise = ['Expertise'],
+  speakerId
 }) => {
-  const handleSubmit = () => {
-    // Handle form submission with formData
-    console.log('Submitting booking:', formData);
-    onNext();
+  const currentUser = useSelector(selectUser);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const handleSubmit = async () => {
+    if (!speakerId) {
+      setSubmitError('Speaker ID is required');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+      const response = await fetch(`${API_BASE_URL}/book-speaker`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', // Include cookies for authentication
+        body: JSON.stringify({
+          speakerId,
+          date: formData.date,
+          startTime: formData.startTime,
+          endTime: formData.endTime,
+          eventName: formData.eventName,
+          eventType: formData.eventType,
+          location: formData.location,
+          attendees: formData.attendees,
+          description: formData.description,
+          offerAmount: formData.offerAmount,
+          currency: formData.currency === '$' ? 'USD' : formData.currency === '₹' ? 'INR' : formData.currency || 'USD',
+          specialRequests: formData.specialRequests,
+          personalMessage: message.greeting + '\n\n' + message.introduction + '\n\n' + 
+            'SPEAKING OPPORTUNITY DETAILS:\n' +
+            `📍 Event: ${message.eventDetails.event}\n` +
+            `📍 Location: ${message.eventDetails.location}\n` +
+            `👥 Audience: ${message.eventDetails.audience}\n` +
+            `⏰ Duration: ${message.eventDetails.duration}\n` +
+            `📅 Date: ${message.eventDetails.date}\n` +
+            `🕐 Time: ${message.eventDetails.time}\n` +
+            `💰 Compensation: ${message.eventDetails.compensation}\n` +
+            `🚗 Special Arrangements: ${message.eventDetails.specialArrangements}\n\n` +
+            'WHAT WE OFFER:\n' +
+            '• Professional speaking fee/honorarium as outlined\n' +
+            '• Travel and accommodation arrangements (if applicable)\n' +
+            '• Professional event production and support\n' +
+            '• Networking opportunities with industry leaders\n' +
+            '• Post-event content and marketing materials\n\n' +
+            'We believe your insights would provide tremendous value to our audience, and we would be honored to have you as our speaker.\n\n' +
+            'Please review the detailed proposal below and let me know if you would like to:\n' +
+            '✅ ACCEPT - Confirm your participation\n' +
+            '❌ DECLINE - Politely decline this opportunity\n' +
+            '🤝 NEGOTIATE - Discuss modifications to the proposal\n\n' +
+            'Looking forward to your response!\n\n' +
+            message.closing.regards + '\n' +
+            message.closing.name
+        })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Failed to send booking request');
+      }
+
+      console.log('Booking request sent successfully:', result);
+      
+      // Close modal and show success
+      onClose();
+      
+      // You can add a success notification here
+      alert('Booking request sent successfully! The speaker will receive a message with your proposal.');
+
+    } catch (error) {
+      console.error('Error sending booking request:', error);
+      setSubmitError(error instanceof Error ? error.message : 'Failed to send booking request');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handlePrevious = () => {
@@ -79,6 +175,43 @@ const Step4: React.FC<Step4Props> = ({
     }
     return `${mins} minutes`;
   };
+
+  // Generate dynamic personal message
+  const generatePersonalMessage = () => {
+    const organizerName = currentUser ? `${currentUser.firstName} ${currentUser.lastName}`.trim() : 'Organizer';
+    const expertiseText = speakerExpertise.length > 0 ? speakerExpertise.join(', ') : 'your field of expertise';
+    const eventDate = formData.date ? new Date(formData.date).toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    }) : 'TBD';
+    
+    return {
+      greeting: `Dear ${speakerName},`,
+      introduction: `I hope this message finds you well. I am reaching out to invite you to speak at our upcoming "${formData.eventName || 'event'}" ${formData.eventType?.toLowerCase() || 'event'} based on your exceptional expertise in ${expertiseText}.`,
+      eventDetails: {
+        event: formData.eventName || 'Event',
+        location: formData.location || 'Location',
+        audience: `${formData.attendees || 0} attendees`,
+        duration: formData.duration ? formatDuration(formData.duration) : 'TBD',
+        date: eventDate,
+        time: formData.startTime && formData.endTime 
+          ? `${formatTime(formData.startTime)} - ${formatTime(formData.endTime)}`
+          : 'TBD',
+        compensation: formData.offerAmount 
+          ? `${formData.currency || '$'}${formData.offerAmount.toLocaleString()}`
+          : 'TBD',
+        specialArrangements: formData.specialRequests || 'None specified'
+      },
+      closing: {
+        regards: 'Best regards,',
+        name: organizerName,
+        note: `*This message will be sent to ${speakerName} along with your booking proposal.`
+      }
+    };
+  };
+
+  const message = generatePersonalMessage();
 
   if (!isVisible) return null;
 
@@ -216,40 +349,58 @@ const Step4: React.FC<Step4Props> = ({
             </div>
           </div>
 
+          {/* Error Message */}
+          {submitError && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-600">{submitError}</p>
+            </div>
+          )}
+
           {/* Personal Message */}
           <div className="mb-6">
             <h4 className="text-lg font-medium text-[#FF6B35] mb-4">Personal Message</h4>
             <div className="bg-gray-50 border border-[#FF6B35] rounded-lg p-4">
               <p className="text-sm text-gray-900 mb-4">
-                Dear Dr. Jane Doe,
+                {message.greeting}
               </p>
               <p className="text-sm text-gray-900 mb-4">
-                I hope this message finds you well. I am reaching out to invite you to speak at our upcoming event 
-                based on your exceptional expertise in AI and Healthcare.
+                {message.introduction}
               </p>
               <p className="text-sm text-gray-900 mb-4 font-medium">
                 SPEAKING OPPORTUNITY DETAILS:
               </p>
               <div className="text-sm text-gray-900 mb-4 space-y-1">
                 <div className="flex items-start">
-                  <span className="text-red-500 mr-2">📍</span>
-                  <span><strong>Event:</strong> [Event name will be filled from your details]</span>
+                  <MapPin className="w-4 h-4 text-[#FF6B35] mr-2 mt-0.5 flex-shrink-0" />
+                  <span><strong>Event:</strong> {message.eventDetails.event}</span>
                 </div>
                 <div className="flex items-start">
-                  <span className="text-red-500 mr-2">📍</span>
-                  <span><strong>Location:</strong> [Location will be filled from your details]</span>
+                  <MapPin className="w-4 h-4 text-[#FF6B35] mr-2 mt-0.5 flex-shrink-0" />
+                  <span><strong>Location:</strong> {message.eventDetails.location}</span>
                 </div>
                 <div className="flex items-start">
-                  <span className="text-red-500 mr-2">👥</span>
-                  <span><strong>Audience:</strong> [Expected attendees will be filled from your details]</span>
+                  <Users className="w-4 h-4 text-[#FF6B35] mr-2 mt-0.5 flex-shrink-0" />
+                  <span><strong>Audience:</strong> {message.eventDetails.audience}</span>
                 </div>
                 <div className="flex items-start">
-                  <span className="text-green-500 mr-2">⏰</span>
-                  <span><strong>Duration:</strong> [Session duration will be filled from your details]</span>
+                  <Clock className="w-4 h-4 text-[#FF6B35] mr-2 mt-0.5 flex-shrink-0" />
+                  <span><strong>Duration:</strong> {message.eventDetails.duration}</span>
                 </div>
                 <div className="flex items-start">
-                  <span className="text-yellow-500 mr-2">💰</span>
-                  <span><strong>Compensation:</strong> [Compensation details will be filled from your details]</span>
+                  <Calendar className="w-4 h-4 text-[#FF6B35] mr-2 mt-0.5 flex-shrink-0" />
+                  <span><strong>Date:</strong> {message.eventDetails.date}</span>
+                </div>
+                <div className="flex items-start">
+                  <Clock className="w-4 h-4 text-[#FF6B35] mr-2 mt-0.5 flex-shrink-0" />
+                  <span><strong>Time:</strong> {message.eventDetails.time}</span>
+                </div>
+                <div className="flex items-start">
+                  <DollarSign className="w-4 h-4 text-[#FF6B35] mr-2 mt-0.5 flex-shrink-0" />
+                  <span><strong>Compensation:</strong> {message.eventDetails.compensation}</span>
+                </div>
+                <div className="flex items-start">
+                  <Car className="w-4 h-4 text-[#FF6B35] mr-2 mt-0.5 flex-shrink-0" />
+                  <span><strong>Special Arrangements:</strong> {message.eventDetails.specialArrangements}</span>
                 </div>
               </div>
               <p className="text-sm text-gray-900 mb-4 font-medium">
@@ -271,15 +422,15 @@ const Step4: React.FC<Step4Props> = ({
               </p>
               <div className="text-sm text-gray-900 mb-4 space-y-1">
                 <div className="flex items-center">
-                  <span className="text-green-500 mr-2">✅</span>
+                  <CheckCircle className="w-4 h-4 text-green-500 mr-2 flex-shrink-0" />
                   <span><strong>ACCEPT</strong> - Confirm your participation</span>
                 </div>
                 <div className="flex items-center">
-                  <span className="text-red-500 mr-2">❌</span>
+                  <XCircle className="w-4 h-4 text-red-500 mr-2 flex-shrink-0" />
                   <span><strong>DECLINE</strong> - Politely decline this opportunity</span>
                 </div>
                 <div className="flex items-center">
-                  <span className="text-blue-500 mr-2">💬</span>
+                  <MessageCircle className="w-4 h-4 text-blue-500 mr-2 flex-shrink-0" />
                   <span><strong>NEGOTIATE</strong> - Discuss modifications to the proposal</span>
                 </div>
               </div>
@@ -287,13 +438,13 @@ const Step4: React.FC<Step4Props> = ({
                 Looking forward to your response!
               </p>
               <p className="text-sm text-gray-900 mb-2">
-                Best regards,
+                {message.closing.regards}
               </p>
               <p className="text-sm text-gray-900 mb-4">
-                [Your name will be added automatically]
+                {message.closing.name}
               </p>
               <p className="text-xs text-gray-500 italic">
-                *This message will be sent to Dr. Jane Doe along with your booking proposal.
+                {message.closing.note}
               </p>
             </div>
           </div>
@@ -309,9 +460,17 @@ const Step4: React.FC<Step4Props> = ({
           </button>
           <button
             onClick={handleSubmit}
-            className="px-6 py-2 bg-[#FF6B35] text-white rounded-lg hover:bg-[#FF6B35]/80 transition-colors font-medium"
+            disabled={isSubmitting}
+            className="px-6 py-2 bg-[#FF6B35] text-white rounded-lg hover:bg-[#FF6B35]/80 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
-            Send Booking Request
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Sending...
+              </>
+            ) : (
+              'Send Booking Request'
+            )}
           </button>
         </div>
       </div>

@@ -5,6 +5,8 @@ import {
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
+import { useAppDispatch } from '@/store/hooks';
+import { setFilters, clearFilters } from '@/store/slices/speakersSlice';
 
 interface SubCategory {
   id: string;
@@ -277,6 +279,10 @@ const categories: Category[] = [
 ];
 
 const FiltersSidebar: React.FC = () => {
+  const dispatch = useAppDispatch();
+  // const filters = useAppSelector(selectSpeakersFilters); // Not needed for local state approach
+  
+  // Local state for pending filter changes (not applied until button click)
   const [searchKeywords, setSearchKeywords] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
   const [identityVerified, setIdentityVerified] = useState(false);
@@ -286,6 +292,8 @@ const FiltersSidebar: React.FC = () => {
   const [selectedExpertise, setSelectedExpertise] = useState('');
   const [yearsOfExperience, setYearsOfExperience] = useState(0);
   const [deliveryMode, setDeliveryMode] = useState('');
+  const [minFee, setMinFee] = useState(0);
+  const [maxFee, setMaxFee] = useState(10000);
 
   const clearAllFilters = () => {
     setSearchKeywords('');
@@ -297,6 +305,36 @@ const FiltersSidebar: React.FC = () => {
     setSelectedExpertise('');
     setYearsOfExperience(0);
     setDeliveryMode('');
+    setMinFee(0);
+    setMaxFee(10000);
+    dispatch(clearFilters());
+  };
+
+  const applyFilters = () => {
+    // Get the actual names instead of IDs
+    const selectedCategory = categories.find(cat => cat.id === selectedTopic);
+    const selectedExpertiseCategory = selectedCategory?.subcategories.find(sub => sub.id === selectedExpertise);
+    
+    const newFilters = {
+      searchQuery: searchKeywords,
+      availabilityDate: selectedDate,
+      location: location,
+      yearsOfExperience: yearsOfExperience,
+      expertise: selectedExpertiseCategory ? [selectedExpertiseCategory.name] : [],
+      topics: selectedCategory ? [selectedCategory.name] : [],
+      eventTypes: deliveryMode ? [deliveryMode] : [],
+      priceRange: {
+        min: minFee,
+        max: maxFee
+      }
+    };
+    
+    console.log('🎯 Applying filters:', newFilters);
+    console.log('🎯 Selected topic:', selectedTopic);
+    console.log('🎯 Selected expertise:', selectedExpertise);
+    console.log('🎯 Selected category:', selectedCategory);
+    console.log('🎯 Selected expertise category:', selectedExpertiseCategory);
+    dispatch(setFilters(newFilters));
   };
 
   const getExpertiseOptions = () => {
@@ -380,18 +418,28 @@ const FiltersSidebar: React.FC = () => {
           <label className="block text-sm font-medium text-gray-700 mb-3">
             Fee Range
           </label>
-          <div className="relative">
-            <div className="flex items-center space-x-2">
-              <div className="flex-1 h-2 bg-gray-200 rounded-full">
-                <div className="relative">
-                  <div className="absolute top-0 left-0 w-full h-2 bg-[#FF6B35] rounded-full"></div>
-                  <div className="absolute -top-1 left-0 w-4 h-4 bg-[#FF6B35] rounded-full border-2 border-white shadow cursor-pointer"></div>
-                  <div className="absolute -top-1 left-1/4 w-4 h-4 bg-[#FF6B35] rounded-full border-2 border-white shadow cursor-pointer"></div>
-                  <div className="absolute -top-1 left-2/4 w-4 h-4 bg-[#FF6B35] rounded-full border-2 border-white shadow cursor-pointer"></div>
-                  <div className="absolute -top-1 left-3/4 w-4 h-4 bg-[#FF6B35] rounded-full border-2 border-white shadow cursor-pointer"></div>
-                  <div className="absolute -top-1 right-0 w-4 h-4 bg-[#FF6B35] rounded-full border-2 border-white shadow cursor-pointer"></div>
-                </div>
-              </div>
+          <div className="flex space-x-2">
+            <div className="flex-1">
+              <label className="block text-xs text-gray-500 mb-1">Min Fee</label>
+              <input 
+                type="number" 
+                value={minFee}
+                onChange={(e) => setMinFee(Math.max(0, parseInt(e.target.value) || 0))}
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-[#FF6B35] focus:border-[#FF6B35]"
+                placeholder="0"
+                min="0"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-xs text-gray-500 mb-1">Max Fee</label>
+              <input 
+                type="number" 
+                value={maxFee}
+                onChange={(e) => setMaxFee(Math.max(minFee, parseInt(e.target.value) || 10000))}
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-[#FF6B35] focus:border-[#FF6B35]"
+                placeholder="10000"
+                min={minFee}
+              />
             </div>
           </div>
         </div>
@@ -401,29 +449,15 @@ const FiltersSidebar: React.FC = () => {
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Event Type
           </label>
-          <select className="block w-full px-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-[#FF6B35] focus:border-[#FF6B35]">
-            <option>Select event type...</option>
-            <option>Conferences & Summits</option>
-            <option>Seminars</option>
-            <option>Keynote Speeches</option>
-            <option>Fireside Chats</option>
-            <option>Town Halls & Open Forums</option>
-            <option>Leadership Retreats</option>
-            <option>Networking Events</option>
-            <option>Trade Shows & Expos</option>
-            <option>Product Launches</option>
-            <option>Sales Kick-Offs (SKOs)</option>
-            <option>Award Ceremonies & Galas</option>
-            <option>Workshops & Masterclasses</option>
-            <option>Corporate Training</option>
-            <option>Guest Lectures</option>
-            <option>TED- Style Talks</option>
-            <option>1:1 Sessions</option>
-            <option>Mentorship Session</option>
-            <option>Pitch Competitions & Startup Showcases</option>
-            <option>Hackathons & Innovation Jams</option>
-            <option>Charity & Fundraising Events</option>
-            <option>Festivals (Music, Arts, Community)</option>
+          <select 
+            value={deliveryMode}
+            onChange={(e) => setDeliveryMode(e.target.value)}
+            className="block w-full px-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-[#FF6B35] focus:border-[#FF6B35]"
+          >
+            <option value="">Select event type...</option>
+            <option value="Corporate & Professional Events">Corporate & Professional Events</option>
+            <option value="Educational & Training Formats">Educational & Training Formats</option>
+            <option value="Specialized & Niche Events">Specialized & Niche Events</option>
           </select>
         </div>
 
@@ -557,7 +591,10 @@ const FiltersSidebar: React.FC = () => {
         </div>
 
         {/* Apply Filters Button */}
-        <button className="w-full mt-69 bg-[#FF6B35] text-white py-3 px-4 rounded-md hover:bg-orange-600 font-medium transition-colors">
+        <button 
+          onClick={applyFilters}
+          className="w-full mt-69 bg-[#FF6B35] text-white py-3 px-4 rounded-md hover:bg-orange-600 font-medium transition-colors"
+        >
           Apply Filters
         </button>
       </div>

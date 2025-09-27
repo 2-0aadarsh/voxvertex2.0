@@ -24,6 +24,7 @@ const initialState: SpeakersState = {
     searchQuery: '',
     location: '',
     expertise: [],
+    topics: [],
     yearsOfExperience: 0,
     availabilityDate: '',
     eventTypes: [],
@@ -93,6 +94,7 @@ const speakersSlice = createSlice({
         searchQuery: '',
         location: '',
         expertise: [],
+        topics: [],
         yearsOfExperience: 0,
         availabilityDate: '',
         eventTypes: [],
@@ -106,7 +108,7 @@ const speakersSlice = createSlice({
     },
     
     // Set available event types
-    setAvailableEventTypes: (state, action: PayloadAction<any[]>) => {
+    setAvailableEventTypes: (state, action: PayloadAction<{ category: string; events: { name: string; price: number; currency: string }[] }[]>) => {
       state.availableEventTypes = action.payload;
     },
     
@@ -162,7 +164,7 @@ export const speakersApi = baseApi.injectEndpoints({
       keepUnusedDataFor: 300,
     }),
     
-    // Search speakers with filters
+    // Search speakers with keywords
     searchSpeakers: builder.query<
       ApiResponse<{
         speakers: Speaker[];
@@ -174,15 +176,57 @@ export const speakersApi = baseApi.injectEndpoints({
           hasPrevPage: boolean;
           limit: number;
         };
-        filters: any;
       }>,
       {
+        q: string;
+        page?: number;
+        limit?: number;
+      }
+    >({
+      query: (params) => {
+        console.log('🔍 Searching speakers with keywords:', params);
+        return {
+          url: '/speaker-search/search',
+          params,
+        };
+      },
+      providesTags: ['Speaker'],
+      keepUnusedDataFor: 300,
+    }),
+
+    // Search speakers with filters
+    searchSpeakersWithFilters: builder.query<
+      ApiResponse<{
+        speakers: Speaker[];
+        pagination: {
+          currentPage: number;
+          totalPages: number;
+          totalCount: number;
+          hasNextPage: boolean;
+          hasPrevPage: boolean;
+          limit: number;
+        };
+        filters: {
+          availabilityDate?: string;
+          eventTypes?: string[];
+          events?: string[];
+          subTypes?: string[];
+          minFee?: number;
+          maxFee?: number;
+          deliveryModes?: string[];
+          yearsOfExperience?: number;
+          location?: string;
+          expertise?: string[];
+          topics?: string[];
+        };
+      }>,
+      {
+        // Search query
         q?: string;
         page?: number;
         limit?: number;
-        location?: string;
-        expertise?: string[];
-        yearsOfExperience?: number;
+        
+        // Availability filters
         availabilityDate?: string;
         eventTypes?: string[];
         events?: string[];
@@ -190,6 +234,11 @@ export const speakersApi = baseApi.injectEndpoints({
         minFee?: number;
         maxFee?: number;
         deliveryModes?: string[];
+        
+        // Profile filters
+        yearsOfExperience?: number;
+        location?: string;
+        expertise?: string[];
         topics?: string[];
       }
     >({
@@ -222,7 +271,7 @@ export const speakersApi = baseApi.injectEndpoints({
     
     // Get available event types for filtering
     getAvailableEventTypes: builder.query<
-      ApiResponse<any[]>,
+      ApiResponse<{ category: string; events: { name: string; price: number; currency: string }[] }[]>,
       void
     >({
       query: () => '/speaker-search/event-types',
@@ -241,6 +290,7 @@ export const speakersApi = baseApi.injectEndpoints({
       keepUnusedDataFor: 600, // Cache for 10 minutes
     }),
     
+
     // Book speaker (for future implementation)
     bookSpeaker: builder.mutation<
       ApiResponse<{ bookingId: string }>,
@@ -289,6 +339,7 @@ export const {
 export const {
   useGetSpeakersQuery,
   useSearchSpeakersQuery,
+  useSearchSpeakersWithFiltersQuery,
   useGetSpeakerSuggestionsQuery,
   useGetAvailableEventTypesQuery,
   useGetSpeakerByIdQuery,

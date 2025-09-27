@@ -1,9 +1,11 @@
 import Booking from "../models/bookingSpeaker.js";
 import EnhancedProfile from "../models/enhancedProfile.js";
 import Availability from "../models/availability.js";
+import Conversation from "../models/conversation.js";
+import Message from "../models/message.js";
 import mongoose from "mongoose";
 
-import User from "../models/user.js";
+// import User from "../models/user.js";
 
 // GET /api/speaker-profile
 
@@ -56,31 +58,30 @@ export const createSpeakerBooking = async (req, res) => {
     const {
       speakerId,
       date,
-      timeSlot,
-      eventDetails,
-      compensationAndArrangements
+      startTime,
+      endTime,
+      eventName,
+      eventType,
+      location,
+      attendees,
+      offerAmount,
+      currency,
+      specialRequests,
+      personalMessage
     } = req.body;
 
-    // Validate event details
-    if (
-      !eventDetails ||
-      !eventDetails.name ||
-      !eventDetails.type ||
-      !eventDetails.location ||
-      !eventDetails.expectedAttendees
-    ) {
+    // Validate required fields
+    if (!speakerId || !date || !startTime || !endTime || !eventName || !eventType || !location || !attendees) {
       return res.status(400).json({
         success: false,
-        message: "Event name, type, location, and expected attendees are required"
+        message: "Speaker ID, date, time, event name, type, location, and attendees are required"
       });
     }
 
-    // Parse timeSlot
-    const [startTime, endTime] = (timeSlot || "").split("-").map(s => s.trim());
-    if (!startTime || !endTime) {
+    if (!offerAmount || offerAmount <= 0) {
       return res.status(400).json({
         success: false,
-        message: "Invalid timeSlot. Please send in format 'HH:MM-HH:MM'"
+        message: "Offer amount must be greater than 0"
       });
     }
 
@@ -91,22 +92,38 @@ export const createSpeakerBooking = async (req, res) => {
     }
 
     // Check availability for selected date
-    const startOfDay = new Date(date);
-    startOfDay.setUTCHours(0, 0, 0, 0);
-    const endOfDay = new Date(date);
-    endOfDay.setUTCHours(23, 59, 59, 999);
-
+    const selectedDate = new Date(date);
+    selectedDate.setUTCHours(0, 0, 0, 0);
+    console.log("🔍 selectedDate:", selectedDate);
+    console.log("🔍 speakerId:", speakerId);
+    console.log("🔍 date from frontend:", date);
+    
+    // Debug: Check all availability for this speaker
+    const allAvailabilities = await Availability.find({ userId: speakerId });
+    console.log("🔍 All availabilities for speaker:", allAvailabilities.length);
+    allAvailabilities.forEach((avail, index) => {
+      console.log(`📅 Availability ${index + 1}:`, {
+        _id: avail._id,
+        date: avail.date,
+        dateISO: avail.date.toISOString(),
+        timeSlots: avail.timeSlots?.length || 0
+      });
+    });
+    
     const availability = await Availability.findOne({
-      userId: new mongoose.Types.ObjectId(speakerId),
-      dates: { $elemMatch: { $gte: startOfDay, $lte: endOfDay } }
+      userId: speakerId,
+      date: selectedDate
     });
 
     if (!availability) {
+      console.log("❌ No availability found for selected date:", selectedDate.toISOString());
       return res.status(404).json({
         success: false,
         message: "Speaker not available on selected date"
       });
     }
+    
+    console.log("✅ Found availability:", availability._id);
 
     // Find the slot being booked
     const slotMatch = availability.timeSlots.find(
@@ -120,34 +137,37 @@ export const createSpeakerBooking = async (req, res) => {
       });
     }
 
-    // Validate compensation
-    if (!compensationAndArrangements || !compensationAndArrangements.primaryCompensation) {
-      return res.status(400).json({
-        success: false,
-        message: "Primary compensation is required"
-      });
-    }
-
-    const { primaryCompensation, travel, lodging, additionalArrangements } = compensationAndArrangements;
-
-    const parsedSpeakerFee = primaryCompensation.speakerFeeAmount
-      ? Number(primaryCompensation.speakerFeeAmount)
-      : 0;
-    const parsedHonorariumFee = primaryCompensation.honorariumFeeAmount
-      ? Number(primaryCompensation.honorariumFeeAmount)
-      : 0;
-
-    if (parsedSpeakerFee <= 0 && parsedHonorariumFee <= 0) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "At least one primary compensation (Speaker Fee or Honorarium Fee) is required"
-      });
-    }
-
     // Create bookingId
     const count = await Booking.countDocuments();
     const bookingId = `BK-${String(count + 1).padStart(5, "0")}`;
+
+    // Create or get conversation between organizer and speaker
+    let conversation = await Conversation.findBetweenUsers(organizerId, speakerId, 'direct');
+    
+    if (!conversation) {
+      conversation = new Conversation({
+        participants: [
+          {
+            user: organizerId,
+            role: req.user.role,
+            joinedAt: new Date(),
+            lastReadAt: new Date(),
+            isActive: true
+          },
+          {
+            user: speakerId,
+            role: 'speaker',
+            joinedAt: new Date(),
+            lastReadAt: new Date(),
+            isActive: true
+          }
+        ],
+        type: 'direct',
+        context: { bookingRequest: true },
+        status: 'active'
+      });
+      await conversation.save();
+    }
 
     // Create Booking
     const booking = new Booking({
@@ -157,36 +177,42 @@ export const createSpeakerBooking = async (req, res) => {
       date: new Date(date),
       timeSlot: `${startTime}-${endTime}`,
       eventDetails: {
-        name: eventDetails.name,
-        type: eventDetails.type,
-        location: eventDetails.location,
-        expectedAttendees: eventDetails.expectedAttendees,
-        specialRequirement: eventDetails.specialRequirement || "",
-        personalMessage
+        name: eventName,
+        type: eventType,
+        location: location,
+        expectedAttendees: attendees,
+        specialRequirement: specialRequests || "",
+        personalMessage: personalMessage || ""
       },
       compensationAndArrangements: {
         primaryCompensation: {
-          speakerFeeAmount: parsedSpeakerFee,
-          honorariumFeeAmount: parsedHonorariumFee
+          speakerFeeAmount: offerAmount,
+          honorariumFeeAmount: 0
         },
         travel: {
-          travelMode: travel?.travelMode || "",
-          arrangements: travel?.arrangements || "",
-          offeredAmount: travel?.offeredAmount || 0
+          travelMode: "",
+          arrangements: "",
+          offeredAmount: 0
         },
         lodging: {
-          ...lodging,
-          checkInDate: lodging?.checkInDate ? new Date(lodging.checkInDate) : null,
-          checkOutDate: lodging?.checkOutDate ? new Date(lodging.checkOutDate) : null
+          accommodationType: "",
+          lodgingArrangement: "",
+          checkInDate: null,
+          checkOutDate: null
         },
-        additionalArrangements: additionalArrangements || {}
-      }
+        additionalArrangements: {
+          localTransportation: "",
+          meals: "",
+          additionalExpenses: specialRequests || ""
+        }
+      },
+      status: 'pending',
+      conversationId: conversation._id
     });
 
     await booking.save();
 
-    // --- Hybrid availability update logic (date + partial time split) ---
-    const bookedDateISO = startOfDay.toISOString();
+    // --- Update availability by removing the booked time slot ---
     const newTimeSlots = [];
 
     for (let slot of availability.timeSlots) {
@@ -206,18 +232,102 @@ export const createSpeakerBooking = async (req, res) => {
 
     availability.timeSlots = newTimeSlots;
 
-    // Remove booked date if no slots left
+    // Remove the entire availability document if no slots left
     if (availability.timeSlots.length === 0) {
-      availability.dates = availability.dates.filter(d => d.toISOString() !== bookedDateISO);
+      await Availability.deleteOne({ _id: availability._id });
+    } else {
+      // Save updated availability
+      await availability.save();
     }
 
-    // Save updated availability
-    await availability.save();
+    // Create booking request message with action buttons
+    const bookingMessage = new Message({
+      content: personalMessage || `Dear Speaker,
+
+I hope this message finds you well. I am reaching out to invite you to speak at our upcoming "${eventName}" ${eventType} based on your exceptional expertise.
+
+SPEAKING OPPORTUNITY DETAILS:
+📍 Event: ${eventName}
+📍 Location: ${location}
+👥 Audience: ${attendees} attendees
+⏰ Duration: ${startTime} - ${endTime}
+📅 Date: ${new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+💰 Compensation: ${currency || '$'}${offerAmount.toLocaleString()}
+🚗 Special Arrangements: ${specialRequests || 'None specified'}
+
+WHAT WE OFFER:
+• Professional speaking fee/honorarium as outlined
+• Travel and accommodation arrangements (if applicable)
+• Professional event production and support
+• Networking opportunities with industry leaders
+• Post-event content and marketing materials
+
+We believe your insights would provide tremendous value to our audience, and we would be honored to have you as our speaker.
+
+Please review the detailed proposal below and let me know if you would like to:
+✅ ACCEPT - Confirm your participation
+❌ DECLINE - Politely decline this opportunity
+🤝 NEGOTIATE - Discuss modifications to the proposal
+
+Looking forward to your response!
+
+Best regards,
+${req.user.firstName} ${req.user.lastName}`,
+      messageType: 'booking_request',
+      sender: organizerId,
+      conversation: conversation._id,
+      metadata: {
+        bookingId: booking._id,
+        eventId: null,
+        amount: offerAmount,
+        currency: currency || 'USD',
+        proposalType: 'initial'
+      }
+    });
+
+    await bookingMessage.save();
+
+    // Update booking with message reference
+    booking.messageId = bookingMessage._id;
+    await booking.save();
+
+    // Update conversation's last message
+    conversation.lastMessage = {
+      content: bookingMessage.content,
+      sender: organizerId,
+      timestamp: bookingMessage.createdAt,
+      messageType: 'booking_request'
+    };
+    await conversation.save();
+
+    // Populate the response data
+    await booking.populate([
+      { path: 'organizer', select: 'firstName lastName email' },
+      { path: 'speaker', select: 'firstName lastName email' }
+    ]);
 
     return res.status(201).json({
       success: true,
-      message: "Booking created successfully",
-      booking
+      message: "Booking request sent successfully",
+      booking: {
+        _id: booking._id,
+        bookingId: booking.bookingId,
+        status: booking.status,
+        date: booking.date,
+        timeSlot: booking.timeSlot,
+        eventDetails: booking.eventDetails,
+        compensationAndArrangements: booking.compensationAndArrangements,
+        organizer: booking.organizer,
+        speaker: booking.speaker,
+        conversationId: booking.conversationId,
+        messageId: booking.messageId,
+        createdAt: booking.createdAt
+      },
+      conversation: {
+        _id: conversation._id,
+        participants: conversation.participants,
+        lastMessage: conversation.lastMessage
+      }
     });
   } catch (error) {
     console.error("Booking creation error:", error);

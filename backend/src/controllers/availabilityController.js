@@ -241,6 +241,7 @@
 
 
 import Availability from '../models/availability.js';
+import mongoose from "mongoose";
 
 // Note: normalizeDate function removed as it's no longer needed with UTC date handling
 
@@ -272,7 +273,8 @@ export const getAvailability = async (req, res) => {
 export const getSpeakerAvailability = async (req, res) => {
   try {
     const { speakerId } = req.params;
-    const { startDate, endDate } = req.query;
+
+    console.log("🔍 getSpeakerAvailability called with:", { speakerId });
 
     if (!speakerId) {
       return res.status(400).json({
@@ -281,55 +283,101 @@ export const getSpeakerAvailability = async (req, res) => {
       });
     }
 
+    // convert to ObjectId
+    // const speakerObjectId = new mongoose.Types.ObjectId(speakerId);
+
     // Build query for date range
     let query = { userId: speakerId };
-    
-    if (startDate && endDate) {
-      const startUTC = new Date(startDate + "T00:00:00.000Z");
-      const endUTC = new Date(endDate + "T23:59:59.999Z");
-      query.date = { $gte: startUTC, $lte: endUTC };
-    } else {
-      // Default: only return future dates
-      const todayUTC = new Date();
-      todayUTC.setUTCHours(0, 0, 0, 0);
-      query.date = { $gte: todayUTC };
-    }
 
-    // Fetch availability documents for this speaker
+    console.log("🔍 Query:", query);
+
+    // Debug: Check what dates exist in the database for this user
+    const allUserAvailabilities = await Availability.find({
+      userId: speakerId,
+    }).sort({ date: 1 });
+
+    console.log("🔍 All availabilities for user:", allUserAvailabilities.length);
+
+    allUserAvailabilities.forEach((avail, index) => {
+      if (!avail.date) {
+        console.warn(`⚠️ Availability ${avail._id} has no date field`);
+      } else {
+        console.log(`📅 Availability ${index + 1}:`, {
+          _id: avail._id,
+          date: avail.date instanceof Date ? avail.date.toISOString() : avail.date,
+          eventTypes: avail.eventTypes?.length || 0,
+        });
+      }
+    });
+
     const availabilityDocs = await Availability.find(query).sort({ date: 1 });
+    console.log(
+      "🔍 Found availability docs matching query:",
+      availabilityDocs.length
+    );
 
     if (!availabilityDocs || availabilityDocs.length === 0) {
+      console.log("⚠️ No availability found for speaker:", speakerId);
       return res.status(404).json({
         success: false,
         message: "No availability found for this speaker",
       });
     }
 
-    // Extract dates and group by common availability settings
-    const availableDates = availabilityDocs.map(doc => doc.date);
-    
-    // Get common settings (assuming all dates have same settings for now)
-    const commonSettings = availabilityDocs[0];
+    // Extract dates safely (skip if no date)
+    const availableDates = availabilityDocs
+      .filter(doc => doc.date instanceof Date) // only valid dates
+      .map(doc => doc.date.toISOString().split("T")[0]);
+
+    // Pick common settings from the first valid doc
+    const firstValidDoc = availabilityDocs.find(doc => doc.date instanceof Date) || availabilityDocs[0];
+
+    console.log("🔍 Available dates (formatted):", availableDates);
+    console.log("🔍 Common settings:", {
+      eventTypes: firstValidDoc?.eventTypes?.length || 0,
+      modes: firstValidDoc?.modes,
+      timeSlots: firstValidDoc?.timeSlots?.length || 0,
+    });
 
     return res.status(200).json({
       success: true,
       data: {
         speakerId: speakerId,
         dates: availableDates,
-        eventTypes: commonSettings.eventTypes,
-        modes: commonSettings.modes,
-        timeSlots: commonSettings.timeSlots,
-        count: availabilityDocs.length
+        eventTypes: firstValidDoc?.eventTypes || [],
+        modes: firstValidDoc?.modes || [],
+        timeSlots: firstValidDoc?.timeSlots || [],
+        count: availabilityDocs.length,
       },
     });
   } catch (error) {
-    console.error("Error fetching speaker availability:", error);
+    console.error("❌ Error fetching speaker availability:", error);
     return res.status(500).json({
       success: false,
       message: "Server error while fetching speaker availability",
     });
   }
 };
+
+// export const getSpeakerAvailabilityById = async (req, res) => {
+//   try {
+//     const { speakerId } = req.params;
+//     console.log("🔍 getSpeakerAvailabilityById called with:", { speakerId });
+//     const speakerObjectId = new mongoose.Types.ObjectId(speakerId);
+//     const availability = await Availability.findOne({ userId: speakerObjectId });
+//     return res.status(200).json({
+//       success: true,
+//       data: availability,
+//     });
+//   }
+//   catch (error) {
+//     console.error("❌ Error fetching speaker availability:", error);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Server error while fetching speaker availability",
+//     });
+//   }
+// };
 
 
 // Get availability for authenticated user (duplicate function - keeping the updated one above)
@@ -410,49 +458,56 @@ export const setAvailability = async (req, res, next) => {
       return res.status(400).json({ message: "At least one date is required" });
     }
 
-    // Upsert (create/update) a single Availability entry for this speaker
-    const availability = await Availability.findOneAndUpdate(
-      { userId }, // ✅ ensures only this speaker's record is modified
-      {
-        $addToSet: {
-          dates: {
-            $each: dates.map(d => {
-              if (typeof d === "string" && d.match(/^\d{4}-\d{2}-\d{2}$/)) {
-                const [year, month, day] = d.split("-").map(Number);
-                return new Date(Date.UTC(year, month - 1, day, 0, 0, 0)); // store as UTC
-              }
-              return new Date(d);
-            }),
+    // Create/update separate Availability documents for each date
+    const results = [];
+    
+    for (const dateStr of dates) {
+      let date;
+      if (typeof dateStr === "string" && dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        const [year, month, day] = dateStr.split("-").map(Number);
+        date = new Date(Date.UTC(year, month - 1, day, 0, 0, 0)); // store as UTC
+      } else {
+        date = new Date(dateStr);
+      }
+
+      const availability = await Availability.findOneAndUpdate(
+        { userId, date }, // Find by userId and specific date
+        {
+          $set: {
+            eventTypes,
+            modes,
+            timeSlots,
+            updatedAt: new Date(),
+          },
+          $setOnInsert: {
+            createdAt: new Date(),
+            userId,
+            date,
           },
         },
-        $set: {
-          eventTypes,
-          modes,
-          timeSlots,
-          updatedAt: new Date(),
-        },
-        $setOnInsert: {
-          createdAt: new Date(),
-          userId,
-        },
-      },
-      { new: true, upsert: true }
-    );
+        { new: true, upsert: true }
+      );
+      
+      results.push(availability);
+    }
 
     console.log("✅ Availability saved successfully:", {
-      matched: result.matchedCount,
-      modified: result.modifiedCount,
-      upserted: result.upsertedCount
+      documentsCreated: results.length,
+      datesCount: dates.length,
+      userId: userId
     });
 
     return res.status(200).json({
       success: true,
       message: `Availability updated for ${dates.length} date(s)`,
       data: {
-        matched: result.matchedCount,
-        modified: result.modifiedCount,
-        upserted: result.upsertedCount,
-        dates: dates
+        documentsCreated: results.length,
+        datesCount: dates.length,
+        dates: dates,
+        eventTypes: results[0]?.eventTypes || eventTypes,
+        modes: results[0]?.modes || modes,
+        timeSlots: results[0]?.timeSlots || timeSlots,
+        availabilities: results
       },
     });
   } catch (error) {

@@ -559,6 +559,7 @@ export interface SpeakerFilters {
   searchQuery: string;
   location: string;
   expertise: string[];
+  topics: string[];
   yearsOfExperience: number;
   availabilityDate: string;
   eventTypes: string[];
@@ -717,4 +718,148 @@ export interface CreateAvailabilityRequest {
   eventTypes: EventType[];
   modes: ('Online' | 'Offline' | 'Hybrid')[];
   timeSlots: TimeSlot[];
+}
+
+// Booking Types
+export type BookingStep = 1 | 2 | 3 | 4;
+
+export interface BookingValidation {
+  isValid: boolean;
+  errors: Record<string, string>;
+}
+
+export interface PrimaryCompensation {
+  speakerFee: {
+    enabled: boolean;
+    amount: number;
+  };
+  honorarium: {
+    enabled: boolean;
+    amount: number;
+  };
+}
+
+export interface TravelExpenses {
+  enabled: boolean;
+  mode: string; // 'air' | 'train' | 'car' | 'other'
+  arrangement: string; // 'arrange' | 'reimburse'
+  amount: number;
+}
+
+export interface LodgingAccommodation {
+  enabled: boolean;
+  type: string; // 'hotel' | 'corporate' | 'homestay' | 'other'
+  arrangement: string; // 'arrange' | 'reimburse'
+  checkInDate: string;
+  checkOutDate: string;
+  amount: number;
+}
+
+export interface AdditionalArrangements {
+  enabled: boolean;
+  localTransportation: boolean;
+  meals: boolean;
+  specialRequests: string;
+}
+
+export interface CompensationDetails {
+  primaryCompensation: PrimaryCompensation;
+  travelExpenses: TravelExpenses;
+  lodgingAccommodation: LodgingAccommodation;
+  additionalArrangements: AdditionalArrangements;
+}
+
+export interface BookingFormData {
+  // Step 1: Date & Time
+  date: string;
+  startTime: string;
+  endTime: string;
+  duration: number; // in minutes
+  
+  // Step 2: Event Details
+  eventName: string;
+  eventType: string;
+  location: string;
+  attendees: number;
+  description: string;
+  
+  // Step 3: Compensation & Arrangements
+  compensation: CompensationDetails;
+  
+  // Step 4: Review & Send
+  personalMessage: string;
+  currency: string;
+}
+
+export interface CurrentBooking {
+  speakerId: string;
+  speakerName: string;
+  bookingId: string | null;
+  status: 'draft' | 'submitted' | 'pending' | 'accepted' | 'declined' | 'cancelled';
+}
+
+export interface SpeakerAvailability {
+  speakerId: string;
+  dates: string[];
+  eventTypes: {
+    category: string;
+    events: {
+      name: string;
+      price: number;
+      currency: string;
+    }[];
+  }[];
+  modes: string[];
+  timeSlots: {
+    slot: string;
+    startTime: string;
+    endTime: string;
+  }[];
+  count: number;
+}
+
+export interface BookingHistoryItem {
+  _id: string;
+  bookingId: string;
+  speakerId: string;
+  speakerName: string;
+  eventName: string;
+  eventType: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  location: string;
+  status: 'draft' | 'submitted' | 'pending' | 'accepted' | 'declined' | 'cancelled';
+  totalAmount: number;
+  currency: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BookingState extends LoadingState {
+  // Current booking session
+  currentBooking: CurrentBooking | null;
+  isBookingModalOpen: boolean;
+  currentStep: BookingStep;
+  
+  // Form data for the booking flow
+  formData: BookingFormData;
+  
+  // Validation state for each step
+  validation: {
+    step1: BookingValidation;
+    step2: BookingValidation;
+    step3: BookingValidation;
+    step4: BookingValidation;
+  };
+  
+  // Speaker availability data
+  speakerAvailability: SpeakerAvailability | null;
+  
+  // Booking history
+  bookingHistory: BookingHistoryItem[];
+  
+  // Available options
+  availableEventTypes: string[];
+  availableTimeSlots: string[];
 }

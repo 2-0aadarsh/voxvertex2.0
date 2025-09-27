@@ -29,6 +29,7 @@ import videosReducer from './slices/videosSlice';
 import calendarReducer from './slices/calendarSlice';
 import availabilityReducer from './slices/availabilitySlice';
 import speakersReducer from './slices/speakersSlice';
+import bookingReducer from './slices/bookingSlice';
 
 // Persist configuration
 const persistConfig = {
@@ -48,7 +49,8 @@ const persistConfig = {
     'videos', 
     'calendar',
     'availability',
-    'speakers'
+    'speakers',
+    'booking'
   ],
 };
 
@@ -77,6 +79,7 @@ const rootReducer = combineReducers({
   calendar: calendarReducer,
   availability: availabilityReducer,
   speakers: speakersReducer,
+  booking: bookingReducer,
 });
 
 // Persisted reducer
@@ -145,6 +148,7 @@ export const resetStore = () => {
   store.dispatch({ type: 'calendar/resetCalendar' });
   store.dispatch({ type: 'availability/resetAvailability' });
   store.dispatch({ type: 'speakers/resetSpeakers' });
+  store.dispatch({ type: 'booking/resetBooking' });
   
   // Reset API cache
   store.dispatch(baseApi.util.resetApiState());
@@ -197,6 +201,7 @@ export {
   calendarReducer,
   availabilityReducer,
   speakersReducer,
+  bookingReducer,
   
   // API
   baseApi,

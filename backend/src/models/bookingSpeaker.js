@@ -79,7 +79,22 @@ const bookingSpeakerSchema = new mongoose.Schema(
     date: Date,
     timeSlot: String,
     eventDetails: eventDetailsSchema, // ✅ Properly defined subdocument
-    compensationAndArrangements: compensationSchema
+    compensationAndArrangements: compensationSchema,
+    status: {
+      type: String,
+      enum: ['pending', 'accepted', 'declined', 'negotiating', 'cancelled', 'completed'],
+      default: 'pending'
+    },
+    // Message reference for the booking request
+    messageId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Message'
+    },
+    // Conversation reference
+    conversationId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Conversation'
+    }
   },
   { timestamps: true }
 );
