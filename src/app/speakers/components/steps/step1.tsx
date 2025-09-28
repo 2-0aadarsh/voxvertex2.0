@@ -41,6 +41,20 @@ const Step1: React.FC<Step1Props> = ({ isVisible, onClose, onNext, onPrevious, f
   }, [formData]);
 
   const handleNext = () => {
+    // Validation
+    if (!eventName.trim()) {
+      alert('Please enter an event name');
+      return;
+    }
+    if (!eventType) {
+      alert('Please select an event type');
+      return;
+    }
+    if (!location.trim()) {
+      alert('Please enter a location');
+      return;
+    }
+
     // Convert expected attendees to number for storage
     let attendeesNum = 0;
     if (expectedAttendees) {
@@ -326,6 +340,7 @@ const Step1: React.FC<Step1Props> = ({ isVisible, onClose, onNext, onPrevious, f
               </div>
             </div>
           </div>
+
 
           {/* Form Fields */}
           <div className="space-y-6">

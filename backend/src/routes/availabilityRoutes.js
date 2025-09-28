@@ -41,6 +41,7 @@ import {
   deleteAvailability,
   getAvailabilityById,
   getSpeakerAvailability,
+  // getSpeakerAvailabilityById,
 } from '../controllers/availabilityController.js';
 
 import { authenticateJWT } from '../middleware/jwtAuth.js';
@@ -48,7 +49,11 @@ import { validateAvailabilityId, validateGetAvailability, validateAvailability }
 
 const router = Router();
 
-// Apply authentication to all routes
+// Public route for organizers (MUST be before authentication middleware)
+router.get("/speaker/:speakerId", getSpeakerAvailability);
+// router.get("/speaker/:speakerId", getSpeakerAvailabilityById);
+
+// Apply authentication to all remaining routes
 router.use(authenticateJWT);
 
 // Get availability for a specific month: GET /api/availability/:year/:month
@@ -65,8 +70,5 @@ router.post('/', authenticateJWT, setAvailability);
 
 // Delete availability for specific dates
 router.delete('/', deleteAvailability);
-
-// New public route for organizers
-router.get("/speaker/:speakerId", getSpeakerAvailability);
 
 export default router;

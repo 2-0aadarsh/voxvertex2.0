@@ -464,6 +464,125 @@ export interface CalendarState extends LoadingState {
   };
 }
 
+// Speaker Types
+export interface Speaker {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  fullName: string;
+  email: string;
+  mobileNo?: string;
+  profileImageUrl?: string;
+  bio?: string;
+  professionalTitle?: string;
+  location?: string;
+  areaOfExpertise?: string[];
+  yearsOfExperience?: number;
+  roleSpecificData?: {
+    industry?: string;
+    activities?: string[];
+    socialLinks?: {
+      linkedin?: string;
+      twitter?: string;
+      website?: string;
+      portfolio?: string;
+    };
+  };
+  isProfileComplete: boolean;
+  createdAt: string;
+  updatedAt: string;
+  // Availability information (when fetched with filters)
+  availability?: {
+    dates: string[];
+    eventTypes: any[];
+    modes: string[];
+    timeSlots: any[];
+  };
+  // Rating and booking information (for marketplace display)
+  rating?: number;
+  totalBookings?: number;
+  priceRange?: {
+    min: number;
+    max: number;
+    currency: string;
+  };
+}
+
+// Enhanced Speaker interface for processed data
+export interface ProcessedSpeaker {
+  id: string;
+  name: string;
+  title: string;
+  rating: number;
+  bookings: number;
+  location: string;
+  price: number;
+  priceRange: {
+    min: number;
+    max: number;
+    currency: string;
+  };
+  tags: string[];
+  specializations: string[];
+  specialization: string;
+  avatar?: string;
+  bio?: string;
+  yearsOfExperience: number;
+  isProfileComplete: boolean;
+  
+  // Additional details for enhanced display
+  firstName: string;
+  lastName: string;
+  email: string;
+  mobileNo?: string;
+  industry?: string;
+  activities: string[];
+  socialLinks?: {
+    linkedin?: string;
+    twitter?: string;
+    website?: string;
+    portfolio?: string;
+  };
+  createdAt: string;
+  availability?: {
+    dates: string[];
+    eventTypes: any[];
+    modes: string[];
+    timeSlots: any[];
+  };
+  
+  // Raw speaker data for detailed view
+  rawData: Speaker;
+}
+
+export interface SpeakerFilters {
+  searchQuery: string;
+  location: string;
+  expertise: string[];
+  topics: string[];
+  yearsOfExperience: number;
+  availabilityDate: string;
+  eventTypes: string[];
+  priceRange: {
+    min: number;
+    max: number;
+  };
+}
+
+export interface SpeakersState extends LoadingState {
+  speakers: Speaker[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    hasMore: boolean;
+  };
+  filters: SpeakerFilters;
+  lastFetchTime: number;
+  searchSuggestions: Speaker[];
+  availableEventTypes: any[];
+}
+
 // Availability Types (for Speakers)
 export interface TimeSlot {
   slot: 'Morning' | 'Afternoon' | 'Evening' | 'Night';
@@ -508,6 +627,7 @@ export interface RootState {
   videos: VideosState;
   calendar: CalendarState;
   availability: AvailabilityState;
+  speakers: SpeakersState;
 }
 
 // API Request Types
@@ -598,4 +718,148 @@ export interface CreateAvailabilityRequest {
   eventTypes: EventType[];
   modes: ('Online' | 'Offline' | 'Hybrid')[];
   timeSlots: TimeSlot[];
+}
+
+// Booking Types
+export type BookingStep = 1 | 2 | 3 | 4;
+
+export interface BookingValidation {
+  isValid: boolean;
+  errors: Record<string, string>;
+}
+
+export interface PrimaryCompensation {
+  speakerFee: {
+    enabled: boolean;
+    amount: number;
+  };
+  honorarium: {
+    enabled: boolean;
+    amount: number;
+  };
+}
+
+export interface TravelExpenses {
+  enabled: boolean;
+  mode: string; // 'air' | 'train' | 'car' | 'other'
+  arrangement: string; // 'arrange' | 'reimburse'
+  amount: number;
+}
+
+export interface LodgingAccommodation {
+  enabled: boolean;
+  type: string; // 'hotel' | 'corporate' | 'homestay' | 'other'
+  arrangement: string; // 'arrange' | 'reimburse'
+  checkInDate: string;
+  checkOutDate: string;
+  amount: number;
+}
+
+export interface AdditionalArrangements {
+  enabled: boolean;
+  localTransportation: boolean;
+  meals: boolean;
+  specialRequests: string;
+}
+
+export interface CompensationDetails {
+  primaryCompensation: PrimaryCompensation;
+  travelExpenses: TravelExpenses;
+  lodgingAccommodation: LodgingAccommodation;
+  additionalArrangements: AdditionalArrangements;
+}
+
+export interface BookingFormData {
+  // Step 1: Date & Time
+  date: string;
+  startTime: string;
+  endTime: string;
+  duration: number; // in minutes
+  
+  // Step 2: Event Details
+  eventName: string;
+  eventType: string;
+  location: string;
+  attendees: number;
+  description: string;
+  
+  // Step 3: Compensation & Arrangements
+  compensation: CompensationDetails;
+  
+  // Step 4: Review & Send
+  personalMessage: string;
+  currency: string;
+}
+
+export interface CurrentBooking {
+  speakerId: string;
+  speakerName: string;
+  bookingId: string | null;
+  status: 'draft' | 'submitted' | 'pending' | 'accepted' | 'declined' | 'cancelled';
+}
+
+export interface SpeakerAvailability {
+  speakerId: string;
+  dates: string[];
+  eventTypes: {
+    category: string;
+    events: {
+      name: string;
+      price: number;
+      currency: string;
+    }[];
+  }[];
+  modes: string[];
+  timeSlots: {
+    slot: string;
+    startTime: string;
+    endTime: string;
+  }[];
+  count: number;
+}
+
+export interface BookingHistoryItem {
+  _id: string;
+  bookingId: string;
+  speakerId: string;
+  speakerName: string;
+  eventName: string;
+  eventType: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  location: string;
+  status: 'draft' | 'submitted' | 'pending' | 'accepted' | 'declined' | 'cancelled';
+  totalAmount: number;
+  currency: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BookingState extends LoadingState {
+  // Current booking session
+  currentBooking: CurrentBooking | null;
+  isBookingModalOpen: boolean;
+  currentStep: BookingStep;
+  
+  // Form data for the booking flow
+  formData: BookingFormData;
+  
+  // Validation state for each step
+  validation: {
+    step1: BookingValidation;
+    step2: BookingValidation;
+    step3: BookingValidation;
+    step4: BookingValidation;
+  };
+  
+  // Speaker availability data
+  speakerAvailability: SpeakerAvailability | null;
+  
+  // Booking history
+  bookingHistory: BookingHistoryItem[];
+  
+  // Available options
+  availableEventTypes: string[];
+  availableTimeSlots: string[];
 }

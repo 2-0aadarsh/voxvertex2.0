@@ -13,8 +13,8 @@ export const searchSpeakers = async (req, res) => {
     // Handle multiple query parameters - take the first one or join them
     let searchQuery;
     if (Array.isArray(query)) {
-      // If multiple q parameters, join them with space
-      searchQuery = query.join(' ');
+      // If multiple q parameters, join them with space and clean up extra spaces
+      searchQuery = query.map(q => q.trim()).filter(q => q.length > 0).join(' ');
     } else if (typeof query === 'string') {
       searchQuery = query;
     } else {
@@ -41,23 +41,23 @@ export const searchSpeakers = async (req, res) => {
     const searchConditions = {
       role: 'speaker', // Only search for speakers
       $or: [
-        // Basic information search
+        // Basic information search - match exact phrase or individual words
         { firstName: { $regex: searchTerm, $options: 'i' } },
         { lastName: { $regex: searchTerm, $options: 'i' } },
         { email: { $regex: searchTerm, $options: 'i' } },
         { mobileNo: { $regex: searchTerm, $options: 'i' } },
         
-        // Profile information search
+        // Profile information search - match exact phrase or individual words
         { bio: { $regex: searchTerm, $options: 'i' } },
         { professionalTitle: { $regex: searchTerm, $options: 'i' } },
         { location: { $regex: searchTerm, $options: 'i' } },
         
-        // Array fields search
-        { areaOfExpertise: { $in: [new RegExp(searchTerm, 'i')] } },
+        // Array fields search - check if any array element contains the search term
+        { areaOfExpertise: { $elemMatch: { $regex: searchTerm, $options: 'i' } } },
         
-        // Role-specific data search
+        // Role-specific data search - match exact phrase or individual words
         { 'roleSpecificData.industry': { $regex: searchTerm, $options: 'i' } },
-        { 'roleSpecificData.activities': { $in: [new RegExp(searchTerm, 'i')] } },
+        { 'roleSpecificData.activities': { $elemMatch: { $regex: searchTerm, $options: 'i' } } },
         { 'roleSpecificData.socialLinks.linkedin': { $regex: searchTerm, $options: 'i' } },
         { 'roleSpecificData.socialLinks.twitter': { $regex: searchTerm, $options: 'i' } },
         { 'roleSpecificData.socialLinks.website': { $regex: searchTerm, $options: 'i' } },

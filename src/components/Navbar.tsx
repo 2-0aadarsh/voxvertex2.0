@@ -210,7 +210,7 @@ const Navbar: React.FC<NavbarProps> = ({
               About
             </button>
             <button 
-              onClick={() => router.push('/speaker')}
+              onClick={() => router.push('/speakers')}
               className="text-gray-900 hover:text-[#FF6B35] font-medium text-sm transition-colors duration-200 hover:scale-105"
             >
               Speaker
