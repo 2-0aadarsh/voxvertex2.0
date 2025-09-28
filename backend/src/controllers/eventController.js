@@ -1,6 +1,6 @@
 import Event from "../models/event.js";
 import UserRole from "../models/userRole.js";
-import User from "../models/user.js";
+import EnhancedUser from "../models/enhancedUser.js";
 import Profile from "../models/profile.js";
 
 // Helper function to check if user is organizer
@@ -23,16 +23,7 @@ export const createEvent = async (req, res) => {
   
   // Handle FormData - all fields come directly in req.body
   data = req.body;
-    if (!req.user) {
-    req.user = {
-      _id: "68c9304518c905c5352cd506",
-      email: "john@gmail.com",
-      firstName: "John",
-      lastName: "Doe",
-      whoAreYou: "Organizer"
-    };
-  }
-  
+   
   // Debug logging
   console.log('Raw request body:', req.body);
   console.log('Parsed data:', data);
@@ -58,29 +49,6 @@ export const createEvent = async (req, res) => {
     console.log('Speakers type:', typeof speakers);
     console.log('Speakers is array:', Array.isArray(speakers));
 
-    // Organizer Role Validation - Check both UserRole collection and User.whoAreYou field
-    let isOrganizer = false;
-    
-    // First check UserRole collection
-    const organizerRole = await UserRole.findOne({ userId: req.user._id });
-    if (organizerRole && ['Business', 'Freelancer'].includes(organizerRole.role)) {
-      isOrganizer = true;
-    }
-    
-    // If not found in UserRole, check User.whoAreYou field
-    if (!isOrganizer) {
-      const user = await User.findById(req.user._id);
-      if (user && user.whoAreYou === 'Organizer') {
-        isOrganizer = true;
-      }
-    }
-    
-    if (!isOrganizer) {
-      return res.status(403).json({
-        success: false,
-        message: 'Permission denied: Only Business/Freelancer/Organizer accounts can create events'
-      });
-    }
 
     let validatedTickets = [];
     if (tickets) {
@@ -129,45 +97,85 @@ export const createEvent = async (req, res) => {
     
     // Ensure speakers is always an array
     let speakersArray = [];
-    if (speakers) {
-      if (typeof speakers === 'string') {
+if (speakers) {
+  if (typeof speakers === 'string') {
+    try {
+      speakersArray = JSON.parse(speakers);
+      if (!Array.isArray(speakersArray)) throw new Error();
+    } catch (e) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid speakers format. Must be a JSON array.'
+      });
+    }
+  } else if (Array.isArray(speakers)) {
+    speakersArray = speakers.map(sp => {
+      if (typeof sp === 'string') {
         try {
-          speakersArray = JSON.parse(speakers);
-        } catch (e) {
-          console.log('Failed to parse speakers string:', e);
-          speakersArray = [];
+          return JSON.parse(sp);
+        } catch (err) {
+          return null;
         }
-      } else if (Array.isArray(speakers)) {
-        speakersArray = speakers;
       }
-    }
-    
-    console.log('Final speakers array:', speakersArray);
-    
-    if (speakersArray && speakersArray.length > 0) {
-      // Handle both string emails and speaker objects
-      validatedSpeakers = speakersArray.map((speaker, index) => {
-        if (typeof speaker === 'string') {
-          // If speaker is just an email string
-          return {
-            email: speaker.toLowerCase().trim(),
-            userId: null // Will be set to null for now
-          };
-        } else if (speaker && typeof speaker === 'object') {
-          // If speaker is an object with name, title, bio
-          return {
-            email: speaker.email || `speaker${index + 1}@example.com`,
-            userId: null, // Will be set to null for now
-            name: speaker.name,
-            title: speaker.title,
-            bio: speaker.bio
-          };
-        }
-        return null;
-      }).filter(Boolean); // Remove any null entries
-    }
-    
-    console.log('Validated speakers:', validatedSpeakers);
+      return sp;
+    }).filter(Boolean); // remove nulls
+  }
+}
+
+// Validate speakers against User collection
+const invalidSpeakers = [];
+
+for (const speaker of speakersArray) {
+  let email;
+  if (typeof speaker === 'string') {
+    email = speaker.toLowerCase().trim();
+  } else if (speaker && typeof speaker === 'object') {
+    email = speaker.email?.toLowerCase().trim();
+  } else {
+    continue; // Skip invalid entries
+  }
+  email = speaker.email;
+if (!email) continue;
+email = email.toString().trim().toLowerCase();
+
+  console.log('Checking speaker in DB:', email);
+//  const user = await User.findOne({
+//   email: { $regex: `^${email}$`, $options: 'i' },  // ignore case in email
+//   role: { $regex: `^speaker$`, $options: 'i' }     // ignore case in role
+// });
+ // Use case-insensitive email match and role check (normalize role)
+  const user = await EnhancedUser.findOne({
+    email: { $regex: new RegExp(`^${email}$`, 'i') },
+    role: { $in: ['speaker', 'Speaker'] } // Accept either
+  });
+
+
+  console.log('DB user found:', user);
+  if (user) {
+    validatedSpeakers.push({
+      email,
+      userId: user._id,
+      name: speaker.name || `${user.firstName} ${user.lastName}`.trim(),
+      title: speaker.title || '',
+      bio: speaker.bio || ''
+    });
+    console.log('DB user found:', user.email);
+  } else {
+    invalidSpeakers.push(email);
+    console.log('DB user not found for:', email);
+  }
+}
+
+if (invalidSpeakers.length > 0) {
+  return res.status(400).json({
+    success: false,
+    message: 'Some speakers are not registered users',
+    invalidSpeakers
+  });
+}
+
+console.log('Validated speakers:', validatedSpeakers);
+
 
     // Event Mode Validation
     if (eventMode === 'online' && !eventLocation) {

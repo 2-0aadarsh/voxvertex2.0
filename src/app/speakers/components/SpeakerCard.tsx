@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
   MapPin, 
   Star, 
@@ -13,6 +14,7 @@ import Step2 from './steps/step2';
 import Step3 from './steps/step3';
 import Step4 from './steps/step4';
 import { Speaker } from '@/store/types';
+
 
 // Extended Speaker interface for display purposes
 interface DisplaySpeaker extends Omit<Speaker, 'availability'> {
@@ -182,6 +184,12 @@ const SpeakerCard: React.FC<SpeakerCardProps> = ({ speaker, isCompact = false })
     specialRequests: '',
     topics: []
   });
+  const router = useRouter(); // Correctly declare router here
+
+  const handleViewProfile = () => {
+    router.push('/speakers_profile'); // Redirect on button click
+  };
+
 
   // Ensure speaker prop is provided
   if (!speaker) {
@@ -240,6 +248,7 @@ const SpeakerCard: React.FC<SpeakerCardProps> = ({ speaker, isCompact = false })
       setCurrentStep(currentStep - 1);
     }
   };
+  
 
   // Handle editing from Step4
   const handleEdit = (step: number) => {
@@ -460,7 +469,10 @@ const SpeakerCard: React.FC<SpeakerCardProps> = ({ speaker, isCompact = false })
 
         {/* Action Buttons */}
         <div className="flex gap-2 absolute bottom-4 left-4 right-4">
-          <button className="flex-1 flex items-center justify-center gap-1 bg-white border border-[#FF6B35] text-[#FF6B35] px-3 py-1.5 rounded-lg hover:bg-orange-50 transition-colors text-xs font-medium">
+          <button
+           className="flex-1 flex items-center justify-center gap-1 bg-white border border-[#FF6B35] text-[#FF6B35] px-3 py-1.5 rounded-lg hover:bg-orange-50 transition-colors text-xs font-medium"
+           onClick={handleViewProfile}
+           >
             <Eye className="w-3 h-3" />
             View Profile
           </button>

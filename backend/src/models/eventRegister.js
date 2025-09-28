@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 const ExtraMemberSchema = new mongoose.Schema({
-  userId: { type: String, required: true },
+  userId: { type: mongoose.Schema.Types.ObjectId, required: true },
   name: String,
   email: String,
   phone: String
@@ -14,7 +14,7 @@ const EventRegistrationSchema = new mongoose.Schema({
     required: true
   },
   registrant: {
-    userId: { type: String, required: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, required: true },
     name: { type: String, required: true },
     email: { type: String, required: true },
     phone: { type: String, required: true },

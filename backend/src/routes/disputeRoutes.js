@@ -10,12 +10,12 @@ import {
     getDisputeStats,
     submitEvidence
 } from '../controllers/disputeController.js';
-import { ensureAuthenticated } from '../middleware/ensureAuth.js';
+import { authenticateJWT } from '../middleware/jwtAuth.js';
 
 const router = Router();
 
 // All dispute routes require authentication
-router.use(ensureAuthenticated);
+router.use(authenticateJWT);
 
 // Dispute CRUD operations
 router.post('/', createDispute);                    // Create new dispute

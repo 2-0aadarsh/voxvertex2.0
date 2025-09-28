@@ -1,19 +1,19 @@
+'use client';
+
 import { DisputeFormData } from '../../types/disputeTypes';
 import { Edit } from 'lucide-react';
-import axios from 'axios';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { log } from 'util';
+import { useCreateDisputeMutation } from '../../../../store/api/disputApi';
 
 interface ReviewStepProps {
   formData: DisputeFormData;
   onStepChange: (step: number) => void;
-  onSubmit?: () => void;
   onClose: () => void;
   isLoading?: boolean;
 }
 
-export default function ReviewStep({
+export default function ReviewStep({  
   formData,
   onStepChange,
   onClose,
@@ -21,67 +21,75 @@ export default function ReviewStep({
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-  // Safely display value or a dash
+  const [createDispute] = useCreateDisputeMutation();
+
   const safeText = (value?: string | number) =>
     typeof value === 'string' ? value.trim() || '-' : value ?? '-';
-  if(formData){
-    console.log("paries involved", formData.partiesInvolved);
-    
-  }
+  
+console.log('ReviewStep formData1:', formData);
+console.log('ReviewStep formData1 respondent:', formData.respondentId);
 
-  /** Submit dispute to backend API */
+
   const handleSubmit = async (e: React.FormEvent) => {
+  console.log("Submitting parties:", formData.partiesInvolved);
+
     e.preventDefault();
     setIsLoading(true);
-
-    const respondentIds =
-      formData.partiesInvolved
-        ?.map((p) => p.userId)
-        .filter((id): id is string => !!id) || [];
-
-    if (respondentIds.length === 0) {
-      alert('Please select at least one respondent.');
-      setIsLoading(false);
-      return;
-    }
-
+    console.log('ReviewStep formData2:', formData);
+      // ✅ Inspect JWT payload
+  const token = localStorage.getItem("accessToken");
+  if (token) {
     try {
-      const payload = {
-        title: formData.disputeTitle,
-        description: formData.detailedDescription,
-        category: formData.disputeReason,
-        priority: 'medium',
-        respondentId: respondentIds[0],
-      };
-      console.log("access token is", localStorage.getItem('accessToken'))
-
-      // 👉  call your backend server, not Next.js /api
-      const token = localStorage.getItem('accessToken');
-if (!token) {
-  alert('Please log in first!');
-  return;
-}
-       try {
-    const response = await axios.post(
-      'http://localhost:3001/api/disputes',
-      payload,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-        // withCredentials: true, // if backend uses cookies
-      }
-    );
-
-    console.log('API response:', response.data);
-  } catch (error: any) {
-    console.error('API call error:', error.response?.data || error.message);
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      console.log('JWT payload:', payload); // Check id, exp, role, etc.
+    } catch (err) {
+      console.error('Invalid token:', err);
+    }
+  } else {
+    console.warn('No access token found in localStorage');
   }
 
-      alert('Dispute created successfully!');
+    try {
+      const respondentIds = formData.partiesInvolved
+  ?.map((p) => p.userId?.toString())
+  .filter(Boolean) as string[] || [];
+
+
+      if (respondentIds.length === 0) {
+        alert('Please select at least one respondent.');
+        setIsLoading(false);
+        return;
+      }
+      console.log('RespondentId:', respondentIds[0]);
+
+
+      const payload = {
+  title: formData.disputeTitle?.trim() || '',
+  description: formData.description?.trim() || '',
+  category: formData.disputeReason?.trim() || '',
+  priority: 'medium',
+  respondentId: respondentIds, // string now
+};
+console.log('Selected parties before submit:', formData.partiesInvolved);
+console.log('Respondent IDs:', respondentIds);
+
+
+
+      if (!payload.title || !payload.description) {
+        alert('Please provide title and description.');
+        setIsLoading(false);
+        return;
+      }
+
+      const result = await createDispute(payload).unwrap();
+      alert(result?.message ?? 'Dispute created successfully');
+      console.log('Dispute created:', result);
+
       onClose();
       router.push('/dispute');
-    } catch (error: any) {
-      console.error('Submit dispute error:', error);
-      alert(error?.response?.data?.message || 'Failed to submit dispute.');
+    } catch (err: any) {
+      console.error('Submit dispute error:', err);
+      alert(err?.data?.message ?? 'Failed to submit dispute.');
     } finally {
       setIsLoading(false);
     }
@@ -190,6 +198,7 @@ if (!token) {
         <button
           type="submit"
           disabled={isLoading}
+        
           className="px-8 py-2 bg-orange-500 text-white rounded-full font-medium hover:bg-orange-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isLoading ? 'Submitting...' : 'Submit Dispute'}
@@ -199,7 +208,6 @@ if (!token) {
   );
 }
 
-/** Helper row for label/value pairs */
 function InfoRow({ label, value }: { label: string; value?: string | number }) {
   return (
     <div className="flex justify-between">
@@ -211,7 +219,6 @@ function InfoRow({ label, value }: { label: string; value?: string | number }) {
   );
 }
 
-/** Reusable SectionCard */
 interface SectionCardProps {
   title: string;
   content: React.ReactNode;

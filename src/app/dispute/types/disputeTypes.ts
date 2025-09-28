@@ -39,6 +39,7 @@ export interface DisputeFormData {
   // Core Details
   eventName: string
   eventId?: string
+  respondentId: string[];
    eventDate?: string;
   disputeReason: string
   disputeTitle?: string 
@@ -73,15 +74,23 @@ export interface DisputeFormData {
  
 // ---- Dispute Record ----
 export interface Dispute {
-  id: string
+  _id: string
+  title:string
+  description: string;
+  complainant: { firstName: string; lastName: string };
+  respondent: { firstName: string; lastName: string };
   eventName: string
   disputeReason: string
   partiesInvolved: string      
   currentStage: DisputeStage
+  resolution?: { compensation?: { amount: number } };
   status: DisputeStatus
   amount: number
+  disputeAmount: number;
+  disputeCurrency: string;
   dateFiled: Date
   managedBy?: string
+  createdAt: string;
 }
 
 // ---- Evidence Detail ----

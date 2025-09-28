@@ -19,7 +19,7 @@ const disputeSchema = new mongoose.Schema({
     category: {
         type: String,
         required: true,
-        enum: ['payment', 'service', 'communication', 'contract', 'other']
+        // enum: ['payment', 'service', 'communication', 'contract', 'other']
     },
     priority: {
         type: String,
@@ -27,18 +27,23 @@ const disputeSchema = new mongoose.Schema({
         enum: ['low', 'medium', 'high', 'urgent'],
         default: 'medium'
     },
+    disputeAmount: { type: Number, default: 0 },
+    disputeCurrency: { type: String, default: 'INR' },
     
     // Parties involved
     complainant: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
-    },
-    respondent: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
-    },
+  _id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  firstName: { type: String, required: true },
+  lastName: { type: String, required: true },
+  email: { type: String }
+},
+respondent: {
+  _id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  firstName: { type: String, required: true },
+  lastName: { type: String, required: true },
+  email: { type: String }
+},
+
     
     // Dispute workflow stages
     currentStage: {

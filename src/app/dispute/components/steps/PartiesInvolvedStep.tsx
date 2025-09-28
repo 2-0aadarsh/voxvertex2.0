@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { DisputeFormData, PartyInvolved } from '../../types/disputeTypes';
 import { Check } from 'lucide-react';
+import { useGetEventsQuery, useGetParticipantsByEventIdQuery } from '../../../../store/api/disputApi';
 
 interface PartiesInvolvedStepProps {
   formData: DisputeFormData;
@@ -14,75 +15,82 @@ interface SelectableParty extends PartyInvolved {
 }
 
 export default function PartiesInvolvedStep({
+  
   formData,
   onFormDataUpdate,
 }: PartiesInvolvedStepProps) {
-  const [activeTab, setActiveTab] =
-    useState<'Speakers' | 'Participants'>('Participants');
+  const [activeTab, setActiveTab] = useState<'Speakers' | 'Participants'>('Participants');
   const [speakers, setSpeakers] = useState<SelectableParty[]>([]);
   const [participants, setParticipants] = useState<SelectableParty[]>([]);
+
+  const { data: eventsData } = useGetEventsQuery(undefined, { skip: !formData.eventId });
+  const { data: participantsData } = useGetParticipantsByEventIdQuery(formData.eventId!, {
+    skip: !formData.eventId,
+  });
+console.log("PartiesInvolvedStep rendered", formData);
+formData.partiesInvolved?.forEach((p) => console.log("party.userId:", p.userId));
+
+
+  const selectedEvent = useMemo(() => {
+    if (!eventsData || !formData.eventId) return null;
+    return (
+      eventsData.data.upcoming.find((e: any) => e._id === formData.eventId) ||
+      eventsData.data.past.find((e: any) => e._id === formData.eventId)
+    );
+  }, [eventsData, formData.eventId]);
 
   // Restore selections from formData
   const restoreSelections = (list: SelectableParty[]) =>
     list.map((p) => ({
       ...p,
-      selected:
-        formData.partiesInvolved?.some((f) => f.email === p.email) || false,
+      selected: formData.partiesInvolved?.some((f) => f.userId === p.userId ) || false,
     }));
 
-  // --- Fetch speakers
+  // Populate speakers from selected event
   useEffect(() => {
-    if (!formData.eventId) return;
+    console.log('selectedEvent.speakers:', selectedEvent.speakers);
 
-    const fetchSpeakers = async () => {
-      const res = await fetch(`http://localhost:3001/api/events`);
-      const data = await res.json();
+    if (!selectedEvent) return;
+    const formatted: SelectableParty[] = selectedEvent.speakers.map((s: any) => ({
+      name: s.name || 'Unknown',
+      email: s.email || 'no-email@example.com',
+      userId: s.userId,
+      role: 'Speaker',
+      // selected: false,
+    }));
+    setSpeakers(restoreSelections(formatted));
+  }, [selectedEvent, formData.partiesInvolved]);
 
-      const selectedEvent =
-        data.data.upcoming.find((e: any) => e._id === formData.eventId) ||
-        data.data.past.find((e: any) => e._id === formData.eventId);
-
-      if (selectedEvent) {
-        const formatted: SelectableParty[] = selectedEvent.speakers.map(
-          (s: any) => ({
-            name: s.name || 'Unknown',
-            email: s.email || 'no-email@example.com',
-            userId: s.userId || s._id,
-            role: 'Speaker',
-            selected: false,
-          })
-        );
-        setSpeakers(restoreSelections(formatted));
-      }
-    };
-    fetchSpeakers();
-  }, [formData.eventId]);
-
-  // --- Fetch participants
+  // Populate participants from API
   useEffect(() => {
-    if (!formData.eventId) return;
+    if (!participantsData?.participants) return;
+    const formatted: SelectableParty[] = participantsData.participants.map((p: any) => ({
+      name: p.name,
+      email: p.email,
+      phone: p.phone,
+      userId: p.userId || p._id,
+      role: 'Participant',
+      // selected: false,
+    }));
+    setParticipants(restoreSelections(formatted));
+  }, [participantsData, formData.partiesInvolved]);
+console.log("Submitting parties:", formData.partiesInvolved);
 
-    const fetchParticipants = async () => {
-      const res = await fetch(
-        `http://localhost:3001/api/registrations/event/${formData.eventId}/participants`
-      );
-      const data = await res.json();
-      if (data.participants) {
-        const formatted: SelectableParty[] = data.participants.map((p: any) => ({
-          name: p.name,
-          email: p.email,
-          phone: p.phone,
-          userId: p.userId || p._id,
-          role: 'Participant',
-          selected: false,
-        }));
-        setParticipants(restoreSelections(formatted));
-      }
-    };
-    fetchParticipants();
-  }, [formData.eventId]);
+  // Merge selected parties
 
-  // --- Merge selected parties whenever lists change
+
+  // Toggle selection
+ const toggleSelection = (party: SelectableParty, type: 'speakers' | 'participants') => {
+  if (type === 'speakers') {
+    setSpeakers((prev) =>
+      prev.map((p) => (p.userId === party.userId ? { ...p, selected: !p.selected } : p))
+    );
+  } else {
+    setParticipants((prev) =>
+      prev.map((p) => (p.userId === party.userId ? { ...p, selected: !p.selected } : p))
+    );
+  }
+};
   useEffect(() => {
     const allSelected: PartyInvolved[] = [
       ...speakers.filter((p) => p.selected),
@@ -94,30 +102,12 @@ export default function PartiesInvolvedStep({
       userId,
       role,
     }));
-    onFormDataUpdate({ partiesInvolved: allSelected });
-  }, [speakers, participants, onFormDataUpdate]);
+      const respondentIds = allSelected
+    .map((p) => p.userId)
+    .filter((id): id is string => !!id);
+    onFormDataUpdate({ partiesInvolved: allSelected, respondentId: respondentIds, });
+  }, [speakers, participants]);
 
-  // --- Toggle selection
-  const toggleSelection = (
-    party: SelectableParty,
-    type: 'speakers' | 'participants'
-  ) => {
-    if (type === 'speakers') {
-      setSpeakers((prev) =>
-        prev.map((p) =>
-          p.email === party.email ? { ...p, selected: !p.selected } : p
-        )
-      );
-    } else {
-      setParticipants((prev) =>
-        prev.map((p) =>
-          p.email === party.email ? { ...p, selected: !p.selected } : p
-        )
-      );
-    }
-  };
-
-  // --- Render the current list
   const renderPartyList = () => {
     const list = activeTab === 'Speakers' ? speakers : participants;
     const currentType: 'speakers' | 'participants' =
@@ -151,6 +141,7 @@ export default function PartiesInvolvedStep({
       </div>
     ));
   };
+
 
   return (
     <div className="space-y-6">
