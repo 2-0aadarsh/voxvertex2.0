@@ -6,7 +6,6 @@ import { Message } from '../types';
 interface MessageProps {
   message: Message;
 }
-
 export function MessageComponent({ message }: MessageProps) {
   const isEventOrganizer = message.sender === 'event_organizer';
   

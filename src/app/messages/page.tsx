@@ -127,7 +127,6 @@ export default function MessagesPage() {
           getProfileImageUrl={getProfileImageUrl}
         />
       </Suspense>
-
       <div className="flex h-[calc(100vh-64px)]">
         <Sidebar currentUser={currentUser} />
         

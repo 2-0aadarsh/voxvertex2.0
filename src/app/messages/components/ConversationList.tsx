@@ -4,7 +4,6 @@ interface ConversationListProps {
   selectedConversation?: string;
   onSelectConversation: (conversationId: string) => void;
 }
-
 export function ConversationList({ 
   conversations, 
   selectedConversation,

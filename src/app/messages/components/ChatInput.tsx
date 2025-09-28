@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { DollarSign, Send } from 'lucide-react';
-
 interface ChatInputProps {
   onSendMessage: (message: string) => void;
 }
