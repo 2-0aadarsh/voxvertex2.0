@@ -54,7 +54,6 @@ export default function TermsAndConditions() {
         />
       </Suspense>
 
-      {/* Hero Section */}
       <div className="relative bg-gradient-to-r from-[#FF6B35] to-[#de3b00] h-76 flex items-center justify-center">
         <div className="relative z-10 text-center text-white">
           <div className="flex justify-center mb-6">

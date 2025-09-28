@@ -1,8 +1,5 @@
-//app\messages\components\ChatHeader.tsx
 'use client';
-
 import { MessageSquare } from 'lucide-react';
-
 export function ChatHeader() {
   return (
     <div className="p-4 border-b border-gray-200 bg-white">

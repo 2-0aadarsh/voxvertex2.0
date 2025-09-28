@@ -5,7 +5,6 @@ export interface Message {
   timestamp: string;
   type?: 'normal' | 'proposal';
 }
-
 export interface Conversation {
   id: string;
   title: string;
@@ -13,7 +12,6 @@ export interface Conversation {
   timestamp: string;
   status: 'negotiating' | 'confirmed' | 'pending';
 }
-
 export interface User {
   name: string;
   email: string;

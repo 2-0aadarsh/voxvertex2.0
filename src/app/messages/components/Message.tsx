@@ -1,4 +1,3 @@
-//app\messages\components\Message.tsx
 //last long msg
 'use client';
 

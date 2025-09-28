@@ -10,7 +10,6 @@ const Navbar = dynamic(() => import('@/components/Navbar'), {
   loading: () => <div className="h-16 bg-white border-b border-gray-200 flex items-center justify-center"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500"></div></div>,
   ssr: false
 });
-
 export default function PrivacyPolicy() {
   // Authentication hooks
   const { user, isAuthenticated } = useAuth();
@@ -53,7 +52,6 @@ export default function PrivacyPolicy() {
         />
       </Suspense>
 
-      {/* Hero Section */}
       <div className="relative bg-gradient-to-r from-[#FF6B35] to-[#de3b00] h-76 flex items-center justify-center">
         <div className="relative z-10 text-center text-white">
           <div className="flex justify-center mb-6">

@@ -1,6 +1,3 @@
-//app\messages\components\ChatInput.tsx
-// 'use client';
-
 import { useState } from 'react';
 import { DollarSign, Send } from 'lucide-react';
 

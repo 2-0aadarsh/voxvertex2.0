@@ -1,5 +1,4 @@
 import { Conversation } from '../types';
-
 interface ConversationListProps {
   conversations: Conversation[];
   selectedConversation?: string;

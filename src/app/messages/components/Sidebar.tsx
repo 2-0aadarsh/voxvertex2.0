@@ -1,4 +1,3 @@
-//app\messages\components\Sidebar.tsx
 "use client";
 
 import { CiSettings, CiUser } from "react-icons/ci";
