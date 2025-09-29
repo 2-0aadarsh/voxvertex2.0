@@ -42,6 +42,7 @@ const Sidebar = () => {
   };
 
   const navigationItems = [
+<<<<<<< Updated upstream
     {
       icon: <CiUser />,
       label: "Profile",
@@ -77,6 +78,15 @@ const Sidebar = () => {
       label: "Dispute",
       href: "/dispute",
     },
+=======
+    { icon: <CiUser />, label: "Profile", href: "/", active: true },
+    { icon: <MdOutlineDashboard />, label: "Dashboard", href: "/dashboard" },
+    { icon: <LuMessageCircleMore />, label: "Messages", href: "/messages" },
+    { icon: <IoCalendarOutline />, label: "Bookings", href: "/bookings" },
+    { icon: <CalendarDays />, label: "Events", href: "/events" },
+    { icon: <VscCreditCard />, label: "Payments", href: "/payments" },
+    { icon: <FaMoneyBillTrendUp />, label: "Dispute", href: "/dispute" },
+>>>>>>> Stashed changes
   ];
 
   const bottomItems = [
