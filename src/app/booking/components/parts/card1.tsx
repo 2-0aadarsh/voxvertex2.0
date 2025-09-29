@@ -1,68 +1,56 @@
+//speaker database cards
+'use client';
+
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { 
   MapPin, 
   Star, 
-  Bookmark,
   Check,
   Eye,
   DollarSign,
-  X
+  X,
+  Plus
 } from 'lucide-react';
-import Step1 from './steps/step1';
-import Step2 from './steps/step2';
-import Step3 from './steps/step3';
-import Step4 from './steps/step4';
-import { Speaker } from '@/store/types';
 
 
-// Extended Speaker interface for display purposes
-interface DisplaySpeaker extends Omit<Speaker, 'availability'> {
+interface Speaker {
+  id: string;
   name: string;
   title: string;
   rating: number;
   bookings: number;
+  location: string;
   price: number;
-  priceRange: {
-    min: number;
-    max: number;
-    currency: string;
-  };
   tags: string[];
-  specializations: string[];
   specialization: string;
+  expertise?: string;
+  date?: string;
+  image?: string;
+  status?: 'In Progress' | 'Confirmed' | 'Declined';
+  description?: string;
+  timeAgo?: string;
   avatar?: string;
-  industry?: string;
-  activities?: string[];
-  socialLinks?: Record<string, string>;
-  availability?: {
-    dates: string[];
-    eventTypes: any[];
-    modes: string[];
-    timeSlots: any[];
-  };
-  rawData?: Record<string, unknown>;
 }
 
-interface SpeakerCardProps {
-  speaker: DisplaySpeaker;
+interface BookingSpeakerCardProps {
+  speaker: Speaker;
   isCompact?: boolean;
 }
 
 // Define the FormData interface to match Step4's requirements
 interface FormData {
-  // Step 1 - Date & Time (previously Step 2)
-  date: string;
-  startTime: string;
-  endTime: string;
-  duration: number; // in minutes
-  
-  // Step 2 - Event Details (previously Step 1)
+  // Step 1 - Event Details
   eventName: string;
   eventType: string;
   location: string;
   attendees: number;
   description?: string;
+  
+  // Step 2 - Date & Time
+  date: string;
+  startTime: string;
+  endTime: string;
+  duration: number; // in minutes
   
   // Step 3 - Preferences
   offerAmount: number;
@@ -158,46 +146,39 @@ const TagCard: React.FC<{
   );
 };
 
-const SpeakerCard: React.FC<SpeakerCardProps> = ({ speaker, isCompact = false }) => {
+const BookingSpeakerCard: React.FC<BookingSpeakerCardProps> = ({ speaker = {
+  id: "1",
+  name: "Sample Speaker",
+  title: "Expert Speaker",
+  rating: 4.8,
+  bookings: 25,
+  location: "New York, NY",
+  price: 5000,
+  tags: ["Technology", "Innovation"],
+  specialization: "Technology"
+}, isCompact = false }) => {
   const [isTagCardVisible, setIsTagCardVisible] = useState(false);
   const [isBookingModalVisible, setIsBookingModalVisible] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
 
   // Add form data state to collect data from all steps
   const [formData, setFormData] = useState<FormData>({
-    // Step 1 - Date & Time (previously Step 2)
-    date: '',
-    startTime: '',
-    endTime: '',
-    duration: 0,
-    
-    // Step 2 - Event Details (previously Step 1)
     eventName: '',
     eventType: '',
     location: '',
     attendees: 0,
     description: '',
-    
-    // Step 3 - Preferences
+    date: '',
+    startTime: '',
+    endTime: '',
+    duration: 0,
     offerAmount: 0,
     currency: '$',
     specialRequests: '',
     topics: []
   });
-  const router = useRouter(); // Correctly declare router here
 
-  const handleViewProfile = () => {
-    router.push('/speakers_profile'); // Redirect on button click
-  };
-
-
-  // Ensure speaker prop is provided
-  if (!speaker) {
-    console.error('SpeakerCard: speaker prop is required');
-    return null;
-  }
-
-  const handleBookmarkClick = () => {
+  const handleAddTagClick = () => {
     setIsTagCardVisible(!isTagCardVisible);
   };
 
@@ -211,20 +192,15 @@ const SpeakerCard: React.FC<SpeakerCardProps> = ({ speaker, isCompact = false })
     setCurrentStep(1); // Reset to step 1 when closing modal
     // Optionally reset form data
     setFormData({
-      // Step 1 - Date & Time (previously Step 2)
-      date: '',
-      startTime: '',
-      endTime: '',
-      duration: 0,
-      
-      // Step 2 - Event Details (previously Step 1)
       eventName: '',
       eventType: '',
       location: '',
       attendees: 0,
       description: '',
-      
-      // Step 3 - Preferences
+      date: '',
+      startTime: '',
+      endTime: '',
+      duration: 0,
       offerAmount: 0,
       currency: '$',
       specialRequests: '',
@@ -248,7 +224,6 @@ const SpeakerCard: React.FC<SpeakerCardProps> = ({ speaker, isCompact = false })
       setCurrentStep(currentStep - 1);
     }
   };
-  
 
   // Handle editing from Step4
   const handleEdit = (step: number) => {
@@ -261,17 +236,19 @@ const SpeakerCard: React.FC<SpeakerCardProps> = ({ speaker, isCompact = false })
   };
 
   if (isCompact) {
-    // 2 column
+    // Compact version for when filters are shown (2-column layout)
     return (
       <>
-        <div className="bg-white rounded-xl border border-[#FF6B35]/80 shadow-sm p-6 hover:shadow-md transition-shadow relative">
+        <div className="bg-white rounded-xl border-1 border-[#FF6B35]/40 shadow-sm p-6 hover:shadow-md transition-shadow relative">
+          {/* Add Tag icon - top right */}
           <div 
             className="absolute top-4 right-4 cursor-pointer"
-            onClick={handleBookmarkClick}
+            onClick={handleAddTagClick}
           >
-            <Bookmark className="w-5 h-5 text-[#FF6B35] fill-current hover:scale-110 transition-transform" />
+            <Plus className="w-5 h-5 text-[#FF6B35] hover:scale-110 transition-transform" />
           </div>
 
+          {/* Tag Card */}
           <TagCard
             isVisible={isTagCardVisible}
             onClose={() => setIsTagCardVisible(false)}
@@ -280,8 +257,10 @@ const SpeakerCard: React.FC<SpeakerCardProps> = ({ speaker, isCompact = false })
           
           {/* Top Section */}
           <div className="flex items-start gap-4 mb-4">
+            {/* Profile Picture */}
             <div className="w-16 h-16 rounded-full flex-shrink-0 relative border-2 border-orange-200">
               <div className="w-full h-full bg-gray-300 rounded-full"></div>
+              {/* Verification badge */}
               <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
                 <Check className="w-3 h-3 text-white" />
               </div>
@@ -300,8 +279,9 @@ const SpeakerCard: React.FC<SpeakerCardProps> = ({ speaker, isCompact = false })
 
           {/* Middle Section */}
           <div className="mb-4">
+            {/* Description */}
             <p className="text-sm text-black mb-3 leading-relaxed">
-              {speaker.bio || "Leading AI researcher with 15+ years of experience in deep learning and neural networks."}
+              Leading AI researcher with 15+ years of experience in deep learning and neural networks.
             </p>
 
             {/* Location */}
@@ -317,27 +297,32 @@ const SpeakerCard: React.FC<SpeakerCardProps> = ({ speaker, isCompact = false })
             </div>
           </div>
 
-          {/* Tags */}
-          <div className="mb-8">
+          {/* Tags Section */}
+          <div className="mb-6">
+            {/* First row of tags */}
+            <div className="flex flex-wrap gap-2 mb-2">
+              <span className="border border-orange-300 text-orange-600 px-3 py-1 rounded-full text-xs">
+                Conferences & Summits
+              </span>
+              <span className="border border-orange-300 text-orange-600 px-3 py-1 rounded-full text-xs">
+                Seminars
+              </span>
+              <span className="border border-orange-300 text-orange-600 px-3 py-1 rounded-full text-xs">
+                Keynote Speeches
+              </span>
+            </div>
+            {/* Second row of tags */}
             <div className="flex flex-wrap gap-2">
-              {speaker.tags && speaker.tags.length > 0 && (
-                <>
-                  {speaker.tags.slice(0, 3).map((tag, index) => (
-                    <span key={index} className="border border-orange-300 text-orange-600 px-3 py-1 rounded-full text-xs">
-                      {tag}
-                    </span>
-                  ))}
-                  {speaker.tags.length > 3 && (
-                    <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs">
-                      +{speaker.tags.length - 3} more
-                    </span>
-                  )}
-                </>
-              )}
+              <span className="border border-orange-300 text-orange-600 px-3 py-1 rounded-full text-xs">
+                Conferences & Summits
+              </span>
+              <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs">
+                +1 more
+              </span>
             </div>
           </div>
 
-          {/* Action Buttons */}
+          {/* Bottom Section - Action Buttons */}
           <div className="flex gap-3">
             <button className="flex-1 flex items-center justify-center gap-2 bg-white border border-[#FF6B35] text-[#FF6B35] px-4 py-2.5 rounded-lg hover:bg-orange-50 transition-colors text-sm font-medium">
               <Eye className="w-4 h-4" />
@@ -352,17 +337,16 @@ const SpeakerCard: React.FC<SpeakerCardProps> = ({ speaker, isCompact = false })
           </div>
         </div>
 
-        {/* Booking Modal Steps - INTERCHANGED: Step 2 is now Step 1, Step 1 is now Step 2 */}
-        <Step2
+        {/* Booking Modal Steps */}
+        {/* <Step1
           isVisible={isBookingModalVisible && currentStep === 1}
           onClose={handleCloseBookingModal}
           onNext={handleNextStep}
           onPrevious={handlePreviousStep}
           formData={formData}
           updateFormData={updateFormData}
-          speakerId={speaker._id}
         />
-        <Step1
+        <Step2
           isVisible={isBookingModalVisible && currentStep === 2}
           onClose={handleCloseBookingModal}
           onNext={handleNextStep}
@@ -381,26 +365,25 @@ const SpeakerCard: React.FC<SpeakerCardProps> = ({ speaker, isCompact = false })
         <Step4
           isVisible={isBookingModalVisible && currentStep === 4}
           onClose={handleCloseBookingModal}
+          onNext={handleNextStep}
           onPrevious={handlePreviousStep}
           formData={formData}
           onEdit={handleEdit}
-          speakerId={speaker._id}
-          speakerName={speaker.name}
-          speakerExpertise={speaker.areaOfExpertise || []}
-        />
+        /> */}
       </>
     );
   }
 
-  // 3 column layout cards
+  // Default version for marketplace view (3-column layout)
   return (
     <>
-      <div className="bg-white rounded-xl border border-[#FF6B35] shadow-sm p-4 hover:shadow-md transition-shadow relative h-90">
+      <div className="bg-white rounded-xl border-1 border-[#FF6B35] shadow-sm p-4 hover:shadow-md transition-shadow relative h-90">
+        {/* Add Tag icon - top right */}
         <div 
           className="absolute top-3 right-3 cursor-pointer"
-          onClick={handleBookmarkClick}
+          onClick={handleAddTagClick}
         >
-          <Bookmark className="w-5 h-5 text-[#FF6B35] fill-current hover:scale-110 transition-transform" />
+          <Plus className="w-5 h-5 text-[#FF6B35] hover:scale-110 transition-transform" />
         </div>
 
         {/* Tag Card */}
@@ -415,11 +398,13 @@ const SpeakerCard: React.FC<SpeakerCardProps> = ({ speaker, isCompact = false })
           {/* Profile Picture */}
           <div className="w-12 h-12 rounded-full flex-shrink-0 relative">
             <div className="w-full h-full bg-gray-300 rounded-full"></div>
+            {/* Verification badge */}
             <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
               <Check className="w-2.5 h-2.5 text-white" />
             </div>
           </div>
 
+          {/* Name, Subtitle, Rating */}
           <div className="flex-1 min-w-0">
             <h3 className="text-base font-bold text-black mb-1">{speaker.name}</h3>
             <p className="text-[#FF6B35] text-xs font-medium mb-1">{speaker.title}</p>
@@ -430,12 +415,12 @@ const SpeakerCard: React.FC<SpeakerCardProps> = ({ speaker, isCompact = false })
           </div>
         </div>
 
-        {/* Desc */}
+        {/* Description */}
         <p className="text-xs text-black mb-4 leading-relaxed">
-          {speaker.bio || "Leading AI researcher with 15+ years of experience in deep learning and neural networks."}
+          Leading AI researcher with 15+ years of experience in deep learning and neural networks.
         </p>
 
-        {/* Location, Price */}
+        {/* Location and Price */}
         <div className="mb-4 space-y-1">
           <div className="flex items-center gap-1">
             <MapPin className="w-3 h-3 text-gray-500" />
@@ -447,32 +432,29 @@ const SpeakerCard: React.FC<SpeakerCardProps> = ({ speaker, isCompact = false })
           </div>
         </div>
 
-        {/* Tags Sec */}
-        <div className="mb-14">
+        {/* Tags Section */}
+        <div className="mb-6">
+          <div className="flex flex-wrap gap-1 mb-1">
+            <span className="border border-orange-300 text-orange-600 px-2 py-0.5 rounded-full text-xs">
+              Conferences & Summits
+            </span>
+            <span className="border border-orange-300 text-orange-600 px-2 py-0.5 rounded-full text-xs">
+              Seminars
+            </span>
+          </div>
           <div className="flex flex-wrap gap-1">
-            {speaker.tags && speaker.tags.length > 0 && (
-              <>
-                {speaker.tags.slice(0, 3).map((tag, index) => (
-                  <span key={index} className="border border-orange-300 text-orange-600 px-2 py-0.5 rounded-full text-xs">
-                    {tag}
-                  </span>
-                ))}
-                {speaker.tags.length > 3 && (
-                  <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-xs">
-                    +{speaker.tags.length - 3} more
-                  </span>
-                )}
-              </>
-            )}
+            <span className="border border-orange-300 text-orange-600 px-2 py-0.5 rounded-full text-xs">
+              Keynote Speeches
+            </span>
+            <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-xs">
+              +1 more
+            </span>
           </div>
         </div>
 
-        {/* Action Buttons */}
+        {/* Bottom Section - Action Buttons */}
         <div className="flex gap-2 absolute bottom-4 left-4 right-4">
-          <button
-           className="flex-1 flex items-center justify-center gap-1 bg-white border border-[#FF6B35] text-[#FF6B35] px-3 py-1.5 rounded-lg hover:bg-orange-50 transition-colors text-xs font-medium"
-           onClick={handleViewProfile}
-           >
+          <button className="flex-1 flex items-center justify-center gap-1 bg-white border border-[#FF6B35] text-[#FF6B35] px-3 py-1.5 rounded-lg hover:bg-orange-50 transition-colors text-xs font-medium">
             <Eye className="w-3 h-3" />
             View Profile
           </button>
@@ -485,17 +467,16 @@ const SpeakerCard: React.FC<SpeakerCardProps> = ({ speaker, isCompact = false })
         </div>
       </div>
 
-      {/* Booking Modal Steps - INTERCHANGED: Step 2 is now Step 1, Step 1 is now Step 2 */}
-      <Step2
+      {/* Booking Modal Steps */}
+      {/* <Step1
         isVisible={isBookingModalVisible && currentStep === 1}
         onClose={handleCloseBookingModal}
         onNext={handleNextStep}
         onPrevious={handlePreviousStep}
         formData={formData}
         updateFormData={updateFormData}
-        speakerId={speaker._id}
       />
-      <Step1
+      <Step2
         isVisible={isBookingModalVisible && currentStep === 2}
         onClose={handleCloseBookingModal}
         onNext={handleNextStep}
@@ -514,15 +495,13 @@ const SpeakerCard: React.FC<SpeakerCardProps> = ({ speaker, isCompact = false })
       <Step4
         isVisible={isBookingModalVisible && currentStep === 4}
         onClose={handleCloseBookingModal}
+        onNext={handleNextStep}
         onPrevious={handlePreviousStep}
         formData={formData}
         onEdit={handleEdit}
-        speakerId={speaker._id}
-        speakerName={speaker.name}
-        speakerExpertise={speaker.areaOfExpertise || []}
-      />
+      /> */}
     </>
   );
 };
 
-export default SpeakerCard;
+export default BookingSpeakerCard;

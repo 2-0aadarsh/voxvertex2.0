@@ -46,7 +46,6 @@ const Sidebar = () => {
       icon: <CiUser />,
       label: "Profile",
       href: "/",
-      active: true,
     },
     {
       icon: <MdOutlineDashboard />,
@@ -66,7 +65,7 @@ const Sidebar = () => {
     {
       icon: <CalendarDays />,
       label: "Events",
-      href: "/events",
+      href: "/events_page",
     },
     {
       icon: <VscCreditCard />,
