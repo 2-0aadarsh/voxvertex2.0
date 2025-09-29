@@ -47,6 +47,8 @@ export default function DisputeManagement() {
   const filtered: Dispute[] = disputes.filter(d =>
     (d.title + d.description).toLowerCase().includes(searchTerm.toLowerCase())
   );
+  console.log("filtered log from line 50 of page.tsx", disputes);
+  
 
   // Stats calculations
   const active = disputes.filter(d => d.status.toLowerCase() === 'active').length;
@@ -170,13 +172,21 @@ console.log("filtered data", filtered);
                       <div className="font-medium text-gray-900">{d.title}</div>
                       <div className="text-xs text-gray-500">{d.description}</div>
                     </td>
-                    <td className="px-4 py-3 align-middle">
-                      <div className="flex flex-wrap gap-2">
-                        {[`${d.complainant.firstName} ${d.complainant.lastName}`, `${d.respondent.firstName} ${d.respondent.lastName}`].map((p, idx) => (
-                          <span key={idx} className="px-3 py-1.5 rounded-full bg-orange-50 text-orange-600 text-sm border border-orange-200">{p}</span>
-                        ))}
-                      </div>
-                    </td>
+                  <td className="px-4 py-3 align-middle">
+                   <div className="flex flex-wrap gap-2">
+                  {/* Complainant */}
+                    <span className="px-3 py-1.5 rounded-full bg-orange-50 text-orange-600 text-sm border border-orange-200">
+                    {d.complainant.firstName} {d.complainant.lastName}
+                  </span>
+                  {/* Respondents array */}
+                  {d.respondent?.map((r, idx) => (
+                  <span key={idx} className="px-3 py-1.5 rounded-full bg-orange-50 text-orange-600 text-sm border border-orange-200">
+                  {r.firstName} {r.lastName}
+                </span>
+    ))}
+  </div>
+</td>
+
                     <td className="px-4 py-3 align-middle">
                       <span className={`inline-flex items-center gap-2 px-6 py-2 rounded-full text-sm font-medium ${getStageColor(d.currentStage)}`}>{d.currentStage}</span>
                     </td>

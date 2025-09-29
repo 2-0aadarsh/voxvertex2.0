@@ -50,6 +50,7 @@ export const disputeApi = createApi({
       }),
       invalidatesTags: (result, error, { disputeId }) => [{ type: 'Dispute', id: disputeId }],
     }),
+    
 
     // Events endpoints (added here too)
     getEvents: builder.query<{ data: { upcoming: any[]; past: any[] } }, void>({

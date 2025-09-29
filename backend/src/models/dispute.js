@@ -32,17 +32,17 @@ const disputeSchema = new mongoose.Schema({
     
     // Parties involved
     complainant: {
-  _id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  _id: { type: mongoose.Schema.Types.ObjectId, ref: 'EnhancedUser', required: true },
   firstName: { type: String, required: true },
   lastName: { type: String, required: true },
   email: { type: String }
 },
-respondent: {
-  _id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+respondent:[ {
+  _id: { type: mongoose.Schema.Types.ObjectId, ref: 'EnhancedUser', required: true },
   firstName: { type: String, required: true },
   lastName: { type: String, required: true },
   email: { type: String }
-},
+}],
 
     
     // Dispute workflow stages
@@ -87,7 +87,7 @@ respondent: {
             duration: { type: Number }, // minutes
             notes: { type: String },
             attendees: [{
-                user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+                user: { type: mongoose.Schema.Types.ObjectId, ref: 'EnhancedUser' },
                 attended: { type: Boolean }
             }]
         }],

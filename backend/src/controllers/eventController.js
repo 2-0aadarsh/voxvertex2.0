@@ -310,12 +310,14 @@ export const getAllEvents = async (req, res) => {
     // For now, this endpoint is protected by ensureAuthenticated but accessible to all authenticated users
     
     const events = await Event.find()
-      .populate('speakers.userId', 'name email profileImage')
+      // .populate('speakers.userId', 'name email profileImage')
       .populate('organizer.userId', 'name email')
       .sort({ eventDate: 1 }) // Sort by event date
       .lean();
 
     const categorized = categorizeEvents(events);
+// console.log("event from line 319",JSON.Stringify(events))
+console.log("event from line 320",events);
 
     res.status(200).json({
       success: true,
@@ -385,9 +387,8 @@ export const getUserEvents = async (req, res) => {
 export const getEventById = async (req, res) => {
   try {
     const event = await Event.findById(req.params.id)
-      .populate('speakers.userId', 'name email profileImage')
-      .populate('organizer.userId', 'name email')
-      .lean();
+  .lean();
+
 
     if (!event) {
       return res.status(404).json({
@@ -395,32 +396,47 @@ export const getEventById = async (req, res) => {
         message: 'Event not found'
       });
     }
-
+if (!req.user || !req.user._id) {
+  return res.status(401).json({ success: false, message: 'User not authenticated' });
+}
     // Check if user is authorized to view this event
     // User can view if they are the organizer or a speaker
     // Handle both populated and unpopulated organizer.userId cases
-    let eventOrganizerId;
-    if (typeof event.organizer.userId === 'object' && event.organizer.userId._id) {
-      // If populated, use the _id field
-      eventOrganizerId = event.organizer.userId._id;
-    } else {
-      // If not populated, use the userId directly
-      eventOrganizerId = event.organizer.userId;
-    }
+    //commented below code because there is nothing like userId._id. there is only userId
+    // let eventOrganizerId;
+    // if (typeof event.organizer.userId === 'object' && event.organizer.userId._id) {
+    //   // If populated, use the _id field
+    //   eventOrganizerId = event.organizer.userId._id;
+    // } else {
+    //   // If not populated, use the userId directly
+    //   eventOrganizerId = event.organizer.userId;
+    // }
+    const eventOrganizerId = event.organizer?.userId; // no ._id
+
+console.log("speaker from getevent by id is", event.speakers);
     
-    const eventOrganizerIdStr = eventOrganizerId.toString();
+    // const eventOrganizerIdStr = eventOrganizerId.toString();
     const reqUserIdStr = req.user._id.toString();
+
+    //commented below code because there is nothing like userId._id. there is only userId
     
-    const isAuthorized = eventOrganizerIdStr === reqUserIdStr || 
-                        event.speakers.some(speaker => {
-                          let speakerId;
-                          if (typeof speaker.userId === 'object' && speaker.userId._id) {
-                            speakerId = speaker.userId._id;
-                          } else {
-                            speakerId = speaker.userId;
-                          }
-                          return speakerId && speakerId.toString() === reqUserIdStr;
-                        });
+    // const isAuthorized = eventOrganizerIdStr === reqUserIdStr || 
+    //                     event.speakers.some(speaker => {
+    //                       let speakerId;
+    //                       if (typeof speaker.userId === 'object' && speaker.userId._id) {
+    //                         speakerId = speaker.userId._id;
+    //                       } else {
+    //                         speakerId = speaker.userId;
+    //                       }
+    //                       return speakerId && speakerId.toString() === reqUserIdStr;
+    //                     });
+
+ const isAuthorized =
+  (eventOrganizerId && eventOrganizerId.toString() === reqUserIdStr) ||
+  event.speakers.some(
+    speaker => speaker.userId && speaker.userId.toString() === reqUserIdStr
+  );
+
     
     if (!isAuthorized) {
       return res.status(403).json({
@@ -428,18 +444,28 @@ export const getEventById = async (req, res) => {
         message: 'Not authorized to view this event'
       });
     }
-
+  // Format speakers: keep userId as ObjectId
+    const formattedSpeakers = event.speakers.map(speaker => ({
+      ...speaker,
+      userId: speaker.userId?._id || speaker.userId || null, // ensures ObjectId
+    }));
+    console.log("formatspeaker line 450", formattedSpeakers);
+    
     // Add status field
     const eventWithStatus = {
       ...event,
+      speakers:formattedSpeakers,
       status: event.eventDate < new Date() ? 'past' : 'upcoming'
     };
+    console.log("eventWithStatus line 458", eventWithStatus);
+    
 
     res.status(200).json({
       success: true,
       data: eventWithStatus
     });
   } catch (error) {
+     console.error('getEventById error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error fetching event'
@@ -559,7 +585,7 @@ export const updateEvent = async (req, res) => {
           if (expertRole?.userId) {
             validatedSpeakers.push({
               email: normalizedEmail,
-              userId: expertRole.userId._id
+              userId: expertRole.userId
             });
           } else {
             invalidSpeakers.push(email);

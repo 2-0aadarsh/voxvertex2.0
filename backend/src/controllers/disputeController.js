@@ -4,7 +4,7 @@ import Dispute from '../models/dispute.js';
 import UserService from '../services/user.service.js';
 import EventRegistration from '../models/eventRegister.js';
 import Event from '../models/event.js';
-import User from '../models/user.js'; // used in assignMediator etc.
+// import User from '../models/user.js'; // used in assignMediator etc.
 
 /**
  * Create a dispute
@@ -15,152 +15,138 @@ import User from '../models/user.js'; // used in assignMediator etc.
  *
  * NOTE: This function preserves your other logic and only updates respondent detection.
  */
+// src/controllers/disputeController.js
+
+/* ----------------- Create a dispute ----------------- */
+// src/controllers/disputeController.js
 export const createDispute = async (req, res) => {
   try {
-    console.log('--- Create Dispute Called ---');
-
     if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication required',
-        code: 'NO_AUTH'
-      });
+      return res.status(401).json({ success: false, message: 'Authentication required' });
     }
 
-    // embed complainant info (keeps behaviour you had)
-    const complainantUser = req.user;
     const complainantData = {
-      _id: complainantUser._id,
-      firstName: complainantUser.firstName,
-      lastName: complainantUser.lastName,
-      email: complainantUser.email
+      _id: req.user._id,
+      firstName: req.user.firstName,
+      lastName: req.user.lastName,
+      email: req.user.email,
     };
 
-    const { title, description, category, priority, respondentId, eventId, disputeAmount,  disputeCurrency, respondentType  } = req.body;
+    const {
+      title,
+      description,
+      category,
+      priority = 'medium',
+      respondentIds, // <-- expecting array from frontend
+      eventId,
+      disputeAmount,
+      disputeCurrency = 'INR',
+    } = req.body;
 
-    if (!title || !description || !category || !respondentId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please provide title, description, category, and respondent'
-      });
-    }
-const parsedAmount = disputeAmount ? Number(disputeAmount) : 0;
-    // Helper to convert id strings to ObjectId when valid
-    const normalizeId = (id) => {
-      if (!id) return id;
-      try {
-        return mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id;
-      } catch {
-        return id;
-      }
-    };
-
-    const respondentValue = normalizeId(respondentId);
-    const respondentStr = respondentId?.toString?.() || respondentId;
-
-    // 1) Try find speaker in event.speakers (speaker._id)
-    let respondent = null;
-    let eventDoc = null;
-    if (eventId) {
-      eventDoc = await Event.findById(eventId).select('speakers').lean();
-      if (eventDoc?.speakers?.length) {
-        const matchedSpeaker = eventDoc.speakers.find(sp => sp.userId?.toString() === respondentStr.toString());
-        if (matchedSpeaker) {
-          // speaker object fields in your DB sample: name, email, title, bio, _id
-          const name = matchedSpeaker.name || `${matchedSpeaker.firstName || ''} ${matchedSpeaker.lastName || ''}`.trim();
-          respondent = {
-            _id: matchedSpeaker.userId,
-            firstName: name.split(' ')[0] || name,
-            lastName: name.split(' ').slice(1).join(' ') || '',
-            email: matchedSpeaker.email || null,
-            extra: {
-              title: matchedSpeaker.title || null,
-              bio: matchedSpeaker.bio || null
-            }
-          };
-        }
-      }
+    // Validate required fields
+    if (!title || !description || !category || !respondentIds || !respondentIds.length) {
+      return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
 
-    // 2) If not speaker, check participants stored in EventRegistration (registrant.userId or extras.userId)
-    if (!respondent) {
-      // Query EventRegistration for the event if available; otherwise search across registrations containing the respondent
-      const registrationQuery = eventId
-        ? { event: eventId, $or: [{ 'registrant.userId': respondentValue }, { 'extras.userId': respondentValue }] }
-        : { $or: [{ 'registrant.userId': respondentValue }, { 'extras.userId': respondentValue }] };
+    // Helper to normalize ID
+    const normalizeId = (id) =>
+      mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : null;
 
-      const registration = await EventRegistration.findOne(registrationQuery).lean();
-      if (registration) {
-        // determine whether registrant or an extra matches
-        if (registration.registrant?.userId?.toString() === respondentStr) {
-          const r = registration.registrant;
-          respondent = {
-            _id: r.userId || r._id,
-            firstName: r.name?.split(' ')[0] || r.name,
-            lastName: r.name?.split(' ').slice(1).join(' ') || '',
-            email: r.email || null,
-            phone: r.phone || null
-          };
-        } else if (Array.isArray(registration.extras)) {
-          const ex = registration.extras.find(e => e.userId?.toString() === respondentStr);
-          if (ex) {
+    // Collect respondents
+    const respondents = [];
+
+    for (const rId of respondentIds) {
+      const respondentObjId = normalizeId(rId);
+      let respondent = null;
+      const rStr = respondentObjId?.toString() || rId.toString();
+
+      // 1) Check event speakers
+      if (eventId) {
+        const eventDoc = await Event.findById(eventId).select('speakers').lean();
+        if (eventDoc?.speakers?.length) {
+          const sp = eventDoc.speakers.find(
+            (s) => s._id?.toString() === rStr || s.userId?.toString() === rStr
+          );
+          if (sp) {
+            const name = sp.name || `${sp.firstName || ''} ${sp.lastName || ''}`.trim();
             respondent = {
-              _id: ex.userId || ex._id,
-              firstName: ex.name?.split(' ')[0] || ex.name,
-              lastName: ex.name?.split(' ').slice(1).join(' ') || '',
-              email: ex.email || null,
-              phone: ex.phone || null
+              _id: sp.userId ? normalizeId(sp.userId) : normalizeId(sp._id),
+              firstName: name.split(' ')[0] || name,
+              lastName: name.split(' ').slice(1).join(' ') || '',
+              email: sp.email || null,
+              role: 'Speaker',
             };
           }
         }
       }
-    }
 
-    // 3) Fallback: try global user lookup (organizer / registered user)
-    if (!respondent) {
-      try {
-        const result = await UserService.getUserById(respondentValue);
+      // 2) Check event participants
+      if (!respondent && eventId) {
+        const reg = await EventRegistration.findOne({
+          event: eventId,
+          $or: [
+            { 'registrant.userId': respondentObjId },
+            { 'extras.userId': respondentObjId },
+          ],
+        }).lean();
+
+        if (reg) {
+          const p =
+            reg.registrant?.userId?.toString() === rStr
+              ? reg.registrant
+              : reg.extras?.find((e) => e.userId?.toString() === rStr);
+
+          if (p) {
+            respondent = {
+              _id: normalizeId(p.userId || p._id),
+              firstName: p.name?.split(' ')[0] || p.name || '',
+              lastName: p.name ? p.name.split(' ').slice(1).join(' ') : '',
+              email: p.email || null,
+              phone: p.phone || null,
+              role: 'Participant',
+            };
+          }
+        }
+      }
+
+      // 3) Global user fallback
+      if (!respondent) {
+        const result = await UserService.getUserById(respondentObjId || rId);
         if (result?.user) {
           respondent = {
             _id: result.user._id,
-            firstName: result.user.firstName,
-            lastName: result.user.lastName,
-            email: result.user.email,
-            phone: result.user.mobileNo || null
+            firstName: result.user.firstName || 'N/A',
+            lastName: result.user.lastName || '',
+            email: result.user.email || '',
+            phone: result.user.mobileNo || null,
+            role: 'User',
           };
         }
-      } catch (err) {
-        respondent = null;
       }
+
+      if (respondent) respondents.push(respondent);
     }
 
-    // If still not found -> return 404
-    if (!respondent) {
-      return res.status(404).json({
-        success: false,
-        message: `Respondent not found for ID ${respondentId}`,
-        code: 'RESPONDENT_NOT_FOUND'
-      });
+    if (!respondents.length) {
+      return res.status(404).json({ success: false, message: 'No valid respondents found' });
     }
 
-    // Generate dispute and save (keeping your existing shape / timeline / messages)
-    const disputeId = `DSP-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
-
+    // Create dispute
     const dispute = new Dispute({
-      disputeId,
+      disputeId: `DSP-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
       title,
       description,
       category,
-      disputeAmount: parsedAmount || 0,
-      disputeCurrency: disputeCurrency || 'INR',
-      priority: priority || 'medium',
+      priority,
+      disputeAmount: Number(disputeAmount) || 0,
+      disputeCurrency,
       complainant: complainantData,
-      respondent,
+      respondent: respondents,
       peerToPeerData: {
         startedAt: new Date(),
-        deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       },
-      eventId // store event reference if present
+      eventId,
     });
 
     dispute.timeline.push({
@@ -168,33 +154,19 @@ const parsedAmount = disputeAmount ? Number(disputeAmount) : 0;
       performedBy: complainantData,
       details: 'Initial creation',
       stage: dispute.currentStage,
-      timestamp: new Date()
+      timestamp: new Date(),
     });
 
-    dispute.messages.push({
-      sender: complainantData,
-      content: 'Dispute created successfully',
-      messageType: 'message',
-      timestamp: new Date()
-    });
-
-    const savedDispute = await dispute.save();
-
-    console.log('✅ Dispute saved successfully:', savedDispute.disputeId);
-    return res.status(201).json({
-      success: true,
-      message: 'Dispute created successfully',
-      dispute: savedDispute
-    });
-  } catch (error) {
-    console.error('❌ Create dispute error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Internal server error',
-      error: error.message
-    });
+    const saved = await dispute.save();
+    return res.status(201).json({ success: true, dispute: saved });
+  } catch (err) {
+    console.error('❌ createDispute error', err);
+    res.status(500).json({ success: false, message: err.message });
   }
 };
+
+/* ---------- export other handlers exactly as you had them ---------- */
+
 
 /**
  * Get all disputes for the current user
@@ -329,10 +301,16 @@ export const getUserDisputes = async (req, res) => {
       }
 
       // respondent may be embedded object or an id
-      let respondent = null;
-      if (disp.respondent) {
-        respondent = await extractPersonFromValue(disp.respondent, disp.eventId);
-      }
+     let respondent = [];
+if (disp.respondent) {
+  if (Array.isArray(disp.respondent)) {
+    respondent = await Promise.all(disp.respondent.map(r => extractPersonFromValue(r, disp.eventId)));
+  } else {
+    const r = await extractPersonFromValue(disp.respondent, disp.eventId);
+    if (r) respondent.push(r);
+  }
+}
+
 
       // If still null, fallback to stored raw value (so frontend can decide)
       return {

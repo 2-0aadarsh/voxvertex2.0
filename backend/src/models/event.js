@@ -70,7 +70,7 @@ const eventSchema = new mongoose.Schema({
     },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: 'EnhancedUser',
       required: false
     },
     name: {
@@ -97,7 +97,7 @@ const eventSchema = new mongoose.Schema({
     },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: 'EnhancedUser',
       required: true
     }
   },
@@ -168,7 +168,7 @@ const eventSchema = new mongoose.Schema({
    tickets: [ticketTierSchema],
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    ref: 'EnhancedUser',
     required: true
   }
 },
