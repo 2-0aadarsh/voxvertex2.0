@@ -240,7 +240,6 @@ export default function Overview({ data = sampleData }: OverviewProps) {
           ></div>
 
           <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto transform transition-all duration-300 scale-100">
-            {/* Header */}
             <div className="flex items-center justify-between p-6 pb-4 border-b border-gray-100">
               <div>
                 <h2 className="text-xl font-semibold text-[#FF6B35]">Add Funds to Wallet</h2>
@@ -420,7 +419,6 @@ export default function Overview({ data = sampleData }: OverviewProps) {
     </div>
   );
 }
-
 // Demo data for testing 
 const sampleData: PaymentData = {
   totalBalance: 15750,

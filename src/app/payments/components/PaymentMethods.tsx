@@ -325,7 +325,6 @@ export default function PaymentMethods() {
             </div>
           )}
         </div>
-
         <div className="bg-[#FF6B35]/10 border border-[#FF6B35] rounded-lg p-4">
           <div className="flex items-start gap-3">
             <Shield size={20} className="text-[#FF6B35] flex-shrink-0 mt-0.5" />

@@ -125,7 +125,6 @@ export default function TransactionHistory({ data }: TransactionHistoryProps) {
       return <span className="inline-flex items-center px-4 py-1 rounded-lg text-xs border border-[#FF6B35] font-medium bg-[#FF6B35]/30 text-[#FF6B36] ">Pending</span>;
     }
   };
-
   const formatAmount = (amount: number, type: TransactionType) => {
     const formatted = `$${amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
     if (type === 'income') {

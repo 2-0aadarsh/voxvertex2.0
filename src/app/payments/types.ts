@@ -8,9 +8,7 @@ export interface PaymentData {
   pendingUtilization: number;
   isVerified: boolean;
 }
-
 export type TabType = 'overview' | 'transactions' | 'subscription' | 'payment-methods';
-
 export interface TabProps {
   activeTab: TabType;
   onTabChange: (tab: TabType) => void;

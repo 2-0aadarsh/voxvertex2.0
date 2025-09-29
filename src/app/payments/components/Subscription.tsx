@@ -333,7 +333,6 @@ export default function Subscription() {
             </div>
             <div className="p-6">
               <h3 className="text-lg font-medium text-[#FF6B35] mb-4">Choose Billing Period</h3>
-              
               <div className="space-y-3 mb-8">
                 {plans.map((plan: Plan) => (
                   <div 

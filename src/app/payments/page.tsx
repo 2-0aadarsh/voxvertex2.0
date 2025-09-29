@@ -10,7 +10,6 @@ import Transactions from './components/Transactions';
 import Subscription from './components/Subscription';
 import PaymentMethods from './components/PaymentMethods';
 import { PaymentData } from './types';
-
 // Dynamic import for Navbar
 const Navbar = dynamic(() => import('@/components/Navbar'), {
   loading: () => <div className="h-16 bg-white border-b border-gray-200 flex items-center justify-center"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500"></div></div>,
