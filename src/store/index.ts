@@ -16,8 +16,11 @@ import {
 } from 'redux-persist';
 import storage from 'redux-persist/lib/storage';
 
-// Import API and slices
+// Import API slices
 import { baseApi } from './api/baseApi';
+import { disputeApi } from '../store/api/disputApi'; // disputeApi with all dispute & events endpoints
+
+// Import other slices
 import authReducer from './slices/authSlice';
 import profileReducer from './slices/profileSlice';
 import postsReducer from './slices/postsSlice';
@@ -36,38 +39,34 @@ const persistConfig = {
   key: 'voxvertex-root',
   version: 1,
   storage,
-  // Only persist auth and some user preferences
   whitelist: ['auth'],
-  // Blacklist API cache and other slices that should not be persisted
   blacklist: [
-    'api', 
-    'posts', 
+    'api',
+    'disputeApi',
+    'posts',
     'feed',
-    'workExperience', 
-    'education', 
-    'awards', 
-    'videos', 
+    'workExperience',
+    'education',
+    'awards',
+    'videos',
     'calendar',
     'availability',
     'speakers',
-    'booking'
+    'booking',
   ],
 };
 
-// Auth persist configuration (more specific)
+// Auth persist configuration
 const authPersistConfig = {
   key: 'auth',
   storage,
-  // Only persist essential auth data including role
   whitelist: ['user', 'isAuthenticated', 'token', 'role'],
 };
 
 // Root reducer
 const rootReducer = combineReducers({
-  // API reducer
   [baseApi.reducerPath]: baseApi.reducer,
-  
-  // Feature reducers
+  [disputeApi.reducerPath]: disputeApi.reducer, // Add only disputeApi reducer
   auth: persistReducer(authPersistConfig, authReducer),
   profile: profileReducer,
   posts: postsReducer,
@@ -88,55 +87,34 @@ const persistedReducer = persistReducer(persistConfig, rootReducer);
 // Store configuration
 export const store = configureStore({
   reducer: persistedReducer,
-  
-  // Middleware configuration
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
-      // Redux Persist configuration
       serializableCheck: {
         ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
       },
-      // Performance optimizations
       immutableCheck: {
         warnAfter: 128,
       },
       serializableStateInvariantCheck: {
         warnAfter: 128,
       },
-    })
-    // Add RTK Query middleware
-    .concat(baseApi.middleware),
-    
-  // Enable Redux DevTools in development
+    }).concat(baseApi.middleware).concat(disputeApi.middleware), // Add both APIs middleware
   devTools: process.env.NODE_ENV !== 'production',
-  
-  // Preloaded state (can be used for SSR)
   preloadedState: undefined,
 });
 
-// Setup RTK Query listeners for automatic refetching
 setupListeners(store.dispatch);
 
-// Create persistor
 export const persistor = persistStore(store);
 
-// Export types
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
 
-// Export store and persistor as default
 export default store;
 
-// ============================================================================
-// STORE UTILITIES & HELPERS
-// ============================================================================
-
-// Store reset utility (useful for logout)
+// Store reset utility
 export const resetStore = () => {
-  // Clear all persisted data
   persistor.purge();
-  
-  // Reset all slices
   store.dispatch({ type: 'auth/resetAuth' });
   store.dispatch({ type: 'profile/resetProfile' });
   store.dispatch({ type: 'posts/resetPosts' });
@@ -149,47 +127,14 @@ export const resetStore = () => {
   store.dispatch({ type: 'availability/resetAvailability' });
   store.dispatch({ type: 'speakers/resetSpeakers' });
   store.dispatch({ type: 'booking/resetBooking' });
-  
-  // Reset API cache
+  // Reset API cache for baseApi and disputeApi
   store.dispatch(baseApi.util.resetApiState());
+  store.dispatch(disputeApi.util.resetApiState());
 };
 
-// Selective cache invalidation
-export const invalidateUserData = () => {
-  store.dispatch(
-    baseApi.util.invalidateTags([
-      'User', 
-      'Profile', 
-      'Post', 
-      'WorkExperience', 
-      'Education', 
-      'Award', 
-      'Video', 
-      'CalendarEvent',
-      'Speaker'
-    ])
-  );
-};
-
-// Performance monitoring (development only)
-if (process.env.NODE_ENV === 'development') {
-  // Log store state changes
-  store.subscribe(() => {
-    const state = store.getState();
-    console.log('Store updated:', {
-      auth: state.auth.isAuthenticated,
-      api: Object.keys(state.api.queries).length,
-      timestamp: new Date().toISOString(),
-    });
-  });
-}
-
-// ============================================================================
-// EXPORT INDIVIDUAL STORE PARTS FOR TESTING
-// ============================================================================
+// Export reducers, APIs, rootReducer, etc.
 
 export {
-  // Reducers
   authReducer,
   profileReducer,
   postsReducer,
@@ -202,13 +147,7 @@ export {
   availabilityReducer,
   speakersReducer,
   bookingReducer,
-  
-  // API
   baseApi,
-  
-  // Root reducer
+  disputeApi,
   rootReducer,
 };
-
-
-

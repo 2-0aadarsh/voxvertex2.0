@@ -4,7 +4,8 @@ import Event from "../models/event.js";
 import { createPaymentOrder } from "../services/eventRegisterPaymentService.js";
 import { sendConfirmationEmail } from "../services/eventRegisterConfirmationService.js";
 import crypto from "crypto";
-import { v4 as uuidv4 } from 'uuid'
+import mongoose from "mongoose";
+import EnhancedUser from "../models/enhancedUser.js"; 
 
 const router = express.Router();
 
@@ -12,6 +13,8 @@ const router = express.Router();
  * STEP 1: Create Registration (ticket selection + user details)
  * No payment created here, just store registrant info in DB
  */
+
+
 export const registerEvent = async (req, res) => {
   try {
     const { eventId, ticketId, registrant, extras = [] } = req.body;
@@ -24,48 +27,66 @@ export const registerEvent = async (req, res) => {
       return res.status(400).json({ error: "Missing registrant details" });
     }
 
-    // Generate userId for registrant
-    registrant.userId = uuidv4();
-
-    // Generate userId for each extra
-    extras.forEach(extra => {
-      extra.userId = uuidv4();
+    // Validate registrant in EnhancedUser collection
+    const existingRegistrant = await EnhancedUser.findOne({
+      email: registrant.email.toLowerCase().trim()
     });
+    if (!existingRegistrant) {
+      return res.status(400).json({
+        success: false,
+        message: "Registrant is not a registered user",
+        invalidUser: registrant.email
+      });
+    }
+    registrant.userId = existingRegistrant._id;
+
+    // Validate extras if provided
+    const invalidExtras = [];
+    for (const extra of extras) {
+      if (!extra?.email) continue;
+
+      const user = await EnhancedUser.findOne({ email: extra.email.toLowerCase().trim() });
+      if (!user) {
+        invalidExtras.push(extra.email);
+      } else {
+        extra.userId = user._id;
+      }
+    }
+
+    if (invalidExtras.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Some extras are not registered users",
+        invalidUsers: invalidExtras
+      });
+    }
 
     // 1. Find event
     const event = await Event.findById(eventId);
     if (!event) return res.status(404).json({ error: "Event not found" });
 
-    
-// ✅ Guard here
-if (!Array.isArray(event.tickets) || event.tickets.length === 0) {
-  return res.status(400).json({ error: "No tickets available for this event" });
-}
-
-     // 2. Find selected ticket inside event.tickets
-    const selectedTicket = event.tickets.find(
-      (ticket) => ticket._id.toString() === ticketId
-    );
-    if (!selectedTicket) {
-      return res.status(404).json({ error: "Selected ticket not found" });
+    if (!Array.isArray(event.tickets) || event.tickets.length === 0) {
+      return res.status(400).json({ error: "No tickets available for this event" });
     }
 
-   // 3. Calculate total participants
+    // 2. Find selected ticket
+    const selectedTicket = event.tickets.find(ticket => ticket._id.toString() === ticketId);
+    if (!selectedTicket) return res.status(404).json({ error: "Selected ticket not found" });
+
+    // 3. Calculate total participants
     const participantCount = 1 + (extras?.length || 0);
+    if (selectedTicket.quantity < participantCount) {
+      return res.status(400).json({ error: "Not enough tickets available" });
+    }
 
-    // 4. Calculate total amount based on ticket type
-   if (selectedTicket.quantity < participantCount) {
-  return res.status(400).json({ error: "Not enough tickets available" });
-}
+    // 4. Calculate total amount
+    const totalAmount = (selectedTicket.price || 0) * participantCount;
 
-// calculate total amount (even if price = 0)
-const totalAmount = (selectedTicket.price || 0) * participantCount;
+    // Reserve tickets
+    selectedTicket.quantity -= participantCount;
+    await event.save();
 
-// Decrease quantity in DB to reserve tickets
-selectedTicket.quantity -= participantCount;
-await event.save();
-
-    // 5. Create a registration in DB with status 'initiated'
+    // 5. Create registration
     const registration = await Registration.create({
       event: event._id,
       ticket: {
@@ -99,11 +120,13 @@ await event.save();
       totalAmount,
       currency: "INR"
     });
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
   }
 };
+
 
 /**
  * STEP 2: Create Razorpay Order for Payment
