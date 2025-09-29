@@ -30,36 +30,36 @@ interface SpeakersContainerProps {
   };
 }
 
-const SpeakersContainer: React.FC<SpeakersContainerProps> = ({ 
-  initialFilters = {} 
+const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
+  initialFilters = {}
 }) => {
   const dispatch = useAppDispatch();
-  
+
   // Local state for UI
   const [showFilters, setShowFilters] = useState(false);
   const [sortBy, setSortBy] = useState('relevance');
   const [searchQuery, setSearchQuery] = useState(initialFilters.searchQuery || '');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
-  
+
   // Redux state
   const filters = useAppSelector(selectSpeakersFilters);
-  
+
   // Debounce search query
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchQuery(searchQuery);
     }, 300);
-    
+
     return () => clearTimeout(timer);
   }, [searchQuery]);
-  
+
   // Update filters when search query changes
   useEffect(() => {
     if (debouncedSearchQuery !== filters.searchQuery) {
       dispatch(setFilters({ searchQuery: debouncedSearchQuery }));
     }
   }, [debouncedSearchQuery, filters.searchQuery, dispatch]);
-  
+
   // Determine which query to use
   const hasActiveSearch = useMemo(() => {
     return !!(debouncedSearchQuery && debouncedSearchQuery.trim().length > 0);
@@ -75,7 +75,7 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
       (filters.priceRange.min > 0 || filters.priceRange.max < 10000)
     );
   }, [filters]);
-  
+
   // API queries
   const {
     data: basicSpeakersData,
@@ -85,7 +85,7 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
     { page: 1, limit: 12 },
     { skip: hasActiveSearch } // Only fetch if no search
   );
-  
+
   const {
     data: searchSpeakersData,
     isLoading: isLoadingSearch,
@@ -119,7 +119,7 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
     },
     { skip: !hasActiveFilters } // Only fetch if filters are active
   );
-  
+
   // Get suggestions for autocomplete (commented out for now to avoid unused variables)
   // const {
   //   data: suggestionsData,
@@ -128,22 +128,22 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
   //   { q: debouncedSearchQuery, limit: 5 },
   //   { skip: debouncedSearchQuery.length < 2 }
   // );
-  
+
   // Get available event types for filters (commented out for now)
   // const {
   //   data: eventTypesData,
   //   isLoading: isLoadingEventTypes,
   // } = useGetAvailableEventTypesQuery();
-  
+
   // Determine which data to use
   const currentData = hasActiveFilters ? filteredSpeakersData : (hasActiveSearch ? searchSpeakersData : basicSpeakersData);
   const currentLoading = hasActiveFilters ? isLoadingFiltered : (hasActiveSearch ? isLoadingSearch : isLoadingBasic);
   const currentError = hasActiveFilters ? filteredError : (hasActiveSearch ? searchError : basicError);
-  
+
   // Process speakers data with enhanced details
   const processedSpeakers = useMemo(() => {
     if (!currentData?.data?.speakers) return [];
-    
+
     return currentData.data.speakers.map((speaker: Speaker) => {
       // Extract all available data from the speaker object
       const {
@@ -206,7 +206,7 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
         bio: bio,
         yearsOfExperience: yearsOfExperience || 0,
         isProfileComplete: isProfileComplete,
-        
+
         // Additional details for enhanced display
         firstName: firstName,
         lastName: lastName,
@@ -217,17 +217,17 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
         socialLinks: socialLinks,
         createdAt: createdAt,
         availability: availability,
-        
+
         // Raw speaker data for detailed view
         rawData: speaker as unknown as Record<string, unknown>
       };
     });
   }, [currentData]);
-  
+
   // Sort speakers
   const sortedSpeakers = useMemo(() => {
     const sorted = [...processedSpeakers];
-    
+
     switch (sortBy) {
       case 'price-low':
         return sorted.sort((a, b) => a.price - b.price);
@@ -243,17 +243,17 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
         return sorted;
     }
   }, [processedSpeakers, sortBy]);
-  
+
   // Handle filter changes (commented out for now)
   // const handleFilterChange = (newFilters: Partial<typeof filters>) => {
   //   dispatch(setFilters(newFilters));
   // };
-  
+
   // const handleClearFilters = () => {
   //   dispatch(clearFilters());
   //   setSearchQuery('');
   // };
-  
+
   // Loading state
   if (currentLoading && processedSpeakers.length === 0) {
     return (
@@ -262,7 +262,7 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
       </div>
     );
   }
-  
+
   // Error state
   if (currentError) {
     return (
@@ -285,7 +285,7 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
       </div>
     );
   }
-  
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
       {/* Hero Section */}
@@ -314,7 +314,7 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
       </div> */}
 
 
-      <div className="bg-white rounded-lg p-4 mb-6 shadow-sm">
+      <div className="bg-white rounded-lg p-2 mb-6 shadow-sm">
         <div className="flex items-center justify-between">
 
           <div className="flex items-center gap-4 flex-1">
@@ -333,22 +333,21 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
                 </svg>
               </div>
             </div> */}
-            
-            {/* Filters Button */}
-            <button 
+
+
+            <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                showFilters 
-                  ? 'bg-[#FF6B35] text-white hover:bg-orange-600' 
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${showFilters
+                  ? 'bg-[#FF6B35] text-white hover:bg-orange-600'
                   : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
-              }`}
+                }`}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z" />
               </svg>
               Filters
             </button>
-            
+
             {/* Clear Filters/Search */}
             {(hasActiveFilters || hasActiveSearch) && (
               <button
@@ -363,21 +362,21 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
             )}
 
 
-            <div className="px-4 py-2 rounded-xl text-center font-medium">
-            {processedSpeakers.length} speakers found
+            <div className="px-2 py-2 rounded-xl text-center font-medium">
+              {processedSpeakers.length} speakers found
+            </div>
           </div>
-          </div>
 
-          
 
-          
 
-          {/* Right side - Sort dropdown */}
+
+
+
           <div className="relative w-full sm:w-40 md:w-48">
-            <select 
+            <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35]"
+              className="appearance-none bg-white border border-gray-300 rounded-lg px-1 py-2 pr-8 text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35]"
             >
               <option value="relevance">Relevance</option>
               <option value="rating">Rating</option>
@@ -386,9 +385,9 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
               <option value="experience">Experience</option>
               <option value="reviews">Most Reviews</option>
             </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-7 text-gray-700">
               <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
               </svg>
             </div>
           </div>
@@ -400,10 +399,10 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
         {/* Filters Sidebar */}
         {showFilters && (
           <div className='flex justify-center sm:items-start'>
-            <FiltersSidebar/>
+            <FiltersSidebar />
           </div>
         )}
-        
+
         {/* Speaker Grid */}
         <div className="flex-1">
           {processedSpeakers.length === 0 ? (
@@ -415,9 +414,9 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
               </div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">No speakers found</h3>
               <p className="text-gray-600 mb-4">
-                {hasActiveFilters 
+                {hasActiveFilters
                   ? 'No speakers found matching your filters. Try adjusting your criteria.'
-                  : hasActiveSearch 
+                  : hasActiveSearch
                     ? `No speakers found for "${debouncedSearchQuery}". Try different keywords.`
                     : 'No speakers are currently available.'
                 }
@@ -438,9 +437,9 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
             <div className={`grid gap-4 ${showFilters ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 sm:grid-cols-1 md:grid-cols-3'} sm:max-w-6xl sm:mx-auto`}>
 
               {sortedSpeakers.map((speaker) => (
-                <SpeakerCard 
-                  key={speaker._id} 
-                  speaker={speaker} 
+                <SpeakerCard
+                  key={speaker._id}
+                  speaker={speaker}
                   isCompact={showFilters}
                 />
               ))}

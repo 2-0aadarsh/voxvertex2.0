@@ -41,6 +41,7 @@ const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const router = useRouter();
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(false);
 
   // Helper function to get profile image URL
   const getProfileImage = (profileImage: any) => {
@@ -175,7 +176,18 @@ const Navbar: React.FC<NavbarProps> = ({
     <header className={`bg-white shadow-md border-b ${className}`}>
       <div className="max-w-7xl mx-auto px-6">
         <div className="flex items-center h-16">
-          {/* Logo */}
+          
+          <div className="flex md:hidden ml-4">
+            <button onClick={()=>setShowSidebar(true)}
+              className="text-gray-900 hover:text-orange-500 focus:outline-none"
+              >
+                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16"/>
+    </svg>
+
+            </button>
+          </div>
+
           <div className="flex-shrink-0">
             <Logo absolute={true} />
           </div>
@@ -200,6 +212,49 @@ const Navbar: React.FC<NavbarProps> = ({
               </div>
             </div>
           )}
+
+
+<div
+  className={`fixed inset-0 z-50 bg-black/50 bg-opacity-50 transition-opacity duration-300 ${showSidebar ? "opacity-100 visible" : "opacity-0 invisible"}`}
+  onClick={() => setShowSidebar(false)}
+></div>
+
+<div
+  className={`fixed top-0 left-0 h-full w-64 bg-white shadow-lg z-50 transform transition-transform duration-300
+    ${showSidebar ? "translate-x-0" : "-translate-x-full"} md:hidden`}
+>
+  {/* Logo */}
+  <div className="p-6 border-b border-gray-200">
+    <Logo />
+  </div>
+
+  {/* Navigation */}
+  <nav className="mt-6">
+    {navigationItems.map((item) => {
+      const Icon = item.icon;
+      const isActive = activeTab === item.id;
+      return (
+        <button
+          key={item.id}
+          onClick={() => {
+            onTabClick?.(item.id);
+            setShowSidebar(false); // close drawer on click
+          }}
+          className={`w-full flex items-center space-x-3 px-6 py-3 text-left transition-colors ${
+            isActive
+              ? "bg-orange-50 text-orange-600 border-r-2 border-orange-500"
+              : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+          }`}
+        >
+          <Icon className="w-5 h-5" />
+          <span className="font-medium">{item.label}</span>
+        </button>
+      );
+    })}
+  </nav>
+</div>
+
+
 
           {/* Navigation - Right aligned */}
           <nav className="flex items-center space-x-8 ml-auto">
@@ -265,7 +320,7 @@ const Navbar: React.FC<NavbarProps> = ({
                   <IoIosArrowDown className="cursor-pointer w-4 h-4" />
                 </button>
 
-                {/* Profile Dropdown */}
+
                 {showProfileDropdown && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
                     <button
