@@ -17,14 +17,15 @@ const ProfileHeader = () => {
   return (
     <header className="relative w-full h-20 bg-[#FFFFFF] flex items-center justify-between px-6 text-[#000000] shadow-sm">
       {/* Logo Section */}
-      <div className="flex items-center">
+      <div className="flex items-center ml-3">
         <div onClick={handleLogoClick} className="cursor-pointer">
           <Logo />
         </div>
       </div>
 
       {/* Right Section - Notifications and Profile */}
-      <div className="flex items-center gap-8">
+      <div className="hidden lg:flex">
+        <div className="flex items-center gap-8">
         {/* Notification Bell */}
         <div className="relative cursor-pointer">
           <LuBell className="w-6 h-6 font-[800]" />
@@ -37,6 +38,7 @@ const ProfileHeader = () => {
           )}
         </div>
         <ProfileButton />
+      </div>
       </div>
     </header>
   );

@@ -123,7 +123,7 @@ const Navbar: React.FC<NavbarProps> = ({
     // Speaker/Organizer sidebar navigation
     return (
       <div
-        className={`bg-white shadow-lg h-screen w-64 fixed left-0 top-0 ${className}`}
+        className={`bg-white shadow-lg h-screen fixed left-0 top-0 ${className}`}
       >
         {/* Logo */}
         <div className="p-6 border-b border-gray-200">
@@ -183,7 +183,7 @@ const Navbar: React.FC<NavbarProps> = ({
           {/* Search Bar - Right after logo */}
           {showSearch && (
             <div className="flex-1 max-w-xl ml-24">
-              <div className="relative">
+              <div className="relative hidden md:flex">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <input
                   type="text"
@@ -205,19 +205,19 @@ const Navbar: React.FC<NavbarProps> = ({
           <nav className="flex items-center space-x-8 ml-auto">
             <button 
               onClick={() => router.push('/about')}
-              className="text-gray-900 hover:text-[#FF6B35] font-medium text-sm transition-colors duration-200 hover:scale-105"
+              className="hidden md:flex text-gray-900 hover:text-[#FF6B35] font-medium text-sm transition-colors duration-200 hover:scale-105"
             >
               About
             </button>
             <button 
               onClick={() => router.push('/speakers')}
-              className="text-gray-900 hover:text-[#FF6B35] font-medium text-sm transition-colors duration-200 hover:scale-105"
+              className="hidden md:flex text-gray-900 hover:text-[#FF6B35] font-medium text-sm transition-colors duration-200 hover:scale-105"
             >
               Speaker
             </button>
             <button 
               onClick={() => router.push('/events_page')}
-              className="text-gray-900 hover:text-[#FF6B35] font-medium text-sm transition-colors duration-200 hover:scale-105"
+              className="hidden md:flex text-gray-900 hover:text-[#FF6B35] font-medium text-sm transition-colors duration-200 hover:scale-105"
             >
               Events
             </button>

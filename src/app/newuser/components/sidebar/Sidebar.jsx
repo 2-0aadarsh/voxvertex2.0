@@ -1,5 +1,5 @@
 "use client";
-
+import { useState, useEffect } from "react";
 import { CiSettings, CiUser } from "react-icons/ci";
 import { IoCalendarOutline } from "react-icons/io5";
 import { LuMessageCircleMore } from "react-icons/lu";
@@ -15,40 +15,27 @@ import { useGetCurrentUserQuery } from "@/store/slices/authSlice";
 const Sidebar = () => {
   const router = useRouter();
   const { user, logout } = useAuth();
-  const { data: currentUserData, isLoading: isUserLoading } =
-    useGetCurrentUserQuery();
+  const { data: currentUserData } = useGetCurrentUserQuery();
+
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const handleLogout = async () => {
-    try {
-      console.log("🚪 Logging out user...");
-
-      // Call logout from Redux store (this will clear tokens and cookies and redirect)
-      await logout();
-
-      console.log("✅ Logout successful");
-    } catch (error) {
-      console.error("❌ Logout error:", error);
-    }
+    await logout();
   };
 
-  // Debug: Log user data to understand the structure
-  console.log("🔍 Sidebar Debug - User data:", {
-    user: user,
-    currentUserData: currentUserData,
-    userFirstName: user?.firstName,
-    userLastName: user?.lastName,
-    userProfileImageUrl: user?.profileImageUrl,
-    currentUserFirstName: currentUserData?.user?.firstName,
-    currentUserLastName: currentUserData?.user?.lastName,
-    currentUserProfileImageUrl: currentUserData?.user?.profileImageUrl,
-  });
-
-  // Get user details from Redux store or current user data
   const userDetails = {
     name:
       user?.firstName && user?.lastName
         ? `${user.firstName} ${user.lastName}`
-        : currentUserData?.user?.firstName && currentUserData?.user?.lastName
+        : currentUserData?.user?.firstName
         ? `${currentUserData.user.firstName} ${currentUserData.user.lastName}`
         : "User",
     email: user?.email || currentUserData?.user?.email || "user@example.com",
@@ -94,103 +81,101 @@ const Sidebar = () => {
   ];
 
   const bottomItems = [
-    {
-      icon: <BiSupport />,
-      label: "Support",
-      href: "/support",
-    },
-    {
-      icon: <CiSettings />,
-      label: "Settings",
-      href: "/settings",
-    },
+    { icon: <BiSupport />, label: "Support", href: "/support" },
+    { icon: <CiSettings />, label: "Settings", href: "/settings" },
   ];
 
   return (
-    <div className="flex flex-col justify-between items-between  w-[20%]  shadow-md">
-      <div className="flex flex-col gap-6 p-10">
-        {navigationItems.map((item, index) => (
-          <div
-            key={index}
-            onClick={() => router.push(item.href)}
-            className={`cursor-pointer px-7 flex items-center justify-start text-[19.64px] font-semibold gap-5 w-[199px] h-[48px] rounded-[10px] ${
-              item.active && `text-[#FF6B35] bg-[#FFE2D7] `
-            }`}
-          >
-            {item.icon}
-            <span>{item.label}</span>
-          </div>
-        ))}
-      </div>
+    <>
+      {/* Hamburger (Mobile Only) */}
+      {!isDesktop && (
+        <button
+          className="p-2 fixed top-4 left-4 rounded z-50 bg-white shadow"
+          onClick={() => setIsSidebarOpen(true)}
+        >
+          ☰
+        </button>
+      )}
 
-      <div className="flex flex-col gap-8 ">
-        <div className="flex flex-col gap-6 px-10">
-          {bottomItems.map((item, index) => (
+      {/* Overlay (Mobile Only) */}
+      {!isDesktop && isSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 z-30"
+          onClick={() => setIsSidebarOpen(false)}
+        ></div>
+      )}
+
+      <div
+        className={`
+          fixed left-0 top-16 h-[calc(100vh-4rem)] flex flex-col shadow-md bg-white z-40
+          transition-transform duration-300
+          ${isDesktop ? "translate-x-0" : isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
+          lg:w-[20%] md:w-[30%] sm:w-[50%] w-[30%]
+          overflow-x-hidden
+        `}
+      >
+        {!isDesktop && (
+          <button
+            className="absolute top-4 right-4 text-xl"
+            onClick={() => setIsSidebarOpen(false)}
+          >
+            ✕
+          </button>
+        )}
+
+        {/* Scrollable Menu */}
+        <div className="flex flex-col gap-2 p-6 sm:p-8 lg:p-10 overflow-y-auto">
+          {navigationItems.map((item, index) => (
             <div
               key={index}
-              className={` cursor-pointer px-7 flex items-center justify-start text-[19.64px] font-semibold gap-5 w-[199px] h-[48px] rounded-[10px] `}
+              className={`cursor-pointer flex items-center gap-2 rounded-md px-3 py-2 text-sm sm:text-base font-medium
+              ${item.active ? "text-[#FF6B35] bg-[#FFE2D7]" : "hover:bg-gray-100"}`}
+              onClick={() => {
+                router.push(item.href);
+                if (!isDesktop) setIsSidebarOpen(false);
+              }}
             >
               {item.icon}
-              <a href="/">{item.label}</a>
+              <span>{item.label}</span>
             </div>
           ))}
         </div>
 
-        <div className="border-t-2 border-[#000000]/19 p-5 flex items-center justify-between ">
-          <div className=" profileImg w-[46px] h-[46px] overflow-hidden cursor-pointer flex items-center justify-center rounded-full bg-gray-200">
-            {user?.profileImageUrl || currentUserData?.user?.profileImageUrl ? (
-              <img
-                src={
-                  user?.profileImageUrl ||
-                  currentUserData?.user?.profileImageUrl
-                }
-                alt="profile"
-                className="w-full h-full object-cover object-center"
-                onError={(e) => {
-                  // Fallback to initials if image fails to load
-                  e.currentTarget.style.display = "none";
-                  e.currentTarget.nextElementSibling.style.display = "flex";
-                }}
-              />
-            ) : null}
+        {/* Bottom Items */}
+        <div className="flex flex-col gap-2 mt-auto px-6 sm:px-8 lg:px-10">
+          {bottomItems.map((item, index) => (
             <div
-              className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold text-lg"
-              style={{
-                display:
-                  user?.profileImageUrl ||
-                  currentUserData?.user?.profileImageUrl
-                    ? "none"
-                    : "flex",
+              key={index}
+              className="cursor-pointer flex items-center gap-2 rounded-md px-3 py-2 w-full text-sm sm:text-base hover:bg-gray-100"
+              onClick={() => {
+                router.push(item.href);
+                if (!isDesktop) setIsSidebarOpen(false);
               }}
             >
-              {userDetails.name
-                .split(" ")
-                .map((n) => n[0])
-                .join("")
-                .toUpperCase()
-                .slice(0, 2)}
+              {item.icon}
+              <span>{item.label}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* User Footer */}
+        <div className="border-t-2 border-gray-200 p-4 sm:p-5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gray-200 flex items-center justify-center text-lg">
+              {userDetails.name[0]}
+            </div>
+            <div>
+              <h2 className="text-sm sm:text-lg font-bold">{userDetails.name}</h2>
+              <p className="text-xs sm:text-sm text-gray-500">{userDetails.email}</p>
             </div>
           </div>
-
-          <div className=" profileDetails flex flex-col items-start justify-center ">
-            <h2 className="text-lg font-bold leading-[150.7%] tracking-[8%] cursor-pointer ">
-              {userDetails.name}
-            </h2>
-            <p className="text-[13px] text-[#6B7280] leading-[150.7%] tracking-[8%]">
-              {userDetails.email}
-            </p>
-          </div>
-
-          <div className="logout">
-            <MdLogout
-              className="text-[#DC2626] text-[33px] cursor-pointer hover:text-red-700 transition-colors"
-              onClick={handleLogout}
-              title="Logout"
-            />
-          </div>
+          <MdLogout
+            className="text-red-500 text-2xl sm:text-3xl cursor-pointer"
+            onClick={handleLogout}
+          />
         </div>
       </div>
-    </div>
+    </>
   );
 };
 

@@ -287,9 +287,9 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
   }
   
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
       {/* Hero Section */}
-      <div 
+      {/* <div 
         className="rounded-lg p-6 mb-6 bg-cover bg-center relative"
         style={{ backgroundImage: 'url(/ai.png)' }}
       >
@@ -307,19 +307,19 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
               }
             </p>
           </div>
-          <div className="bg-[#FF6B35] text-white px-4 py-2 rounded-full font-medium">
+          <div className="bg-[#FF6B35] text-white px-4 py-2 rounded-xl text-center font-medium">
             {processedSpeakers.length} speakers found
           </div>
         </div>
-      </div>
+      </div> */}
 
-      {/* Search and Filter Bar */}
+
       <div className="bg-white rounded-lg p-4 mb-6 shadow-sm">
         <div className="flex items-center justify-between">
-          {/* Left side - Search and Filters */}
+
           <div className="flex items-center gap-4 flex-1">
-            {/* Search Input */}
-            <div className="relative flex-1 max-w-md">
+
+            {/* <div className="relative flex-1 max-w-md">
               <input
                 type="text"
                 placeholder="Search speakers..."
@@ -332,7 +332,7 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </div>
-            </div>
+            </div> */}
             
             {/* Filters Button */}
             <button 
@@ -361,10 +361,19 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
                 Clear all
               </button>
             )}
+
+
+            <div className="px-4 py-2 rounded-xl text-center font-medium">
+            {processedSpeakers.length} speakers found
+          </div>
           </div>
 
+          
+
+          
+
           {/* Right side - Sort dropdown */}
-          <div className="relative">
+          <div className="relative w-full sm:w-40 md:w-48">
             <select 
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
@@ -386,11 +395,13 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
         </div>
       </div>
 
-      {/* Main Content Area */}
-      <div className={`flex gap-8 ${showFilters ? '' : 'justify-center'}`}>
+
+      <div className={`flex flex-col sm:flex-row sm:items-start gap-8 ${showFilters ? '' : 'justify-center'}`}>
         {/* Filters Sidebar */}
         {showFilters && (
-          <FiltersSidebar />
+          <div className='flex justify-center sm:items-start'>
+            <FiltersSidebar/>
+          </div>
         )}
         
         {/* Speaker Grid */}
@@ -424,7 +435,8 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
               )}
             </div>
           ) : (
-            <div className={`grid gap-4 ${showFilters ? 'grid-cols-2' : 'grid-cols-3 max-w-6xl mx-auto'}`}>
+            <div className={`grid gap-4 ${showFilters ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 sm:grid-cols-1 md:grid-cols-3'} sm:max-w-6xl sm:mx-auto`}>
+
               {sortedSpeakers.map((speaker) => (
                 <SpeakerCard 
                   key={speaker._id} 
