@@ -451,6 +451,31 @@ export const bookingApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: (result, error, bookingId) => [{ type: 'Booking', id: bookingId }],
     }),
+
+    // Accept booking
+    acceptBooking: builder.mutation<
+      ApiResponse<{ bookingId: string; status: string }>,
+      string
+    >({
+      query: (bookingId) => ({
+        url: `/book-speaker/${bookingId}/accept`,
+        method: 'PUT',
+      }),
+      invalidatesTags: (result, error, bookingId) => [{ type: 'Booking', id: bookingId }, 'Conversation', 'Message'],
+    }),
+
+    // Decline booking
+    declineBooking: builder.mutation<
+      ApiResponse<{ bookingId: string; status: string }>,
+      { bookingId: string; reason?: string }
+    >({
+      query: ({ bookingId, reason }) => ({
+        url: `/book-speaker/${bookingId}/decline`,
+        method: 'PUT',
+        body: { reason },
+      }),
+      invalidatesTags: (result, error, { bookingId }) => [{ type: 'Booking', id: bookingId }, 'Conversation', 'Message'],
+    }),
   }),
 });
 
@@ -502,6 +527,8 @@ export const {
   useGetBookingHistoryQuery,
   useGetBookingByIdQuery,
   useCancelBookingMutation,
+  useAcceptBookingMutation,
+  useDeclineBookingMutation,
 } = bookingApi;
 
 // Selectors

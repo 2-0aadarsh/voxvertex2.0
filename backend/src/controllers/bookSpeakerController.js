@@ -3,7 +3,6 @@ import EnhancedProfile from "../models/enhancedProfile.js";
 import Availability from "../models/availability.js";
 import Conversation from "../models/conversation.js";
 import Message from "../models/message.js";
-import mongoose from "mongoose";
 
 // import User from "../models/user.js";
 
@@ -46,6 +45,338 @@ export const getAllSpeakerProfiles = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Server error while fetching speaker profiles"
+    });
+  }
+};
+
+// Accept booking request
+export const acceptBooking = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const speakerId = req.user._id;
+
+    // Find the booking
+    const booking = await Booking.findById(bookingId).populate('speaker', 'firstName lastName email role');
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found"
+      });
+    }
+
+    // Debug: Log booking details
+    console.log("🔍 DEBUG booking details:");
+    console.log("🔍 booking._id:", booking._id);
+    console.log("🔍 booking.speaker:", booking.speaker);
+    console.log("🔍 booking.organizer:", booking.organizer);
+    console.log("🔍 booking.status:", booking.status);
+
+    // Debug: Log booking and speaker IDs
+    console.log("🔍 DEBUG acceptBooking:");
+    console.log("🔍 bookingId:", bookingId);
+    console.log("🔍 booking.speaker:", booking.speaker);
+    console.log("🔍 booking.speaker._id:", booking.speaker._id);
+    console.log("🔍 booking.speaker._id.toString():", booking.speaker._id.toString());
+    console.log("🔍 speakerId (req.user._id):", speakerId);
+    console.log("🔍 speakerId.toString():", speakerId.toString());
+    
+    // Handle both populated and non-populated speaker objects
+    const bookingSpeakerId = booking.speaker._id ? booking.speaker._id.toString() : booking.speaker.toString();
+    console.log("🔍 bookingSpeakerId (final):", bookingSpeakerId);
+    console.log("🔍 IDs match:", bookingSpeakerId === speakerId.toString());
+
+    // Verify the speaker is the one being booked
+    if (bookingSpeakerId !== speakerId.toString()) {
+      console.log("❌ Speaker ID mismatch - booking not for this speaker");
+      console.log("❌ Expected:", speakerId.toString());
+      console.log("❌ Found:", bookingSpeakerId);
+      return res.status(403).json({
+        success: false,
+        message: "You can only accept bookings sent to you"
+      });
+    }
+
+    // Check if booking is still pending
+    if (booking.status !== 'pending') {
+      return res.status(400).json({
+        success: false,
+        message: `Booking is already ${booking.status}`
+      });
+    }
+
+    // Update booking status
+    booking.status = 'accepted';
+    booking.acceptedAt = new Date();
+    await booking.save();
+
+    // Find the conversation
+    const conversation = await Conversation.findById(booking.conversationId);
+    if (!conversation) {
+      return res.status(404).json({
+        success: false,
+        message: "Conversation not found"
+      });
+    }
+
+    // Create acceptance message
+    const acceptanceMessage = new Message({
+      content: `✅ **BOOKING ACCEPTED**
+
+Great news! I'm excited to accept your speaking invitation for "${booking.eventDetails.name}".
+
+**Confirmed Details:**
+📅 Date: ${new Date(booking.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+🕐 Time: ${booking.timeSlot}
+📍 Location: ${booking.eventDetails.location}
+👥 Audience: ${booking.eventDetails.expectedAttendees} attendees
+💰 Compensation: ${booking.compensationAndArrangements.primaryCompensation.speakerFeeAmount ? `$${booking.compensationAndArrangements.primaryCompensation.speakerFeeAmount.toLocaleString()}` : 'As discussed'}
+
+I'm looking forward to delivering value to your audience and making this event a success!
+
+Please let me know if there are any additional details or preparations needed from my end.
+
+Best regards,
+${req.user.firstName} ${req.user.lastName}`,
+      messageType: 'booking_accepted',
+      sender: speakerId,
+      conversation: booking.conversationId,
+      metadata: {
+        bookingId: booking._id,
+        eventId: null,
+        amount: booking.compensationAndArrangements.primaryCompensation.speakerFeeAmount,
+        currency: 'USD',
+        proposalType: 'accepted'
+      }
+    });
+
+    await acceptanceMessage.save();
+
+    // Update conversation's last message
+    conversation.lastMessage = {
+      content: `✅ Booking accepted for ${booking.eventDetails.name}`,
+      sender: speakerId,
+      timestamp: acceptanceMessage.createdAt,
+      messageType: 'booking_accepted'
+    };
+    await conversation.save();
+
+    // Import socketService for real-time updates
+    const socketService = (await import('../services/socketService.js')).default;
+
+    // Populate conversation data for broadcast
+    await conversation.populate([
+      { path: 'participants.user', select: 'firstName lastName profileImageUrl role' },
+      { path: 'lastMessage.sender', select: 'firstName lastName profileImageUrl' }
+    ]);
+
+    // Broadcast booking acceptance to both participants
+    console.log(`📡 Broadcasting booking acceptance to organizer: user_${booking.organizer}`);
+    socketService.io.to(`user_${booking.organizer}`).emit('booking_status_changed', {
+      type: 'booking_accepted',
+      booking: booking,
+      conversation: conversation,
+      message: acceptanceMessage,
+      timestamp: new Date()
+    });
+    
+    console.log(`📡 Broadcasting booking acceptance to speaker: user_${speakerId}`);
+    socketService.io.to(`user_${speakerId}`).emit('booking_status_changed', {
+      type: 'booking_accepted',
+      booking: booking,
+      conversation: conversation,
+      message: acceptanceMessage,
+      timestamp: new Date()
+    });
+
+    // Also broadcast new message to conversation
+    socketService.io.to(`conversation_${booking.conversationId}`).emit('new_message', {
+      message: acceptanceMessage,
+      conversationId: booking.conversationId,
+      timestamp: new Date()
+    });
+
+    console.log(`✅ Booking ${bookingId} accepted by speaker ${speakerId}`);
+
+    return res.status(200).json({
+      success: true,
+      message: "Booking accepted successfully",
+      booking: {
+        _id: booking._id,
+        bookingId: booking.bookingId,
+        status: booking.status,
+        acceptedAt: booking.acceptedAt
+      },
+      conversation: {
+        _id: conversation._id,
+        lastMessage: conversation.lastMessage
+      }
+    });
+
+  } catch (error) {
+    console.error("Error accepting booking:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Error while accepting booking",
+      error: error.message
+    });
+  }
+};
+
+// Decline booking request
+export const declineBooking = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const speakerId = req.user._id;
+    const { reason } = req.body; // Optional decline reason
+
+    // Find the booking
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found"
+      });
+    }
+
+    // Handle both populated and non-populated speaker objects
+    const bookingSpeakerId = booking.speaker._id ? booking.speaker._id.toString() : booking.speaker.toString();
+    
+    // Verify the speaker is the one being booked
+    if (bookingSpeakerId !== speakerId.toString()) {
+      console.log("❌ Speaker ID mismatch in decline - booking not for this speaker");
+      console.log("❌ Expected:", speakerId.toString());
+      console.log("❌ Found:", bookingSpeakerId);
+      return res.status(403).json({
+        success: false,
+        message: "You can only decline bookings sent to you"
+      });
+    }
+
+    // Check if booking is still pending
+    if (booking.status !== 'pending') {
+      return res.status(400).json({
+        success: false,
+        message: `Booking is already ${booking.status}`
+      });
+    }
+
+    // Update booking status
+    booking.status = 'declined';
+    booking.declinedAt = new Date();
+    booking.declineReason = reason || 'No reason provided';
+    await booking.save();
+
+    // Find the conversation
+    const conversation = await Conversation.findById(booking.conversationId);
+    if (!conversation) {
+      return res.status(404).json({
+        success: false,
+        message: "Conversation not found"
+      });
+    }
+
+    // Create decline message
+    const declineMessage = new Message({
+      content: `❌ **BOOKING DECLINED**
+
+Thank you for considering me for your speaking opportunity "${booking.eventDetails.name}".
+
+I regret to inform you that I'm unable to accept this invitation at this time.
+
+**Event Details:**
+📅 Date: ${new Date(booking.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+🕐 Time: ${booking.timeSlot}
+📍 Location: ${booking.eventDetails.location}
+
+**Reason for declining:** ${reason || 'Scheduling conflict'}
+
+I appreciate your interest in having me speak at your event, and I hope we can collaborate on future opportunities.
+
+Thank you for understanding.
+
+Best regards,
+${req.user.firstName} ${req.user.lastName}`,
+      messageType: 'booking_declined',
+      sender: speakerId,
+      conversation: booking.conversationId,
+      metadata: {
+        bookingId: booking._id,
+        eventId: null,
+        declineReason: reason || 'Scheduling conflict',
+        proposalType: 'declined'
+      }
+    });
+
+    await declineMessage.save();
+
+    // Update conversation's last message
+    conversation.lastMessage = {
+      content: `❌ Booking declined for ${booking.eventDetails.name}`,
+      sender: speakerId,
+      timestamp: declineMessage.createdAt,
+      messageType: 'booking_declined'
+    };
+    await conversation.save();
+
+    // Import socketService for real-time updates
+    const socketService = (await import('../services/socketService.js')).default;
+
+    // Populate conversation data for broadcast
+    await conversation.populate([
+      { path: 'participants.user', select: 'firstName lastName profileImageUrl role' },
+      { path: 'lastMessage.sender', select: 'firstName lastName profileImageUrl' }
+    ]);
+
+    // Broadcast booking decline to both participants
+    console.log(`📡 Broadcasting booking decline to organizer: user_${booking.organizer}`);
+    socketService.io.to(`user_${booking.organizer}`).emit('booking_status_changed', {
+      type: 'booking_declined',
+      booking: booking,
+      conversation: conversation,
+      message: declineMessage,
+      timestamp: new Date()
+    });
+    
+    console.log(`📡 Broadcasting booking decline to speaker: user_${speakerId}`);
+    socketService.io.to(`user_${speakerId}`).emit('booking_status_changed', {
+      type: 'booking_declined',
+      booking: booking,
+      conversation: conversation,
+      message: declineMessage,
+      timestamp: new Date()
+    });
+
+    // Also broadcast new message to conversation
+    socketService.io.to(`conversation_${booking.conversationId}`).emit('new_message', {
+      message: declineMessage,
+      conversationId: booking.conversationId,
+      timestamp: new Date()
+    });
+
+    console.log(`❌ Booking ${bookingId} declined by speaker ${speakerId}`);
+
+    return res.status(200).json({
+      success: true,
+      message: "Booking declined successfully",
+      booking: {
+        _id: booking._id,
+        bookingId: booking.bookingId,
+        status: booking.status,
+        declinedAt: booking.declinedAt,
+        declineReason: booking.declineReason
+      },
+      conversation: {
+        _id: conversation._id,
+        lastMessage: conversation.lastMessage
+      }
+    });
+
+  } catch (error) {
+    console.error("Error declining booking:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Error while declining booking",
+      error: error.message
     });
   }
 };
@@ -125,26 +456,29 @@ export const createSpeakerBooking = async (req, res) => {
     
     console.log("✅ Found availability:", availability._id);
 
-    // Find the slot being booked
-    const slotMatch = availability.timeSlots.find(
-      slot => startTime >= slot.startTime && endTime <= slot.endTime
-    );
-
-    if (!slotMatch) {
-      return res.status(400).json({
-        success: false,
-        message: "Selected date/time is not available for this speaker"
-      });
-    }
+    // No time slot validation - allow booking for any time
+    // The speaker can decide to accept or decline based on their own schedule
+    console.log("📅 Booking request for time:", startTime, "-", endTime);
+    console.log("📅 Speaker availability on this date:", availability.timeSlots);
 
     // Create bookingId
     const count = await Booking.countDocuments();
     const bookingId = `BK-${String(count + 1).padStart(5, "0")}`;
 
     // Create or get conversation between organizer and speaker
-    let conversation = await Conversation.findBetweenUsers(organizerId, speakerId, 'direct');
-    
+    // First, try to find existing conversation without context restrictions
+    let conversation = await Conversation.findOne({
+      type: 'direct',
+      status: 'active',
+      $and: [
+        { participants: { $elemMatch: { user: organizerId, isActive: true } } },
+        { participants: { $elemMatch: { user: speakerId, isActive: true } } }
+      ]
+    });
+
+    // If no conversation exists, create a new one
     if (!conversation) {
+      console.log("🆕 Creating new conversation between organizer and speaker");
       conversation = new Conversation({
         participants: [
           {
@@ -163,10 +497,25 @@ export const createSpeakerBooking = async (req, res) => {
           }
         ],
         type: 'direct',
-        context: { bookingRequest: true },
+        context: { 
+          topic: eventName, // Use event name as topic for better organization
+          bookingRequest: true 
+        },
         status: 'active'
       });
       await conversation.save();
+      console.log("✅ New conversation created:", conversation._id);
+    } else {
+      console.log("♻️ Reusing existing conversation:", conversation._id);
+      // Update context with new event info if needed
+      if (!conversation.context?.topic || conversation.context.topic !== eventName) {
+        conversation.context = {
+          ...conversation.context,
+          topic: eventName,
+          bookingRequest: true
+        };
+        await conversation.save();
+      }
     }
 
     // Create Booking
@@ -212,33 +561,10 @@ export const createSpeakerBooking = async (req, res) => {
 
     await booking.save();
 
-    // --- Update availability by removing the booked time slot ---
-    const newTimeSlots = [];
-
-    for (let slot of availability.timeSlots) {
-      if (slot.startTime === slotMatch.startTime && slot.endTime === slotMatch.endTime) {
-        // Partial slot before booking
-        if (startTime > slot.startTime) {
-          newTimeSlots.push({ ...slot, endTime: startTime });
-        }
-        // Partial slot after booking
-        if (endTime < slot.endTime) {
-          newTimeSlots.push({ ...slot, startTime: endTime });
-        }
-      } else {
-        newTimeSlots.push(slot); // unaffected slots
-      }
-    }
-
-    availability.timeSlots = newTimeSlots;
-
-    // Remove the entire availability document if no slots left
-    if (availability.timeSlots.length === 0) {
-      await Availability.deleteOne({ _id: availability._id });
-    } else {
-      // Save updated availability
-      await availability.save();
-    }
+    // --- No availability modification needed ---
+    // Since we're not validating time slots, we don't need to modify availability
+    // The speaker's availability remains unchanged and they can decide to accept/decline
+    console.log("📅 Availability unchanged - speaker can accept/decline based on their preference");
 
     // Create booking request message with action buttons
     const bookingMessage = new Message({
@@ -265,9 +591,9 @@ WHAT WE OFFER:
 We believe your insights would provide tremendous value to our audience, and we would be honored to have you as our speaker.
 
 Please review the detailed proposal below and let me know if you would like to:
-✅ ACCEPT - Confirm your participation
-❌ DECLINE - Politely decline this opportunity
-🤝 NEGOTIATE - Discuss modifications to the proposal
+ACCEPT - Confirm your participation
+DECLINE - Politely decline this opportunity
+NEGOTIATE - Discuss modifications to the proposal
 
 Looking forward to your response!
 
@@ -299,6 +625,35 @@ ${req.user.firstName} ${req.user.lastName}`,
       messageType: 'booking_request'
     };
     await conversation.save();
+
+    // Import socketService at the top if not already imported
+    const socketService = (await import('../services/socketService.js')).default;
+
+    // Populate conversation data for broadcast
+    await conversation.populate([
+      { path: 'participants.user', select: 'firstName lastName profileImageUrl role' },
+      { path: 'lastMessage.sender', select: 'firstName lastName profileImageUrl' }
+    ]);
+
+    // Broadcast conversation creation to participants only
+    console.log(`📡 Broadcasting to organizer room: user_${organizerId}`);
+    socketService.io.to(`user_${organizerId}`).emit('conversation_created', {
+      conversation: conversation,
+      timestamp: new Date()
+    });
+    
+    console.log(`📡 Broadcasting to speaker room: user_${speakerId}`);
+    socketService.io.to(`user_${speakerId}`).emit('conversation_created', {
+      conversation: conversation,
+      timestamp: new Date()
+    });
+
+    console.log(`📡 Broadcasted conversation creation to participants: ${organizerId}, ${speakerId}`);
+    console.log(`📡 Conversation data being sent:`, {
+      id: conversation._id,
+      participants: conversation.participants.map(p => ({ userId: p.user._id, role: p.role })),
+      context: conversation.context
+    });
 
     // Populate the response data
     await booking.populate([

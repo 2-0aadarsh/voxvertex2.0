@@ -28,6 +28,7 @@ const initialState: SpeakersState = {
     yearsOfExperience: 0,
     availabilityDate: '',
     eventTypes: [],
+    deliveryModes: [],
     priceRange: { min: 0, max: 10000 },
   },
   isLoading: false,
@@ -98,6 +99,7 @@ const speakersSlice = createSlice({
         yearsOfExperience: 0,
         availabilityDate: '',
         eventTypes: [],
+        deliveryModes: [],
         priceRange: { min: 0, max: 10000 },
       };
     },

@@ -4,6 +4,7 @@ import "./globals.css";
 import StoreProvider from "@/store/StoreProvider";
 import AuthCheck from "./AuthCheck";
 import ScrollToTop from "@/components/ScrollToTop";
+import SocketProvider from "@/components/SocketProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,9 +32,11 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       > 
         <StoreProvider>
-          <ScrollToTop />
-          <AuthCheck />
-          {children}
+          <SocketProvider>
+            <ScrollToTop />
+            <AuthCheck />
+            {children}
+          </SocketProvider>
         </StoreProvider>
       </body>
     </html>

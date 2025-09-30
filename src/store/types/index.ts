@@ -340,12 +340,13 @@ export interface WorkExperience {
   title: string;
   company: string;
   location?: string;
+  employmentType?: string;
   startDate: string;
   endDate?: string;
-  isCurrent: boolean;
-  description: string;
+  isCurrentlyWorking: boolean;
+  description?: string;
   skills: string[];
-  achievements: string[];
+  achievements?: string[];
   order: number;
   createdAt: string;
   updatedAt: string;
@@ -362,11 +363,11 @@ export interface Education {
   user: string;
   degree: string;
   institution: string;
-  field: string;
+  fieldOfStudy: string;
   location?: string;
   startDate: string;
   endDate?: string;
-  isCurrent: boolean;
+  isCurrentlyStudying: boolean;
   grade?: string;
   description?: string;
   achievements: string[];
@@ -563,6 +564,7 @@ export interface SpeakerFilters {
   yearsOfExperience: number;
   availabilityDate: string;
   eventTypes: string[];
+  deliveryModes: string[];
   priceRange: {
     min: number;
     max: number;

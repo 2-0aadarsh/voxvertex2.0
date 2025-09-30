@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { useEffect } from "react";
 import ProfileHeader from "../newuser/components/header/ProfileHeader"
-import Sidebar from "../newuser/components/sidebar/Sidebar";
+import Sidebar from "./components/sidebar/Sidebar";
 import AboutUser from "./components/sections/aboutUser/AboutUser"
 import Post from "../newuser/components/sections/posts/Posts"
 import WorkExperience from "../newuser/components/sections/workExperience/WorkExperience"
@@ -42,7 +42,7 @@ export default function ParticipantLayout({
       <ProfileHeader />
       <div className="flex flex-col lg:flex-row items-stretch justify-between min-h-screen">
         <Sidebar />
-        <div className="w-full bg-[#fffbf5]">
+        <div className="w-full bg-[#fffbf5] ml-64">
           <main className="flex flex-col items-center justify-between gap-5 py-5 px-4 lg:px-0">
             <AboutUser />
             <Post />

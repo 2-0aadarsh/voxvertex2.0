@@ -1,6 +1,8 @@
 'use client';
 import React, { Suspense } from 'react';
 import dynamic from 'next/dynamic';
+import { useAuth } from '@/store/hooks';
+import { useGetCurrentUserQuery } from '@/store/slices/authSlice';
 import SpeakersContainer from './components/SpeakersContainer';
 
 // Dynamic import for Navbar
@@ -10,10 +12,9 @@ const Navbar = dynamic(() => import('@/components/Navbar'), {
 });
 
 const SpeakerMarketplace: React.FC = () => {
-  // Mock authentication data - properly structured to match expected types
-  const user = undefined as any; // Use any to bypass strict typing temporarily
-  const currentUserData = undefined as any;
-  const isAuthenticated = false;
+  // Authentication hooks - same as home page
+  const { user, isAuthenticated } = useAuth();
+  const { data: currentUserData } = useGetCurrentUserQuery();
 
   // Helper function to get profile image URL
   const getProfileImageUrl = (profileImage: any): string | null => {
@@ -41,11 +42,11 @@ const SpeakerMarketplace: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 border-4">
       {/* Header */}
       <Suspense fallback={<div className="h-16 bg-white border-b border-gray-200 flex items-center justify-center"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500"></div></div>}>
         <Navbar 
-          user={user}
+          user={user || undefined}
           currentUserData={currentUserData}
           isAuthenticated={isAuthenticated}
           forceHomepageStyle={true}

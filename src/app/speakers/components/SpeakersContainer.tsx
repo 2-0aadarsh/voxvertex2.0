@@ -66,14 +66,31 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
   }, [debouncedSearchQuery]);
 
   const hasActiveFilters = useMemo(() => {
-    return !!(
+    const hasFilters = !!(
       filters.location ||
       filters.expertise?.length ||
+      filters.topics?.length ||
       filters.yearsOfExperience ||
       filters.availabilityDate ||
       filters.eventTypes?.length ||
+      filters.deliveryModes?.length ||
       (filters.priceRange.min > 0 || filters.priceRange.max < 10000)
     );
+    
+    console.log('🔍 hasActiveFilters check:', {
+      hasFilters,
+      filters,
+      location: filters.location,
+      expertise: filters.expertise?.length,
+      topics: filters.topics?.length,
+      yearsOfExperience: filters.yearsOfExperience,
+      availabilityDate: filters.availabilityDate,
+      eventTypes: filters.eventTypes?.length,
+      deliveryModes: filters.deliveryModes?.length,
+      priceRange: filters.priceRange
+    });
+    
+    return hasFilters;
   }, [filters]);
 
   // API queries
@@ -114,12 +131,37 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
       yearsOfExperience: filters.yearsOfExperience,
       availabilityDate: filters.availabilityDate,
       eventTypes: filters.eventTypes,
+      deliveryModes: filters.deliveryModes, // Add deliveryModes parameter
       minFee: filters.priceRange.min,
       maxFee: filters.priceRange.max,
     },
     { skip: !hasActiveFilters } // Only fetch if filters are active
   );
 
+<<<<<<< HEAD
+=======
+  // Debug logging for filtered query
+  console.log('🔍 Filtered query debug:', {
+    hasActiveFilters,
+    skip: !hasActiveFilters,
+    queryParams: {
+      q: debouncedSearchQuery,
+      location: filters.location,
+      expertise: filters.expertise,
+      topics: filters.topics,
+      yearsOfExperience: filters.yearsOfExperience,
+      availabilityDate: filters.availabilityDate,
+      eventTypes: filters.eventTypes,
+      deliveryModes: filters.deliveryModes,
+      minFee: filters.priceRange.min,
+      maxFee: filters.priceRange.max,
+    },
+    isLoading: isLoadingFiltered,
+    error: filteredError,
+    data: filteredSpeakersData
+  });
+  
+>>>>>>> 92a26e2 (implemented the chatting with negotitaion functionality)
   // Get suggestions for autocomplete (commented out for now to avoid unused variables)
   // const {
   //   data: suggestionsData,

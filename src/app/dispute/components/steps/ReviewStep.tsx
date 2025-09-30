@@ -68,7 +68,7 @@ console.log('ReviewStep formData1 respondent:', formData.respondentId);
   description: formData.description?.trim() || '',
   category: formData.disputeReason?.trim() || '',
   priority: 'medium',
-  respondentIds: respondentIds, // string now
+  respondentId: respondentIds, // string now
 };
 console.log('Selected parties before submit:', formData.partiesInvolved);
 console.log('Respondent IDs:', respondentIds);

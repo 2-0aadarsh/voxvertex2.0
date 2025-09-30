@@ -59,4 +59,8 @@
 // });
 
 // export const { selectEvent } = eventsSlice.actions;
+<<<<<<< HEAD
 // export default eventsSlice.reducer;
+=======
+// export default eventsSlice.reducer;
+>>>>>>> 92a26e2 (implemented the chatting with negotitaion functionality)

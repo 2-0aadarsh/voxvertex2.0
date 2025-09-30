@@ -174,7 +174,7 @@ const Navbar: React.FC<NavbarProps> = ({
   // Public homepage navigation
   return (
     <header className={`bg-white shadow-md border-b ${className}`}>
-      <div className="max-w-7xl mx-auto px-6">
+      <div className="w-full px-6">
         <div className="flex items-center h-16">
           
           <div className="flex md:hidden ml-4">

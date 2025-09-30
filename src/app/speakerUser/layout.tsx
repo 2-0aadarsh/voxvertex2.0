@@ -92,7 +92,7 @@ export default function SpeakerUserLayout({
           <Sidebar />
         </Suspense>
         
-        <div className="w-full bg-[#fffbf5]">
+        <div className="w-full bg-[#fffbf5] ml-64">
           <main className="flex flex-col items-center justify-between gap-5 py-5 px-4 lg:px-0">
             <Suspense fallback={<div className="bg-white p-6 animate-pulse h-64"></div>}>
               <AboutUser />

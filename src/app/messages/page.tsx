@@ -1,15 +1,18 @@
 'use client';
 
-import React, { Suspense, useState } from 'react';
+import React, { Suspense } from 'react';
 import { useAuth } from '@/store/hooks';
 import { useGetCurrentUserQuery } from '@/store/slices/authSlice';
 import dynamic from 'next/dynamic';
-import { Sidebar } from './components/Sidebar';
-import { ConversationList } from './components/ConversationList';
-import { MessageComponent } from './components/Message';
-import { ChatInput } from './components/ChatInput';
+import Sidebar from '@/components/Sidebar';
+import RealConversationList from './components/RealConversationList';
 import { ChatHeader } from './components/ChatHeader';
-import { Message as MessageType, Conversation, User } from './types';
+import RealTimeMessageList from '@/components/RealTimeMessageList';
+import RealTimeMessageInput from '@/components/RealTimeMessageInput';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { useSocket } from '@/hooks/useSocket';
+import { setActiveConversation } from '@/store/slices/messagingSlice';
+import { useGetUserConversationsQuery } from '@/store/slices/messagingSlice';
 
 // Dynamic import for Navbar
 const Navbar = dynamic(() => import('@/components/Navbar'), {
@@ -17,66 +20,27 @@ const Navbar = dynamic(() => import('@/components/Navbar'), {
   ssr: false
 });
 
-const currentUser: User = {
-  name: 'John Doe',
-  email: 'john@gmail.com',
-  role: 'Senior Product Manager'
-};
-
-const conversations: Conversation[] = [
-  {
-    id: '1',
-    title: 'Jane Doe - Innovate 2025',
-    lastMessage: 'The fee of $7,000 has been confirmed',
-    timestamp: '2m ago',
-    status: 'negotiating'
-  }
-];
-
-const initialMessages: MessageType[] = [
-  {
-    id: '1',
-    sender: 'event_organizer',
-    content: 'Hi Dr. Jane! We would love to have you speak at our Annual Tech Summit 2025. Are you available on March 15th?',
-    timestamp: '4:20:37 PM'
-  },
-  {
-    id: '2',
-    sender: 'dr_jane_doe',
-    content: 'Hello! Yes, I am available on March 15th. I would be delighted to speak at your event. What topic would you like me to focus on?',
-    timestamp: '4:30:37 PM'
-  },
-  {
-    id: '3',
-    sender: 'event_organizer',
-    content: 'Hi Dr. Jane! We would love to have you speak at our Annual Tech Summit 2025. Are you available on March 15th?',
-    timestamp: '4:20:37 PM'
-  },
-  {
-    id: '4',
-    sender: 'dr_jane_doe',
-    content: 'Hello! Yes, I am available on March 15th. I would be delighted to speak at your event. What topic would you like me to focus on?',
-    timestamp: '4:30:37 PM'
-  },
-  {
-    id: '5',
-    sender: 'event_organizer',
-    content: 'Proposal message content',
-    timestamp: '4:20:37 PM',
-    type: 'proposal'
-  }
-];
 
 export default function MessagesPage() {
   // Authentication hooks
   const { user, isAuthenticated } = useAuth();
   const { data: currentUserData } = useGetCurrentUserQuery();
 
-  const [selectedConversation, setSelectedConversation] = useState('1');
-  const [messages, setMessages] = useState<MessageType[]>(initialMessages);
+  // Redux hooks
+  const dispatch = useAppDispatch();
+  const activeConversationId = useAppSelector((state) => state.messaging.activeConversationId);
+
+  // RTK Query hooks
+  const { 
+    data: conversationsData, 
+    isLoading: conversationsLoading
+  } = useGetUserConversationsQuery({ limit: 20, skip: 0 });
+
+  // Socket hooks
+  const { joinConversation, leaveConversation } = useSocket();
 
   // Helper function to get profile image URL
-  const getProfileImageUrl = (profileImage: any) => {
+  const getProfileImageUrl = (profileImage: unknown) => {
     if (!profileImage) return null;
     
     // Handle string URLs
@@ -86,33 +50,53 @@ export default function MessagesPage() {
     }
     
     // Handle object with data and contentType (Buffer)
-    if (typeof profileImage === 'object' && profileImage.data && profileImage.contentType) {
-      const dataUrl = `data:${profileImage.contentType};base64,${profileImage.data.toString('base64')}`;
-      return dataUrl;
-    }
-    
-    // Handle object with url property
-    if (typeof profileImage === 'object' && profileImage.url) {
-      if (profileImage.url.startsWith('http')) return profileImage.url;
-      return `https://res.cloudinary.com/demo/image/fetch/${profileImage.url}`;
+    if (typeof profileImage === 'object' && profileImage !== null) {
+      const obj = profileImage as Record<string, unknown>;
+      if ('data' in obj && 'contentType' in obj) {
+        const dataUrl = `data:${obj.contentType};base64,${obj.data}`;
+        return dataUrl;
+      }
+      
+      // Handle object with url property
+      if ('url' in obj && typeof obj.url === 'string') {
+        if (obj.url.startsWith('http')) return obj.url;
+        return `https://res.cloudinary.com/demo/image/fetch/${obj.url}`;
+      }
     }
     
     return null;
   };
 
-  const handleSendMessage = (content: string) => {
-    const newMessage: MessageType = {
-      id: Date.now().toString(),
-      sender: 'event_organizer',
-      content,
-      timestamp: new Date().toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: true
-      })
-    };
-    setMessages([...messages, newMessage]);
+  // Get conversations from RTK Query data
+  const conversations = conversationsData?.conversations || [];
+  
+  // Get the active conversation data
+  const activeConversation = activeConversationId 
+    ? conversations.find(conv => conv._id === activeConversationId)
+    : null;
+
+  // Handle conversation selection with toggle functionality
+  const handleSelectConversation = (conversationId: string) => {
+    // If clicking on the same conversation, close it (toggle off)
+    if (activeConversationId === conversationId) {
+      // Leave current conversation room
+      leaveConversation(conversationId);
+      // Clear active conversation
+      dispatch(setActiveConversation(null));
+      return;
+    }
+
+    // If clicking on a different conversation, switch to it
+    // Leave previous conversation room
+    if (activeConversationId && activeConversationId !== conversationId) {
+      leaveConversation(activeConversationId);
+    }
+
+    // Set active conversation
+    dispatch(setActiveConversation(conversationId));
+
+    // Join new conversation room
+    joinConversation(conversationId);
   };
 
   return (
@@ -128,7 +112,7 @@ export default function MessagesPage() {
         />
       </Suspense>
       <div className="flex h-[calc(100vh-64px)]">
-        <Sidebar currentUser={currentUser} />
+        <Sidebar userRole="newuser" />
         
         <div className="flex-1 flex flex-col ml-[20%]">
           <div className="bg-orange-50 border-b border-gray-200 px-6 py-4">
@@ -136,22 +120,45 @@ export default function MessagesPage() {
             <p className="text-sm text-gray-600 mt-1">All your conversations and negotiations in one place.</p>
           </div>
           <div className="flex-1 flex">
-            <ConversationList 
-              conversations={conversations}
-              selectedConversation={selectedConversation}
-              onSelectConversation={setSelectedConversation}
+            {/* Real Conversation List */}
+            <RealConversationList 
+              selectedConversationId={activeConversationId || undefined}
+              onSelectConversation={handleSelectConversation}
             />
             
             <div className="flex-1 flex flex-col">
-              <ChatHeader />
+              <ChatHeader conversation={activeConversation} />
 
-              <div className="flex-1 p-6 overflow-y-auto bg-orange-50">
-                {messages.map((message) => (
-                  <MessageComponent key={message.id} message={message} />
-                ))}
-              </div>
-              
-              <ChatInput onSendMessage={handleSendMessage} />
+              {/* Always use real-time components */}
+              {activeConversationId ? (
+                <>
+                  <RealTimeMessageList 
+                    conversationId={activeConversationId}
+                    className="flex-1"
+                    autoScroll={true}
+                  />
+                  <RealTimeMessageInput 
+                    conversationId={activeConversationId}
+                    placeholder="Type your message..."
+                  />
+                </>
+              ) : (
+                <div className="flex-1 flex items-center justify-center bg-orange-50">
+                  <div className="text-center">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">Select a conversation</h3>
+                    <p className="text-sm text-gray-500">
+                      {conversationsLoading ? 'Loading conversations...' : 
+                       conversations.length === 0 ? 'No conversations yet. Book a speaker to start chatting!' :
+                       'Choose a conversation from the list to start messaging'}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

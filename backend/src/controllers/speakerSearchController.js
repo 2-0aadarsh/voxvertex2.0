@@ -10,13 +10,14 @@ export const searchSpeakers = async (req, res) => {
   try {
     const { q: query, page = 1, limit = 10 } = req.query;
 
-    // Handle multiple query parameters - take the first one or join them
-    let searchQuery;
+    // Handle multiple query parameters - search for each term individually
+    let searchTerms = [];
     if (Array.isArray(query)) {
-      // If multiple q parameters, join them with space and clean up extra spaces
-      searchQuery = query.map(q => q.trim()).filter(q => q.length > 0).join(' ');
+      // If multiple q parameters, search for each term individually
+      searchTerms = query.map(q => q.trim()).filter(q => q.length > 0);
     } else if (typeof query === 'string') {
-      searchQuery = query;
+      // Single query - split by spaces to get individual terms
+      searchTerms = query.trim().split(/\s+/).filter(term => term.length > 0);
     } else {
       return res.status(400).json({
         success: false,
@@ -26,7 +27,7 @@ export const searchSpeakers = async (req, res) => {
     }
 
     // Validate query parameter
-    if (!searchQuery || searchQuery.trim().length === 0) {
+    if (searchTerms.length === 0) {
       return res.status(400).json({
         success: false,
         message: 'Search query is required',
@@ -34,35 +35,36 @@ export const searchSpeakers = async (req, res) => {
       });
     }
 
-    const searchTerm = searchQuery.trim();
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    // Create search conditions for various fields
+    // Create search conditions for various fields - search for each term individually
     const searchConditions = {
       role: 'speaker', // Only search for speakers
-      $or: [
-        // Basic information search - match exact phrase or individual words
-        { firstName: { $regex: searchTerm, $options: 'i' } },
-        { lastName: { $regex: searchTerm, $options: 'i' } },
-        { email: { $regex: searchTerm, $options: 'i' } },
-        { mobileNo: { $regex: searchTerm, $options: 'i' } },
-        
-        // Profile information search - match exact phrase or individual words
-        { bio: { $regex: searchTerm, $options: 'i' } },
-        { professionalTitle: { $regex: searchTerm, $options: 'i' } },
-        { location: { $regex: searchTerm, $options: 'i' } },
-        
-        // Array fields search - check if any array element contains the search term
-        { areaOfExpertise: { $elemMatch: { $regex: searchTerm, $options: 'i' } } },
-        
-        // Role-specific data search - match exact phrase or individual words
-        { 'roleSpecificData.industry': { $regex: searchTerm, $options: 'i' } },
-        { 'roleSpecificData.activities': { $elemMatch: { $regex: searchTerm, $options: 'i' } } },
-        { 'roleSpecificData.socialLinks.linkedin': { $regex: searchTerm, $options: 'i' } },
-        { 'roleSpecificData.socialLinks.twitter': { $regex: searchTerm, $options: 'i' } },
-        { 'roleSpecificData.socialLinks.website': { $regex: searchTerm, $options: 'i' } },
-        { 'roleSpecificData.socialLinks.portfolio': { $regex: searchTerm, $options: 'i' } }
-      ]
+      $and: searchTerms.map(term => ({
+        $or: [
+          // Basic information search - match each term individually
+          { firstName: { $regex: term, $options: 'i' } },
+          { lastName: { $regex: term, $options: 'i' } },
+          { email: { $regex: term, $options: 'i' } },
+          { mobileNo: { $regex: term, $options: 'i' } },
+          
+          // Profile information search - match each term individually
+          { bio: { $regex: term, $options: 'i' } },
+          { professionalTitle: { $regex: term, $options: 'i' } },
+          { location: { $regex: term, $options: 'i' } },
+          
+          // Array fields search - check if any array element contains the term
+          { areaOfExpertise: { $elemMatch: { $regex: term, $options: 'i' } } },
+          
+          // Role-specific data search - match each term individually
+          { 'roleSpecificData.industry': { $regex: term, $options: 'i' } },
+          { 'roleSpecificData.activities': { $elemMatch: { $regex: term, $options: 'i' } } },
+          { 'roleSpecificData.socialLinks.linkedin': { $regex: term, $options: 'i' } },
+          { 'roleSpecificData.socialLinks.twitter': { $regex: term, $options: 'i' } },
+          { 'roleSpecificData.socialLinks.website': { $regex: term, $options: 'i' } },
+          { 'roleSpecificData.socialLinks.portfolio': { $regex: term, $options: 'i' } }
+        ]
+      }))
     };
 
     // Execute search query
@@ -106,7 +108,7 @@ export const searchSpeakers = async (req, res) => {
     // Response with pagination
     res.status(200).json({
       success: true,
-      message: `Found ${totalCount} speaker(s) matching "${searchTerm}"`,
+      message: `Found ${totalCount} speaker(s) matching "${searchTerms.join(' ')}"`,
       data: {
         speakers: formattedSpeakers,
         pagination: {
@@ -452,7 +454,12 @@ export const searchSpeakersWithFilters = async (req, res) => {
       const trimmedEventTypes = eventTypesArray.map(type => type.trim());
       console.log('🎯 Event types (categories) before trimming:', eventTypesArray);
       console.log('🎯 Event types (categories) after trimming:', trimmedEventTypes);
-      availabilityConditions['eventTypes.category'] = { $in: trimmedEventTypes };
+      
+      // Use regex for partial matching instead of exact matching
+      availabilityConditions['eventTypes.category'] = { 
+        $regex: trimmedEventTypes.join('|'), 
+        $options: 'i' 
+      };
     }
 
     // Filter by events (specific event names like "Conferences & Summits")
@@ -464,7 +471,12 @@ export const searchSpeakersWithFilters = async (req, res) => {
       const trimmedEvents = eventsArray.map(event => event.trim());
       console.log('🎯 Events (specific names) before trimming:', eventsArray);
       console.log('🎯 Events (specific names) after trimming:', trimmedEvents);
-      availabilityConditions['eventTypes.events.name'] = { $in: trimmedEvents };
+      
+      // Use regex for partial matching instead of exact matching
+      availabilityConditions['eventTypes.events.name'] = { 
+        $regex: trimmedEvents.join('|'), 
+        $options: 'i' 
+      };
     }
 
     // Filter by delivery modes
@@ -474,22 +486,40 @@ export const searchSpeakersWithFilters = async (req, res) => {
       const trimmedModes = modesArray.map(mode => mode.trim());
       console.log('🎯 Delivery modes before trimming:', modesArray);
       console.log('🎯 Delivery modes after trimming:', trimmedModes);
-      availabilityConditions.modes = { $in: trimmedModes };
+      
+      // Use regex for partial matching instead of exact matching
+      availabilityConditions.modes = { 
+        $regex: trimmedModes.join('|'), 
+        $options: 'i' 
+      };
     }
 
-    // Filter by fee range
+    // Filter by fee range - handle this separately as it requires different logic
+    let feeFilter = null;
     if (minFee || maxFee) {
-      const feeConditions = {};
-      if (minFee) {
-        feeConditions['eventTypes.events.price'] = { $gte: parseInt(minFee) };
+      // Only apply fee filter if user has actually set a meaningful fee range
+      // If minFee=0 and maxFee=10000, it's likely the default values, so skip fee filtering
+      const minFeeNum = parseInt(minFee);
+      const maxFeeNum = parseInt(maxFee);
+      
+      // Skip fee filtering if it's the default range (0-10000) as it's too restrictive
+      if (!(minFeeNum === 0 && maxFeeNum === 10000)) {
+        const feeConditions = {};
+        if (minFee && minFeeNum > 0) {
+          feeConditions['eventTypes.events.price'] = { $gte: minFeeNum };
+        }
+        if (maxFee && maxFeeNum < 10000) {
+          if (feeConditions['eventTypes.events.price']) {
+            feeConditions['eventTypes.events.price'].$lte = maxFeeNum;
+          } else {
+            feeConditions['eventTypes.events.price'] = { $lte: maxFeeNum };
+          }
+        }
+        feeFilter = feeConditions;
+        console.log('🔍 Applied fee filter:', feeFilter);
+      } else {
+        console.log('🔍 Skipping fee filter - default range detected (0-10000)');
       }
-      if (maxFee) {
-        feeConditions['eventTypes.events.price'] = { 
-          ...feeConditions['eventTypes.events.price'],
-          $lte: parseInt(maxFee) 
-        };
-      }
-      availabilityConditions = { ...availabilityConditions, ...feeConditions };
     }
 
     // Handle combining $or conditions if we have multiple date ranges
@@ -515,6 +545,7 @@ export const searchSpeakersWithFilters = async (req, res) => {
     }
 
     console.log('🔍 Final availability conditions:', JSON.stringify(availabilityConditions, null, 2));
+    console.log('🔍 Fee filter:', feeFilter);
     console.log('🔍 Query parameters received:', {
       availabilityDate,
       eventTypes,
@@ -561,8 +592,48 @@ export const searchSpeakersWithFilters = async (req, res) => {
       date: directAvailabilityCheck?.date ? directAvailabilityCheck.date.toISOString() : null
     });
 
+    // Combine availability conditions with fee filter if present
+    let finalAvailabilityConditions = { ...availabilityConditions };
+    if (feeFilter) {
+      // If we have existing conditions, combine them with $and
+      if (Object.keys(finalAvailabilityConditions).length > 0) {
+        finalAvailabilityConditions = {
+          $and: [
+            finalAvailabilityConditions,
+            feeFilter
+          ]
+        };
+      } else {
+        finalAvailabilityConditions = feeFilter;
+      }
+    }
+
+    console.log('🔍 DEBUG: Checking if fee filter is too restrictive');
+    console.log('🔍 Fee filter conditions:', feeFilter);
+    console.log('🔍 Min fee:', minFee, 'Max fee:', maxFee);
+    
+    // If fee filter is too restrictive (minFee=0, maxFee=10000), let's check what prices exist
+    if (minFee === '0' && maxFee === '10000') {
+      console.log('🔍 Fee filter might be too restrictive, checking actual prices in database...');
+      const allPrices = await Availability.find({})
+        .select('eventTypes')
+        .lean();
+      
+      const allEventPrices = allPrices.flatMap(record => 
+        record.eventTypes?.flatMap(eventType => 
+          eventType.events?.map(event => event.price) || []
+        ) || []
+      );
+      
+      console.log('🔍 All prices in database:', allEventPrices);
+      console.log('🔍 Min price in DB:', Math.min(...allEventPrices));
+      console.log('🔍 Max price in DB:', Math.max(...allEventPrices));
+    }
+
+    console.log('🔍 Final availability conditions with fee filter:', JSON.stringify(finalAvailabilityConditions, null, 2));
+
     // Get availability records matching the criteria
-    const availabilityRecords = await Availability.find(availabilityConditions)
+    const availabilityRecords = await Availability.find(finalAvailabilityConditions)
       .populate({
         path: 'userId',
         model: 'EnhancedUser',

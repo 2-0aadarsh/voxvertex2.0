@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 "use client";
 import { useState, useEffect } from "react";
 import { CiSettings, CiUser } from "react-icons/ci";
@@ -186,6 +187,12 @@ const Sidebar = () => {
       </div>
     </>
   );
+=======
+import Sidebar from "@/components/Sidebar";
+
+const NewUserSidebar = () => {
+  return <Sidebar userRole="newuser" />;
+>>>>>>> 92a26e2 (implemented the chatting with negotitaion functionality)
 };
 
-export default Sidebar;
+export default NewUserSidebar;

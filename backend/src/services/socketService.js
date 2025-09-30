@@ -1,5 +1,5 @@
 import { Server } from 'socket.io';
-import jwt from 'jsonwebtoken';
+import { verifyAccessToken } from '../utils/tokens/jwt.utils.js';
 import EnhancedUser from '../models/enhancedUser.js';
 import Conversation from '../models/conversation.js';
 import Message from '../models/message.js';
@@ -38,8 +38,9 @@ class SocketService {
           return next(new Error('Authentication error: No token provided'));
         }
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const user = await EnhancedUser.findById(decoded.userId).select('-password');
+        // Use the same JWT verification as the rest of the app
+        const decoded = verifyAccessToken(token);
+        const user = await EnhancedUser.findById(decoded.id).select('-password');
         
         if (!user) {
           return next(new Error('Authentication error: User not found'));
@@ -67,6 +68,8 @@ class SocketService {
       this.setupMessageHandlers(socket);
       this.setupTypingHandlers(socket);
       this.setupStatusHandlers(socket);
+      this.setupConversationHandlers(socket);
+      this.setupPingHandler(socket);
       this.setupDisconnection(socket);
     });
   }
@@ -77,6 +80,9 @@ class SocketService {
     // Store user connection
     this.connectedUsers.set(userId, socket.id);
     this.userSockets.set(socket.id, userId);
+    
+    // Join user to their personal room for targeted broadcasts
+    socket.join(`user_${userId}`);
     
     // Update user's online status
     this.updateUserOnlineStatus(userId, true);
@@ -105,6 +111,7 @@ class SocketService {
 
       conversations.forEach(conversation => {
         socket.join(`conversation_${conversation._id}`);
+        console.log(`📱 User ${userId} joined conversation room: conversation_${conversation._id}`);
       });
 
       console.log(`📱 User ${userId} joined ${conversations.length} conversations`);
@@ -203,6 +210,68 @@ class SocketService {
           timestamp: new Date()
         });
       }
+    });
+  }
+
+  setupConversationHandlers(socket) {
+    socket.on('join_user_room', async () => {
+      try {
+        const userId = socket.userId;
+        socket.join(`user_${userId}`);
+        console.log(`🏠 User ${userId} joined personal room user_${userId}`);
+      } catch (error) {
+        socket.emit('room_error', {
+          error: error.message,
+          timestamp: new Date()
+        });
+      }
+    });
+
+    socket.on('join_conversation', async (data) => {
+      try {
+        const { conversationId } = data;
+        socket.join(`conversation_${conversationId}`);
+        console.log(`📱 User ${socket.userId} joined conversation ${conversationId}`);
+      } catch (error) {
+        socket.emit('conversation_error', {
+          error: error.message,
+          timestamp: new Date()
+        });
+      }
+    });
+
+    socket.on('leave_conversation', async (data) => {
+      try {
+        const { conversationId } = data;
+        socket.leave(`conversation_${conversationId}`);
+        console.log(`📱 User ${socket.userId} left conversation ${conversationId}`);
+      } catch (error) {
+        socket.emit('conversation_error', {
+          error: error.message,
+          timestamp: new Date()
+        });
+      }
+    });
+
+    socket.on('join_personal_room', async (data) => {
+      try {
+        const { userId } = data;
+        socket.join(`user_${userId}`);
+        console.log(`🏠 User ${socket.userId} joined personal room user_${userId}`);
+      } catch (error) {
+        socket.emit('room_error', {
+          error: error.message,
+          timestamp: new Date()
+        });
+      }
+    });
+  }
+
+  setupPingHandler(socket) {
+    socket.on('ping', () => {
+      socket.emit('pong', {
+        timestamp: new Date()
+      });
     });
   }
 
@@ -405,6 +474,10 @@ class SocketService {
     const { conversationId } = data;
     const userId = socket.userId;
 
+    // Get user info for typing indicator
+    const user = await EnhancedUser.findById(userId).select('firstName lastName');
+    const userName = user ? `${user.firstName} ${user.lastName}` : 'Unknown User';
+
     // Update typing status
     await MessageStatus.findOneAndUpdate(
       { user: userId, conversation: conversationId },
@@ -419,6 +492,7 @@ class SocketService {
     socket.to(`conversation_${conversationId}`).emit('user_typing', {
       conversationId: conversationId,
       userId: userId,
+      userName: userName,
       isTyping: true,
       timestamp: new Date()
     });
@@ -438,10 +512,9 @@ class SocketService {
     );
 
     // Broadcast typing stop to other participants
-    socket.to(`conversation_${conversationId}`).emit('user_typing', {
+    socket.to(`conversation_${conversationId}`).emit('user_stopped_typing', {
       conversationId: conversationId,
       userId: userId,
-      isTyping: false,
       timestamp: new Date()
     });
   }
@@ -450,7 +523,7 @@ class SocketService {
     const { conversationId, status } = data;
     const userId = socket.userId;
 
-    const messageStatus = await MessageStatus.findOneAndUpdate(
+    await MessageStatus.findOneAndUpdate(
       { user: userId, conversation: conversationId },
       { status: status },
       { upsert: true }
@@ -549,7 +622,8 @@ class SocketService {
   }
 }
 
-export default new SocketService();
+const socketService = new SocketService();
+export default socketService;
 
 
 

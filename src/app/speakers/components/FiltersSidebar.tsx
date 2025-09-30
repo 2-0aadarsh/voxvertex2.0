@@ -292,6 +292,7 @@ const FiltersSidebar: React.FC = () => {
   const [selectedTopic, setSelectedTopic] = useState('');
   const [selectedExpertise, setSelectedExpertise] = useState('');
   const [yearsOfExperience, setYearsOfExperience] = useState(0);
+  const [eventType, setEventType] = useState(''); // Add separate state for event types
   const [deliveryMode, setDeliveryMode] = useState('');
   const [minFee, setMinFee] = useState(0);
   const [maxFee, setMaxFee] = useState(10000);
@@ -308,6 +309,7 @@ const FiltersSidebar: React.FC = () => {
     setSelectedTopic('');
     setSelectedExpertise('');
     setYearsOfExperience(0);
+    setEventType(''); // Clear event type
     setDeliveryMode('');
     setMinFee(0);
     setMaxFee(10000);
@@ -326,7 +328,8 @@ const FiltersSidebar: React.FC = () => {
       yearsOfExperience: yearsOfExperience,
       expertise: selectedExpertiseCategory ? [selectedExpertiseCategory.name] : [],
       topics: selectedCategory ? [selectedCategory.name] : [],
-      eventTypes: deliveryMode ? [deliveryMode] : [],
+      eventTypes: eventType ? [eventType] : [], // Use eventType state
+      deliveryModes: deliveryMode ? [deliveryMode] : [], // Use deliveryMode state
       priceRange: {
         min: minFee,
         max: maxFee
@@ -338,6 +341,8 @@ const FiltersSidebar: React.FC = () => {
     console.log('🎯 Selected expertise:', selectedExpertise);
     console.log('🎯 Selected category:', selectedCategory);
     console.log('🎯 Selected expertise category:', selectedExpertiseCategory);
+    console.log('🎯 Event type:', eventType);
+    console.log('🎯 Delivery mode:', deliveryMode);
     dispatch(setFilters(newFilters));
   };
 
@@ -485,8 +490,8 @@ const FiltersSidebar: React.FC = () => {
             Event Type
           </label>
           <select 
-            value={deliveryMode}
-            onChange={(e) => setDeliveryMode(e.target.value)}
+            value={eventType}
+            onChange={(e) => setEventType(e.target.value)}
             className="block w-full px-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-[#FF6B35] focus:border-[#FF6B35]"
           >
             <option value="">Select event type...</option>

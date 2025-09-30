@@ -14,7 +14,7 @@ const messageSchema = new mongoose.Schema({
   // Message type
   messageType: {
     type: String,
-    enum: ['text', 'image', 'file', 'system', 'event_invite', 'booking_request', 'negotiation_proposal', 'negotiation_accepted', 'negotiation_declined', 'negotiation_cancelled'],
+    enum: ['text', 'image', 'file', 'system', 'event_invite', 'booking_request', 'booking_accepted', 'booking_declined', 'negotiation_proposal', 'negotiation_accepted', 'negotiation_declined', 'negotiation_cancelled'],
     default: 'text'
   },
 
@@ -84,7 +84,7 @@ const messageSchema = new mongoose.Schema({
     },
     proposalType: {
       type: String,
-      enum: ['initial', 'counter', 'final']
+      enum: ['initial', 'counter', 'final', 'accepted', 'declined']
     },
     finalAgreement: {
       amount: Number,

@@ -32,7 +32,10 @@ import videosReducer from './slices/videosSlice';
 import calendarReducer from './slices/calendarSlice';
 import availabilityReducer from './slices/availabilitySlice';
 import speakersReducer from './slices/speakersSlice';
+import speakerProfileReducer from './slices/speakerProfileSlice';
 import bookingReducer from './slices/bookingSlice';
+import messagingReducer from './slices/messagingSlice';
+import negotiationReducer from './slices/negotiationSlice';
 
 // Persist configuration
 const persistConfig = {
@@ -52,7 +55,10 @@ const persistConfig = {
     'calendar',
     'availability',
     'speakers',
+    'speakerProfile',
     'booking',
+    'messaging',
+    'negotiation'
   ],
 };
 
@@ -78,7 +84,10 @@ const rootReducer = combineReducers({
   calendar: calendarReducer,
   availability: availabilityReducer,
   speakers: speakersReducer,
+  speakerProfile: speakerProfileReducer,
   booking: bookingReducer,
+  messaging: messagingReducer,
+  negotiation: negotiationReducer,
 });
 
 // Persisted reducer
@@ -126,13 +135,53 @@ export const resetStore = () => {
   store.dispatch({ type: 'calendar/resetCalendar' });
   store.dispatch({ type: 'availability/resetAvailability' });
   store.dispatch({ type: 'speakers/resetSpeakers' });
+  store.dispatch({ type: 'speakerProfile/resetProfile' });
   store.dispatch({ type: 'booking/resetBooking' });
-  // Reset API cache for baseApi and disputeApi
+  store.dispatch({ type: 'messaging/resetMessagingState' });
+  store.dispatch({ type: 'negotiation/resetNegotiation' });
+  
+  // Reset API cache
   store.dispatch(baseApi.util.resetApiState());
   store.dispatch(disputeApi.util.resetApiState());
 };
 
-// Export reducers, APIs, rootReducer, etc.
+// Selective cache invalidation
+export const invalidateUserData = () => {
+  store.dispatch(
+    baseApi.util.invalidateTags([
+      'User', 
+      'Profile', 
+      'Post', 
+      'WorkExperience', 
+      'Education', 
+      'Award', 
+      'Video', 
+      'CalendarEvent',
+      'Speaker',
+      'SpeakerProfile',
+      'Conversation',
+      'Message',
+      'Negotiation'
+    ])
+  );
+};
+
+// Performance monitoring (development only)
+if (process.env.NODE_ENV === 'development') {
+  // Log store state changes
+  store.subscribe(() => {
+    const state = store.getState();
+    console.log('Store updated:', {
+      auth: state.auth.isAuthenticated,
+      api: Object.keys(state.api.queries).length,
+      timestamp: new Date().toISOString(),
+    });
+  });
+}
+
+// ============================================================================
+// EXPORT INDIVIDUAL STORE PARTS FOR TESTING
+// ============================================================================
 
 export {
   authReducer,
@@ -146,7 +195,12 @@ export {
   calendarReducer,
   availabilityReducer,
   speakersReducer,
+  speakerProfileReducer,
   bookingReducer,
+  messagingReducer,
+  negotiationReducer,
+  
+  // API
   baseApi,
   disputeApi,
   rootReducer,

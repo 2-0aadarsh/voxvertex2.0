@@ -8,13 +8,23 @@ import UserService from '../services/user.service.js';
  */
 export const authenticateJWT = async (req, res, next) => {
   try {
+    console.log('🔐 AUTHENTICATE JWT DEBUG');
+    console.log('🔐 Request URL:', req.url);
+    console.log('🔐 Request method:', req.method);
+    console.log('🔐 Cookies:', req.cookies);
+    console.log('🔐 Authorization header:', req.header('Authorization'));
+    
     // Get token from cookies or Authorization header
     const accessToken = req.cookies.accessToken || 
                        req.header('Authorization')?.replace('Bearer ', '');
     const refreshToken = req.cookies.refreshToken;
+    
+    console.log('🔐 Access token found:', !!accessToken);
+    console.log('🔐 Refresh token found:', !!refreshToken);
 
     // If no tokens provided
     if (!accessToken && !refreshToken) {
+      console.log('🔐 NO TOKENS PROVIDED - returning 401');
       return res.status(401).json({
         success: false,
         message: 'Authentication required',
@@ -39,6 +49,7 @@ export const authenticateJWT = async (req, res, next) => {
 
         req.user = user;
         req.tokenData = decoded;
+        console.log('🔐 AUTHENTICATION SUCCESS - proceeding to controller');
         return next();
       } catch (accessError) {
         // Access token is invalid/expired, try refresh token

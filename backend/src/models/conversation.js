@@ -70,7 +70,7 @@ const conversationSchema = new mongoose.Schema({
     },
     messageType: {
       type: String,
-      enum: ['text', 'image', 'file', 'system', 'event_invite', 'booking_request', 'negotiation_proposal', 'negotiation_accepted', 'negotiation_declined', 'negotiation_cancelled'],
+      enum: ['text', 'image', 'file', 'system', 'event_invite', 'booking_request', 'booking_accepted', 'booking_declined', 'negotiation_proposal', 'negotiation_accepted', 'negotiation_declined', 'negotiation_cancelled'],
       default: 'text'
     }
   },
@@ -200,8 +200,8 @@ conversationSchema.statics.findBetweenUsers = function(userId1, userId2, type = 
     type: type,
     status: 'active',
     $and: [
-      { participants: { $elemMatch: { user: userId1 } } },
-      { participants: { $elemMatch: { user: userId2 } } }
+      { participants: { $elemMatch: { user: userId1, isActive: true } } },
+      { participants: { $elemMatch: { user: userId2, isActive: true } } }
     ]
   });
 };

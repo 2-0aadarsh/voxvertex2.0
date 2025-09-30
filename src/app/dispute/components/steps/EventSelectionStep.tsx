@@ -10,8 +10,6 @@ interface EventSelectionStepProps {
 export default function EventSelectionStep({ formData, onFormDataUpdate }: EventSelectionStepProps) {
   // Use RTK Query hook
   const { data: eventsData, isLoading, isError } = useGetEventsQuery();
-  console.log("events from eventslection page is", eventsData);
-  
 
   // Transform events data if needed
   const events = eventsData

@@ -134,12 +134,27 @@ export const authApi = baseApi.injectEndpoints({
           
           // Update auth state with user and token
           if (data.success && data.user) {
+            // Get token from cookies if not in response
+            const getTokenFromCookies = () => {
+              if (typeof document === 'undefined') return null;
+              const cookies = document.cookie.split(';');
+              const accessTokenCookie = cookies.find(cookie => 
+                cookie.trim().startsWith('accessToken=')
+              );
+              return accessTokenCookie ? accessTokenCookie.split('=')[1] : null;
+            };
+
+            const tokenFromResponse = data.tokens?.accessToken;
+            const tokenFromCookies = getTokenFromCookies();
+            const finalToken = tokenFromResponse || tokenFromCookies;
+
             dispatch(setAuthSuccess({ 
               user: data.user, // Direct user object in response
-              token: data.tokens?.accessToken
+              token: finalToken
             }));
             console.log('✅ Auth state updated with user:', data.user);
             console.log('✅ User role:', data.user.role);
+            console.log('✅ Token stored in Redux:', finalToken ? 'Yes' : 'No');
           }
         } catch (error) {
           console.error('❌ Login error in onQueryStarted:', error);
@@ -190,12 +205,26 @@ export const authApi = baseApi.injectEndpoints({
           
           // Update auth state with user from token
           if (data.success && data.user) {
+            // Get token from cookies if not in response
+            const getTokenFromCookies = () => {
+              if (typeof document === 'undefined') return null;
+              const cookies = document.cookie.split(';');
+              const accessTokenCookie = cookies.find(cookie => 
+                cookie.trim().startsWith('accessToken=')
+              );
+              return accessTokenCookie ? accessTokenCookie.split('=')[1] : null;
+            };
+
+            const tokenFromResponse = data.tokenRefreshed && data.tokens ? data.tokens.accessToken : null;
+            const tokenFromCookies = getTokenFromCookies();
+            const finalToken = tokenFromResponse || tokenFromCookies;
+
             dispatch(setAuthSuccess({ 
               user: data.user,
-              // If token was refreshed, update the token
-              token: data.tokenRefreshed && data.tokens ? data.tokens.accessToken : undefined
+              token: finalToken
             }));
             console.log('✅ Auth state updated from token validation with role:', data.user.role);
+            console.log('✅ Token stored in Redux:', finalToken ? 'Yes' : 'No');
           }
         } catch (error) {
           console.error('❌ Token validation error:', error);
@@ -227,8 +256,24 @@ export const authApi = baseApi.injectEndpoints({
           
           // Update auth state with user
           if (data.success && data.user) {
-            dispatch(setAuthSuccess({ user: data.user }));
+            // Get token from cookies
+            const getTokenFromCookies = () => {
+              if (typeof document === 'undefined') return null;
+              const cookies = document.cookie.split(';');
+              const accessTokenCookie = cookies.find(cookie => 
+                cookie.trim().startsWith('accessToken=')
+              );
+              return accessTokenCookie ? accessTokenCookie.split('=')[1] : null;
+            };
+
+            const tokenFromCookies = getTokenFromCookies();
+
+            dispatch(setAuthSuccess({ 
+              user: data.user,
+              token: tokenFromCookies
+            }));
             console.log('✅ Auth state updated from getCurrentUser with role:', data.user.role);
+            console.log('✅ Token stored in Redux:', tokenFromCookies ? 'Yes' : 'No');
           }
         } catch (error) {
           console.error('❌ getCurrentUser error:', error);

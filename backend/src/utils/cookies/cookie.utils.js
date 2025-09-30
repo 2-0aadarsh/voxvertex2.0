@@ -23,11 +23,17 @@ export const setRefreshTokenCookie = (res, token) => {
 };
 
 /**
- * Set access token cookie (15 minutes)
+ * Set access token cookie (15 minutes) - NOT httpOnly for Socket.IO access
  */
 export const setAccessTokenCookie = (res, token) => {
   const maxAge = 15 * 60 * 1000; // 15 minutes
-  res.cookie("accessToken", token, getCookieConfig(maxAge));
+  res.cookie("accessToken", token, {
+    httpOnly: false, // Allow JavaScript access for Socket.IO
+    secure: false, // Set to isProd in production
+    sameSite: "lax", // Set to isProd ? "none" : "lax" in production
+    maxAge,
+    path: '/',
+  });
 };
 
 /**
@@ -79,7 +85,12 @@ export const clearAuthCookies = (res) => {
   
   // Clear backend cookies
   console.log('🍪 Clearing backend cookies: accessToken, refreshToken');
-  res.clearCookie("accessToken", clearConfig);
+  res.clearCookie("accessToken", {
+    httpOnly: false, // Match the setting used when setting the cookie
+    secure: false,
+    sameSite: "lax",
+    path: '/',
+  });
   res.clearCookie("refreshToken", clearConfig);
   
   // Clear frontend cookies (non-httpOnly)

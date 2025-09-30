@@ -93,9 +93,14 @@ export default function NewUserLayout({
         <Suspense fallback={<div className="w-64 bg-white"></div>}>
           <Sidebar />
         </Suspense>
+<<<<<<< HEAD
 
         {/* Main Content */}
         <div className="flex-1 bg-[#fffbf5] lg:ml-64">
+=======
+        
+        <div className="w-full bg-[#fffbf5] ml-64">
+>>>>>>> 92a26e2 (implemented the chatting with negotitaion functionality)
           <main className="flex flex-col items-center justify-between gap-5 py-5 px-4 lg:px-0">
             <Suspense fallback={<div className="bg-white p-6 animate-pulse h-64"></div>}>
               <AboutUser />

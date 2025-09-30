@@ -3,6 +3,7 @@ import Negotiation from '../models/negotiation.js';
 import Conversation from '../models/conversation.js';
 import Message from '../models/message.js';
 import EnhancedUser from '../models/enhancedUser.js';
+import Booking from '../models/bookingSpeaker.js';
 import socketService from '../services/socketService.js';
 
 // Create a new negotiation
@@ -65,6 +66,13 @@ export const createNegotiation = async (req, res) => {
       status: 'active'
     });
 
+    // Link to existing booking if it exists
+    const existingBooking = await Booking.findOne({ conversationId: conversationId });
+    if (existingBooking && existingBooking.status === 'pending') {
+      console.log(`📋 Linking negotiation to existing booking ${existingBooking._id}`);
+      // The negotiation is now linked to this booking via conversationId
+    }
+
     await negotiation.save();
 
     const negotiationMessage = new Message({
@@ -76,6 +84,9 @@ export const createNegotiation = async (req, res) => {
     });
 
     await negotiationMessage.save();
+
+    // Populate message sender
+    await negotiationMessage.populate('sender', 'firstName lastName profileImageUrl role');
 
     conversation.lastMessage = {
       content: `💰 New proposal: ${currency} ${amount}`,
@@ -91,7 +102,26 @@ export const createNegotiation = async (req, res) => {
       { path: 'event', select: 'title date' }
     ]);
 
-    socketService.io.to(conversationId).emit('negotiation_created', { negotiation, message: negotiationMessage });
+    // Broadcast to conversation room
+    socketService.io.to(`conversation_${conversationId}`).emit('negotiation_created', { 
+      negotiation, 
+      message: negotiationMessage,
+      timestamp: new Date()
+    });
+    
+    // Also broadcast to user rooms for immediate delivery
+    socketService.io.to(`user_${negotiation.organizer}`).emit('negotiation_created', { 
+      negotiation, 
+      message: negotiationMessage,
+      timestamp: new Date()
+    });
+    socketService.io.to(`user_${negotiation.speaker}`).emit('negotiation_created', { 
+      negotiation, 
+      message: negotiationMessage,
+      timestamp: new Date()
+    });
+    
+    console.log(`💰 Broadcasting negotiation_created to conversation_${conversationId} and user rooms`);
 
     res.status(201).json({ success: true, message: 'Negotiation created successfully', negotiation, message: negotiationMessage });
 
@@ -165,6 +195,9 @@ export const proposeAmount = async (req, res) => {
 
     await negotiationMessage.save();
 
+    // Populate message sender
+    await negotiationMessage.populate('sender', 'firstName lastName profileImageUrl role');
+
     const conversation = await Conversation.findById(negotiation.conversation);
     conversation.lastMessage = { content: `💰 Counter-proposal: ${currency} ${amount}`, sender: currentUserId, timestamp: negotiationMessage.createdAt, messageType: 'negotiation_proposal' };
     await conversation.save();
@@ -175,7 +208,26 @@ export const proposeAmount = async (req, res) => {
       { path: 'event', select: 'title date' }
     ]);
 
-    socketService.io.to(negotiation.conversation.toString()).emit('negotiation_proposal', { negotiation, message: negotiationMessage });
+    // Broadcast to conversation room
+    socketService.io.to(`conversation_${negotiation.conversation}`).emit('negotiation_proposal', { 
+      negotiation, 
+      message: negotiationMessage,
+      timestamp: new Date()
+    });
+    
+    // Also broadcast to user rooms for immediate delivery
+    socketService.io.to(`user_${negotiation.organizer}`).emit('negotiation_proposal', { 
+      negotiation, 
+      message: negotiationMessage,
+      timestamp: new Date()
+    });
+    socketService.io.to(`user_${negotiation.speaker}`).emit('negotiation_proposal', { 
+      negotiation, 
+      message: negotiationMessage,
+      timestamp: new Date()
+    });
+    
+    console.log(`💰 Broadcasting negotiation_proposal to conversation_${negotiation.conversation} and user rooms`);
 
     res.status(200).json({ success: true, message: 'Proposal sent successfully', negotiation, message: negotiationMessage });
 
@@ -224,6 +276,17 @@ export const acceptProposal = async (req, res) => {
 
     await negotiation.save();
 
+    // Update corresponding booking status if it exists
+    const booking = await Booking.findOne({ conversationId: negotiation.conversation });
+    if (booking && booking.status === 'pending') {
+      booking.status = 'accepted';
+      booking.acceptedAt = new Date();
+      // Update the compensation amount to the negotiated amount
+      booking.compensationAndArrangements.primaryCompensation.speakerFeeAmount = lastProposal.amount;
+      await booking.save();
+      console.log(`📋 Updated booking ${booking._id} status to 'accepted' with negotiated amount: $${lastProposal.amount}`);
+    }
+
     const acceptanceMessage = new Message({
       content: `✅ Proposal accepted: ${negotiation.currentProposal.currency} ${negotiation.currentProposal.amount} - ${message || 'Deal confirmed!'}`,
       messageType: 'negotiation_accepted',
@@ -233,6 +296,9 @@ export const acceptProposal = async (req, res) => {
     });
 
     await acceptanceMessage.save();
+
+    // Populate message sender
+    await acceptanceMessage.populate('sender', 'firstName lastName profileImageUrl role');
 
     const conversation = await Conversation.findById(negotiation.conversation);
     conversation.lastMessage = { content: `✅ Proposal accepted: ${negotiation.currentProposal.currency} ${negotiation.currentProposal.amount}`, sender: currentUserId, timestamp: acceptanceMessage.createdAt, messageType: 'negotiation_accepted' };
@@ -244,7 +310,26 @@ export const acceptProposal = async (req, res) => {
       { path: 'event', select: 'title date' }
     ]);
 
-    socketService.io.to(negotiation.conversation.toString()).emit('negotiation_accepted', { negotiation, message: acceptanceMessage });
+    // Broadcast to conversation room
+    socketService.io.to(`conversation_${negotiation.conversation}`).emit('negotiation_accepted', { 
+      negotiation, 
+      message: acceptanceMessage,
+      timestamp: new Date()
+    });
+    
+    // Also broadcast to user rooms for immediate delivery
+    socketService.io.to(`user_${negotiation.organizer}`).emit('negotiation_accepted', { 
+      negotiation, 
+      message: acceptanceMessage,
+      timestamp: new Date()
+    });
+    socketService.io.to(`user_${negotiation.speaker}`).emit('negotiation_accepted', { 
+      negotiation, 
+      message: acceptanceMessage,
+      timestamp: new Date()
+    });
+    
+    console.log(`✅ Broadcasting negotiation_accepted to conversation_${negotiation.conversation} and user rooms`);
 
     res.status(200).json({ success: true, message: 'Proposal accepted successfully', negotiation, message: acceptanceMessage });
 
@@ -290,6 +375,16 @@ export const declineProposal = async (req, res) => {
     negotiation.status = 'declined';
     await negotiation.save();
 
+    // Update corresponding booking status if it exists
+    const booking = await Booking.findOne({ conversationId: negotiation.conversation });
+    if (booking && booking.status === 'pending') {
+      booking.status = 'declined';
+      booking.declinedAt = new Date();
+      booking.declineReason = message || 'Proposal declined';
+      await booking.save();
+      console.log(`📋 Updated booking ${booking._id} status to 'declined'`);
+    }
+
     const declineMessage = new Message({
       content: `❌ Proposal declined: ${negotiation.currentProposal.currency} ${negotiation.currentProposal.amount} - ${message || 'Proposal not accepted'}`,
       messageType: 'negotiation_declined',
@@ -299,6 +394,9 @@ export const declineProposal = async (req, res) => {
     });
 
     await declineMessage.save();
+
+    // Populate message sender
+    await declineMessage.populate('sender', 'firstName lastName profileImageUrl role');
 
     const conversation = await Conversation.findById(negotiation.conversation);
     conversation.lastMessage = { content: `❌ Proposal declined: ${negotiation.currentProposal.currency} ${negotiation.currentProposal.amount}`, sender: currentUserId, timestamp: declineMessage.createdAt, messageType: 'negotiation_declined' };
@@ -310,7 +408,26 @@ export const declineProposal = async (req, res) => {
       { path: 'event', select: 'title date' }
     ]);
 
-    socketService.io.to(negotiation.conversation.toString()).emit('negotiation_declined', { negotiation, message: declineMessage });
+    // Broadcast to conversation room
+    socketService.io.to(`conversation_${negotiation.conversation}`).emit('negotiation_declined', { 
+      negotiation, 
+      message: declineMessage,
+      timestamp: new Date()
+    });
+    
+    // Also broadcast to user rooms for immediate delivery
+    socketService.io.to(`user_${negotiation.organizer}`).emit('negotiation_declined', { 
+      negotiation, 
+      message: declineMessage,
+      timestamp: new Date()
+    });
+    socketService.io.to(`user_${negotiation.speaker}`).emit('negotiation_declined', { 
+      negotiation, 
+      message: declineMessage,
+      timestamp: new Date()
+    });
+    
+    console.log(`❌ Broadcasting negotiation_declined to conversation_${negotiation.conversation} and user rooms`);
 
     res.status(200).json({ success: true, message: 'Proposal declined successfully', negotiation, message: declineMessage });
 
@@ -360,6 +477,14 @@ export const cancelNegotiation = async (req, res) => {
     // Cancel the negotiation
     await negotiation.cancelNegotiation(currentUserId, reason);
 
+    // Update corresponding booking status if it exists
+    const booking = await Booking.findOne({ conversationId: negotiation.conversation });
+    if (booking && booking.status === 'pending') {
+      booking.status = 'cancelled';
+      await booking.save();
+      console.log(`📋 Updated booking ${booking._id} status to 'cancelled' due to negotiation cancellation`);
+    }
+
     // Create cancellation message
     const cancelMessage = new Message({
       content: `🚫 Negotiation cancelled - ${reason || 'No reason provided'}`,
@@ -374,6 +499,9 @@ export const cancelNegotiation = async (req, res) => {
     });
 
     await cancelMessage.save();
+
+    // Populate message sender
+    await cancelMessage.populate('sender', 'firstName lastName profileImageUrl role');
 
     // Update conversation's last message
     const conversation = await Conversation.findById(negotiation.conversation);
@@ -392,11 +520,26 @@ export const cancelNegotiation = async (req, res) => {
       { path: 'event', select: 'title date' }
     ]);
 
-    // Emit real-time event
-    socketService.io.to(negotiation.conversation.toString()).emit('negotiation_cancelled', {
-      negotiation: negotiation,
-      message: cancelMessage
+    // Broadcast to conversation room
+    socketService.io.to(`conversation_${negotiation.conversation}`).emit('negotiation_cancelled', { 
+      negotiation, 
+      message: cancelMessage,
+      timestamp: new Date()
     });
+    
+    // Also broadcast to user rooms for immediate delivery
+    socketService.io.to(`user_${negotiation.organizer}`).emit('negotiation_cancelled', { 
+      negotiation, 
+      message: cancelMessage,
+      timestamp: new Date()
+    });
+    socketService.io.to(`user_${negotiation.speaker}`).emit('negotiation_cancelled', { 
+      negotiation, 
+      message: cancelMessage,
+      timestamp: new Date()
+    });
+    
+    console.log(`🚫 Broadcasting negotiation_cancelled to conversation_${negotiation.conversation} and user rooms`);
 
     res.status(200).json({
       success: true,

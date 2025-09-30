@@ -33,6 +33,7 @@ export const createOrGetConversation = async (req, res) => {
     let conversation = await Conversation.findBetweenUsers(currentUserId, participantId, type);
 
     if (!conversation) {
+      console.log("🆕 Creating new conversation between users:", currentUserId, "and", participantId);
       // Create new conversation
       conversation = new Conversation({
         participants: [
@@ -57,7 +58,7 @@ export const createOrGetConversation = async (req, res) => {
       });
 
       await conversation.save();
-      
+      console.log("✅ New conversation created:", conversation._id);
 
       // Create message statuses for both participants
       await MessageStatus.create([
@@ -81,6 +82,8 @@ export const createOrGetConversation = async (req, res) => {
         participants: [currentUserId, participantId],
         eventId: context?.eventId || null
       });
+    } else {
+      console.log("♻️ Reusing existing conversation:", conversation._id);
     }
 
     // Populate conversation data
@@ -181,15 +184,19 @@ export const getConversationMessages = async (req, res) => {
         message: 'Access denied to this conversation'
       });
     }
-    await Message.populate(messages, { path: 'sender', select: 'firstName lastName profileImageUrl role' });
 
-    await conversation.populate('participants.user', 'firstName lastName profileImageUrl role');
-
+    // Get messages for this conversation
     const messages = await Message.findInConversation(
       conversationId,
       parseInt(limit),
       parseInt(skip)
     );
+
+    // Populate message senders
+    await Message.populate(messages, { path: 'sender', select: 'firstName lastName profileImageUrl role' });
+
+    // Populate conversation participants
+    await conversation.populate('participants.user', 'firstName lastName profileImageUrl role');
 
     res.status(200).json({
       success: true,
@@ -208,12 +215,6 @@ export const getConversationMessages = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Internal server error',
-      participants: conversation.participants.map(p => ({
-         _id: p.user._id,
-         name: `${p.user.firstName} ${p.user.lastName}`,
-         role: p.role
-        })),
-        eventId: conversation.context?.eventId || null,
       error: error.message
     });
   }
@@ -242,9 +243,9 @@ export const sendMessage = async (req, res) => {
       sender: senderId,
       conversation: conversationId,
       metadata: {
-      eventId: conversation.context?.eventId, // ✅ take from conversation
-    replyTo: replyTo
-  },
+        eventId: conversation.context?.eventId, // ✅ take from conversation
+        replyTo: replyTo
+      },
       attachments: attachments || []
     });
 
@@ -276,34 +277,43 @@ export const sendMessage = async (req, res) => {
 
     await conversation.populate('participants.user', 'firstName lastName profileImageUrl role');
     
-// After saving message
-await message.populate([
-  { path: 'sender', select: 'firstName lastName profileImageUrl role' },
-  { path: 'metadata.replyTo', select: 'content sender' }
-]);
+    // After saving message
+    await message.populate([
+      { path: 'sender', select: 'firstName lastName profileImageUrl role' },
+      { path: 'metadata.replyTo', select: 'content sender' }
+    ]);
 
-res.status(201).json({
-  success: true,
-  message: {
-    _id: message._id,
-    content: message.content,
-    messageType: message.messageType,
-    sender: message.sender,                   // ✅ Populated sender
-    conversation: message.conversation,
-    status: message.status,
-    attachments: message.attachments,
-    metadata: {
-      ...message.metadata,
-      eventId: message.metadata?.eventId     // ✅ Include eventId
-    },
-    adminAccess: message.adminAccess,
-    isEncrypted: message.isEncrypted,
-    priority: message.priority,
-    readBy: message.readBy,
-    createdAt: message.createdAt,
-    updatedAt: message.updatedAt
-  }
-});
+    // Broadcast message to conversation participants via Socket.IO
+    socketService.io.to(`conversation_${conversationId}`).emit('new_message', {
+      message: message,
+      conversationId: conversationId,
+      timestamp: new Date()
+    });
+
+    console.log(`💬 Message sent via HTTP API in conversation ${conversationId} by user ${senderId}`);
+
+    res.status(201).json({
+      success: true,
+      message: {
+        _id: message._id,
+        content: message.content,
+        messageType: message.messageType,
+        sender: message.sender,                   // ✅ Populated sender
+        conversation: message.conversation,
+        status: message.status,
+        attachments: message.attachments,
+        metadata: {
+          ...message.metadata,
+          eventId: message.metadata?.eventId     // ✅ Include eventId
+        },
+        adminAccess: message.adminAccess,
+        isEncrypted: message.isEncrypted,
+        priority: message.priority,
+        readBy: message.readBy,
+        createdAt: message.createdAt,
+        updatedAt: message.updatedAt
+      }
+    });
 
   } catch (error) {
     console.error('Error sending message:', error);

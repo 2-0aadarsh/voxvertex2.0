@@ -47,8 +47,11 @@ export default function DisputeManagement() {
   const filtered: Dispute[] = disputes.filter(d =>
     (d.title + d.description).toLowerCase().includes(searchTerm.toLowerCase())
   );
+<<<<<<< HEAD
   console.log("filtered log from line 50 of page.tsx", disputes);
   
+=======
+>>>>>>> 92a26e2 (implemented the chatting with negotitaion functionality)
 
   // Stats calculations
   const active = disputes.filter(d => d.status.toLowerCase() === 'active').length;

@@ -334,7 +334,7 @@ const CombinedTestimonialsFooter = () => {
           <div className="relative">
             <input
               type="email"
-              placeholder=""
+              placeholder="Enter your email"
               className="w-full px-4 py-2 pr-24 text-black text-sm bg-white rounded-full border-0 outline-none placeholder-gray-500"
             />
             <button className="absolute right-1 top-1 bottom-1 px-4 bg-white text-[#FF6B35] border border-[#FF6B35] text-sm font-medium rounded-full shadow-lg hover:shadow-xl hover:bg-gray-50 transition-all">
@@ -352,9 +352,10 @@ const CombinedTestimonialsFooter = () => {
           <li><a href="#" className="text-sm hover:underline">Home</a></li>
           <li><a href="#" className="text-sm hover:underline">Events</a></li>
           <li><a href="#" className="text-sm hover:underline">Blogs</a></li>
-          <li><a href="#" className="text-sm hover:underline">Podcast</a></li>
-          <li><a href="#" className="text-sm hover:underline">Courses</a></li>
-          <li><a href="#" className="text-sm hover:underline">About</a></li>
+          {/* <li><a href="#" className="text-sm hover:underline">Podcast</a></li>
+          <li><a href="#" className="text-sm hover:underline">Courses</a></li> */}
+          <li><a href="/about" className="text-sm hover:underline">About</a></li>
+          <li><a href="/pricing" className="text-sm hover:underline">Pricing</a></li>
           <li><a href="#" className="text-sm hover:underline">Contact</a></li>
         </ul>
       </div>
@@ -365,8 +366,8 @@ const CombinedTestimonialsFooter = () => {
         <ul className="space-y-2">
           <li><a href="#" className="text-sm hover:underline">FAQs</a></li>
           <li><a href="#" className="text-sm hover:underline">Help Center</a></li>
-          <li><a href="#" className="text-sm hover:underline">Terms & Conditions</a></li>
-          <li><a href="#" className="text-sm hover:underline">Privacy Policy</a></li>
+          <li><a href="/terms" className="text-sm hover:underline">Terms & Conditions</a></li>
+          <li><a href="/privacy_policy" className="text-sm hover:underline">Privacy Policy</a></li>
         </ul>
       </div>
 
@@ -378,14 +379,14 @@ const CombinedTestimonialsFooter = () => {
             <Mail className="w-4 h-4 flex-shrink-0" />
             <span className="text-sm">info@voxvertex.com</span>
           </div>
-          <div className="flex items-center gap-2">
+          {/* <div className="flex items-center gap-2">
             <Phone className="w-4 h-4 flex-shrink-0" />
             <span className="text-sm">+91 7356459540</span>
-          </div>
+          </div> */}
           <div className="flex items-start gap-2">
             <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5" />
             <span className="text-sm leading-relaxed">
-              C-162, IInd Floor, Swarn Jayanti Puram, Ghaziabad (201013)
+              C-182, IInd Floor, Swarn Jayanti Puram, Ghaziabad (201013)
             </span>
           </div>
         </div>
@@ -394,10 +395,10 @@ const CombinedTestimonialsFooter = () => {
       {/* Follow Us Column */}
       <div className="col-span-1">
         <h3 className="text-base font-semibold mb-4 ml-2">FOLLOW US</h3>
-        <div className="flex gap-3">
-          <a href="#" className="hover:opacity-80 transition-opacity">
+        <div className="flex gap-8">
+          {/* <a href="#" className="hover:opacity-80 transition-opacity">
             <Facebook className="w-5 h-5" />
-          </a>
+          </a> */}
           <a href="#" className="hover:opacity-80 transition-opacity">
             <Instagram className="w-5 h-5" />
           </a>
