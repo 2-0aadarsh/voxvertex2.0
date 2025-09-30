@@ -10,6 +10,7 @@ import Transactions from './components/Transactions';
 import Subscription from './components/Subscription';
 import PaymentMethods from './components/PaymentMethods';
 import { PaymentData } from './types';
+
 // Dynamic import for Navbar
 const Navbar = dynamic(() => import('@/components/Navbar'), {
   loading: () => <div className="h-16 bg-white border-b border-gray-200 flex items-center justify-center"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500"></div></div>,
@@ -97,31 +98,33 @@ export default function PaymentsDashboard() {
         />
       </Suspense>
 
-      <div className="p-6">
+      <div className="p-3 sm:p-6">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-8 gap-3 sm:gap-0">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Payments Dashboard</h1>
-              <p className="text-gray-600 mt-1">Manage your funds, transactions, and payment methods</p>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Payments Dashboard</h1>
+              <p className="text-sm sm:text-base text-gray-600 mt-1">Manage your funds, transactions, and payment methods</p>
             </div>
-            <div className="flex items-center gap-2 text-sm">
-              <CheckCircle className="w-4 h-4 text-green-500" />
-              <span className="text-green-600">Verified Account</span>
-              <span className="ml-4 font-semibold text-gray-900">
+            <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-green-500" />
+                <span className="text-green-600">Verified Account</span>
+              </div>
+              <span className="sm:ml-4 font-semibold text-gray-900">
                 Total Balance: ${paymentData.totalBalance.toLocaleString()}
               </span>
             </div>
           </div>
 
           {/* Navigation Tabs */}
-          <div className="bg-[#FF6B35]/10 rounded-full shadow-sm border border-white mb-8 p-2">
-            <div className="flex w-full">
+          <div className="bg-[#FF6B35]/10 rounded-2xl sm:rounded-full shadow-sm border border-white mb-4 sm:mb-8 p-1.5 sm:p-2">
+            <div className="flex flex-col sm:flex-row w-full gap-1 sm:gap-0">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex-1 px-6 py-3 rounded-full transition-all duration-200 font-medium ${
+                  className={`flex-1 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-full transition-all duration-200 font-medium text-sm sm:text-base ${
                     activeTab === tab.id
                       ? 'bg-[#FF6B35] text-white shadow-md'
                       : 'text-gray-600 hover:text-[#FF6B35] hover:bg-[#FF6B35]/10'
