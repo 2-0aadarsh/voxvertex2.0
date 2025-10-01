@@ -49,6 +49,118 @@ export const getAllSpeakerProfiles = async (req, res) => {
   }
 };
 
+// Get organizer's bookings grouped by status
+export const getOrganizerBookings = async (req, res) => {
+  try {
+    const organizerId = req.user._id;
+
+    // Find all bookings for this organizer
+    const bookings = await Booking.find({ organizer: organizerId })
+      .populate({
+        path: 'speaker',
+        select: 'firstName lastName profileImageUrl role areaOfExpertise professionalTitle bio'
+      })
+      .sort({ createdAt: -1 }); // Most recent first
+
+    // Helper function to calculate time ago
+    const getTimeAgo = (date) => {
+      const now = new Date();
+      const diffInSeconds = Math.floor((now - date) / 1000);
+      
+      if (diffInSeconds < 60) return 'Just now';
+      if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+      if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+      if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)} days ago`;
+      if (diffInSeconds < 31536000) return `${Math.floor(diffInSeconds / 2592000)} months ago`;
+      return `${Math.floor(diffInSeconds / 31536000)} years ago`;
+    };
+
+    // Helper function to format booking data
+    const formatBooking = (booking) => ({
+      _id: booking._id,
+      bookingId: booking.bookingId,
+      speaker: {
+        _id: booking.speaker._id,
+        firstName: booking.speaker.firstName,
+        lastName: booking.speaker.lastName,
+        profileImageUrl: booking.speaker.profileImageUrl,
+        expertise: booking.speaker.areaOfExpertise?.join(', ') || 
+                  booking.speaker.professionalTitle || 
+                  'General Speaking'
+      },
+      eventDetails: {
+        name: booking.eventDetails.name,
+        type: booking.eventDetails.type,
+        location: booking.eventDetails.location,
+        expectedAttendees: booking.eventDetails.expectedAttendees
+      },
+      compensationAndArrangements: {
+        primaryCompensation: {
+          speakerFeeAmount: booking.compensationAndArrangements.primaryCompensation.speakerFeeAmount
+        }
+      },
+      date: booking.date.toISOString().split('T')[0], // YYYY-MM-DD format
+      timeSlot: booking.timeSlot,
+      status: booking.status,
+      createdAt: booking.createdAt.toISOString(),
+      timeAgo: getTimeAgo(booking.createdAt)
+    });
+
+    // Group bookings by status
+    const inProgress = [];
+    const confirmed = [];
+    const declined = [];
+
+    bookings.forEach(booking => {
+      const formattedBooking = formatBooking(booking);
+      
+      switch (booking.status) {
+        case 'pending':
+          inProgress.push(formattedBooking);
+          break;
+        case 'accepted':
+          confirmed.push(formattedBooking);
+          break;
+        case 'declined':
+          declined.push(formattedBooking);
+          break;
+        default:
+          // Handle any other statuses
+          inProgress.push(formattedBooking);
+      }
+    });
+
+    // Calculate statistics
+    const stats = {
+      total: bookings.length,
+      inProgress: inProgress.length,
+      confirmed: confirmed.length,
+      declined: declined.length
+    };
+
+    console.log(`📊 Retrieved ${bookings.length} bookings for organizer ${organizerId}`);
+    console.log(`📊 Stats: ${stats.inProgress} in progress, ${stats.confirmed} confirmed, ${stats.declined} declined`);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        inProgress,
+        confirmed,
+        declined
+      },
+      stats
+    });
+
+  } catch (error) {
+    console.error("Error fetching organizer bookings:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error while fetching organizer bookings",
+      error: error.message
+    });
+  }
+};
+
 // Accept booking request
 export const acceptBooking = async (req, res) => {
   try {

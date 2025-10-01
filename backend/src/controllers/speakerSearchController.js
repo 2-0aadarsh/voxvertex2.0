@@ -1,5 +1,6 @@
 import EnhancedUser from '../models/enhancedUser.js';
 import Availability from '../models/availability.js';
+import SavedSpeaker from '../models/savedSpeaker.js';
 
 /**
  * Search speakers based on various keywords
@@ -929,6 +930,173 @@ export const getAvailableEventTypes = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Internal server error while getting event types',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Get saved speakers for database view (with custom tags merged into areaOfExpertise)
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export const getSavedSpeakersForDatabase = async (req, res) => {
+  try {
+    const organizerId = req.user._id;
+    const { page = 1, limit = 20, tags } = req.query;
+
+    console.log('📋 Fetching saved speakers for database view:', { organizerId, page, limit, tags });
+    
+    // First check if there are any saved speakers at all
+    const totalSavedSpeakers = await SavedSpeaker.countDocuments({ organizer: organizerId, isActive: true });
+    console.log(`📊 Total saved speakers for organizer ${organizerId}: ${totalSavedSpeakers}`);
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    // Build query
+    let query = { organizer: organizerId, isActive: true };
+    
+    // Filter by tags if provided
+    if (tags) {
+      const tagArray = Array.isArray(tags) ? tags : [tags];
+      query.customTags = { $in: tagArray };
+    }
+
+    // Get saved speakers with pagination
+    const savedSpeakers = await SavedSpeaker.find(query)
+      .populate({
+        path: 'speaker',
+        select: 'firstName lastName fullName email profileImageUrl bio professionalTitle location areaOfExpertise yearsOfExperience roleSpecificData isProfileComplete createdAt'
+      })
+      .sort({ savedAt: -1 })
+      .limit(parseInt(limit))
+      .skip(skip);
+
+    // Get total count
+    const totalCount = await SavedSpeaker.countDocuments(query);
+
+    // Format speakers for database view - merge custom tags with areaOfExpertise
+    const formattedSpeakers = savedSpeakers.map(savedSpeaker => {
+      const speaker = savedSpeaker.speaker;
+      
+      // Merge custom tags with areaOfExpertise
+      const mergedExpertise = [
+        ...(speaker.areaOfExpertise || []),
+        ...(savedSpeaker.customTags || [])
+      ].filter((item, index, arr) => arr.indexOf(item) === index); // Remove duplicates
+
+      return {
+        _id: speaker._id,
+        firstName: speaker.firstName,
+        lastName: speaker.lastName,
+        fullName: speaker.fullName,
+        email: speaker.email,
+        mobileNo: speaker.mobileNo,
+        profileImageUrl: speaker.profileImageUrl,
+        bio: speaker.bio,
+        professionalTitle: speaker.professionalTitle,
+        location: speaker.location,
+        areaOfExpertise: mergedExpertise, // Custom tags merged here
+        originalAreaOfExpertise: speaker.areaOfExpertise, // Keep original for reference
+        customTags: savedSpeaker.customTags, // Keep custom tags separate
+        yearsOfExperience: speaker.yearsOfExperience,
+        roleSpecificData: {
+          industry: speaker.roleSpecificData?.industry,
+          activities: speaker.roleSpecificData?.activities,
+          socialLinks: speaker.roleSpecificData?.socialLinks
+        },
+        isProfileComplete: speaker.isProfileComplete,
+        createdAt: speaker.createdAt,
+        // Saved speaker specific data
+        savedAt: savedSpeaker.savedAt,
+        notes: savedSpeaker.notes,
+        savedSpeakerId: savedSpeaker._id
+      };
+    });
+
+    console.log(`✅ Found ${formattedSpeakers.length} saved speakers for database view`);
+    console.log('📋 Formatted speakers sample:', formattedSpeakers.slice(0, 1));
+
+    res.status(200).json({
+      success: true,
+      message: "Saved speakers for database retrieved successfully",
+      data: {
+        speakers: formattedSpeakers,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total: totalCount,
+          totalPages: Math.ceil(totalCount / parseInt(limit)),
+          hasNextPage: skip + formattedSpeakers.length < totalCount,
+          hasPrevPage: parseInt(page) > 1
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error fetching saved speakers for database:', error);
+    res.status(500).json({
+      success: false,
+      message: "Server error while fetching saved speakers for database",
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Get saved speakers with custom tags (for tag management)
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export const getSavedSpeakersWithTags = async (req, res) => {
+  try {
+    const organizerId = req.user._id;
+    const { page = 1, limit = 20 } = req.query;
+
+    console.log('🏷️ Fetching saved speakers with tags:', { organizerId, page, limit });
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // Get saved speakers with pagination
+    const savedSpeakers = await SavedSpeaker.find({ organizer: organizerId, isActive: true })
+      .populate({
+        path: 'speaker',
+        select: 'firstName lastName fullName email profileImageUrl bio professionalTitle location areaOfExpertise yearsOfExperience roleSpecificData isProfileComplete createdAt'
+      })
+      .sort({ savedAt: -1 })
+      .limit(parseInt(limit))
+      .skip(skip);
+
+    // Get total count
+    const totalCount = await SavedSpeaker.countDocuments({ organizer: organizerId, isActive: true });
+
+    // Get all unique custom tags for this organizer
+    const customTags = await SavedSpeaker.getOrganizerCustomTags(organizerId);
+
+    console.log(`✅ Found ${savedSpeakers.length} saved speakers with ${customTags.length} custom tags`);
+
+    res.status(200).json({
+      success: true,
+      message: "Saved speakers with tags retrieved successfully",
+      data: {
+        savedSpeakers,
+        customTags,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total: totalCount,
+          totalPages: Math.ceil(totalCount / parseInt(limit)),
+          hasNextPage: skip + savedSpeakers.length < totalCount,
+          hasPrevPage: parseInt(page) > 1
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error fetching saved speakers with tags:', error);
+    res.status(500).json({
+      success: false,
+      message: "Server error while fetching saved speakers with tags",
       error: error.message
     });
   }

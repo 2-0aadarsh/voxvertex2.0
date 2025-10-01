@@ -4,7 +4,6 @@ import { useState } from 'react';
 import {
   Search,
   Filter,
-  Bell,
   FileText,
   X,
 } from 'lucide-react';
@@ -12,6 +11,10 @@ import Link from 'next/link';
 import CreateDispute from './create/page';
 import { useGetDisputesQuery } from '../../store/api/disputApi';
 import { Dispute } from './types/disputeTypes';
+import Sidebar from '@/components/Sidebar';
+import Navbar from '@/components/Navbar';
+import { useAuth } from '@/store/hooks';
+import { useGetCurrentUserQuery } from '@/store/slices/authSlice';
 
 
 // interface Dispute {
@@ -33,7 +36,36 @@ export default function DisputeManagement() {
   const [page, setPage] = useState(1);
   const [showModal, setShowModal] = useState(false);
 
-  const { data, isLoading, error } = useGetDisputesQuery({
+  // Authentication hooks
+  const { user, isAuthenticated } = useAuth();
+  const { data: currentUserData } = useGetCurrentUserQuery();
+
+  // Helper function to get profile image URL
+  const getProfileImageUrl = (profileImage: string | { data?: unknown; contentType?: string; url?: string } | null | undefined) => {
+    if (!profileImage) return null;
+    
+    // Handle string URLs
+    if (typeof profileImage === 'string') {
+      if (profileImage.startsWith('http')) return profileImage;
+      return `https://res.cloudinary.com/demo/image/fetch/${profileImage}`;
+    }
+    
+    // Handle object with data and contentType (Buffer)
+    if (typeof profileImage === 'object' && profileImage.data && profileImage.contentType) {
+      const dataUrl = `data:${profileImage.contentType};base64,${(profileImage.data as { toString: (encoding: string) => string }).toString('base64')}`;
+      return dataUrl;
+    }
+    
+    // Handle object with url property
+    if (typeof profileImage === 'object' && profileImage.url) {
+      if (profileImage.url.startsWith('http')) return profileImage.url;
+      return `https://res.cloudinary.com/demo/image/fetch/${profileImage.url}`;
+    }
+    
+    return null;
+  };
+
+  const { data } = useGetDisputesQuery({
     status: statusFilter === 'All Statuses' ? undefined : statusFilter.toLowerCase(),
     stage: stageFilter === 'All Stages' ? undefined : stageFilter.toLowerCase().replace(' ', '-'),
     page,
@@ -47,11 +79,8 @@ export default function DisputeManagement() {
   const filtered: Dispute[] = disputes.filter(d =>
     (d.title + d.description).toLowerCase().includes(searchTerm.toLowerCase())
   );
-<<<<<<< HEAD
   console.log("filtered log from line 50 of page.tsx", disputes);
   
-=======
->>>>>>> 92a26e2 (implemented the chatting with negotitaion functionality)
 
   // Stats calculations
   const active = disputes.filter(d => d.status.toLowerCase() === 'active').length;
@@ -74,23 +103,17 @@ export default function DisputeManagement() {
 console.log("filtered data", filtered);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      <aside className="w-56 bg-white border-r flex flex-col justify-between h-screen">
-        {/* Sidebar content - put your Sidebar here */}
-      </aside>
-
-      <div className="flex-1 flex flex-col">
-        <header className="flex items-center justify-end px-8 py-4 bg-white border-b">
-          <button className="relative mr-6" disabled={isLoading}>
-            <Bell size={20} className="text-gray-600 hover:text-orange-500" />
-            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-orange-500 rounded-full"></span>
-          </button>
-          <div className="flex items-center gap-3">
-            <img src="/user-avatar.png" alt="User" className="w-8 h-8 rounded-full border" />
-            <span className="text-gray-700 font-medium">John Doe</span>
-          </div>
-        </header>
-
+    <div className="min-h-screen bg-gray-50">
+      <Navbar 
+        user={user || undefined}
+        currentUserData={currentUserData}
+        isAuthenticated={isAuthenticated}
+        forceHomepageStyle={true}
+        getProfileImageUrl={getProfileImageUrl}
+      />
+      <Sidebar />
+      
+      <div className="ml-64 ">
         <main className="flex-1 p-8">
           <div className="bg-gradient-to-r from-[#FF9974] via-[#FFB194] to-[#FFCBB8] rounded-lg flex justify-between items-center p-6 mb-8">
             <div>
@@ -244,7 +267,7 @@ console.log("filtered data", filtered);
   );
 }
 
-function StatCard({ title, value, color }: { title: string; value: any; color: string }) {
+function StatCard({ title, value, color }: { title: string; value: string | number; color: string }) {
   return (
     <div className="bg-white rounded-2xl shadow-md p-6 flex flex-col items-start">
       <div className="text-sm font-medium text-gray-400 mb-1">{title}</div>

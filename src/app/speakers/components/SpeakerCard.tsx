@@ -37,9 +37,9 @@ interface DisplaySpeaker extends Omit<Speaker, 'availability'> {
   socialLinks?: Record<string, string>;
   availability?: {
     dates: string[];
-    eventTypes: any[];
+    eventTypes: unknown[];
     modes: string[];
-    timeSlots: any[];
+    timeSlots: unknown[];
   };
   rawData?: Record<string, unknown>;
 }
@@ -47,6 +47,8 @@ interface DisplaySpeaker extends Omit<Speaker, 'availability'> {
 interface SpeakerCardProps {
   speaker: DisplaySpeaker;
   isCompact?: boolean;
+  onSaveSpeaker?: (speakerId: string, customTags: string[], notes?: string) => Promise<void>;
+  showSaveButton?: boolean;
 }
 
 // Define the FormData interface to match Step4's requirements
@@ -75,13 +77,12 @@ const TagCard: React.FC<{
   isVisible: boolean;
   onClose: () => void;
   position: { top: number; right: number };
-}> = ({ isVisible, onClose, position }) => {
+  onSave: (tags: string[], notes: string) => void;
+  isLoading?: boolean;
+}> = ({ isVisible, onClose, position, onSave, isLoading = false }) => {
   const [newTag, setNewTag] = useState('');
-  const [selectedTags, setSelectedTags] = useState<string[]>([
-    'Conferences & Summits',
-    'Seminars',
-    'Keynote Speeches'
-  ]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [notes, setNotes] = useState('');
 
   const handleAddTag = () => {
     if (newTag.trim() && !selectedTags.includes(newTag.trim())) {
@@ -98,6 +99,11 @@ const TagCard: React.FC<{
     if (e.key === 'Enter') {
       handleAddTag();
     }
+  };
+
+  const handleSave = () => {
+    onSave(selectedTags, notes);
+    onClose();
   };
 
   if (!isVisible) return null;
@@ -139,6 +145,17 @@ const TagCard: React.FC<{
         ))}
       </div>
 
+      {/* Notes Field */}
+      <div className="mb-4">
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Add notes (optional)..."
+          rows={2}
+          className="w-full px-3 py-2 border text-sm border-[#FF6B35]/40 rounded-lg text-gray-700 placeholder-gray-500 focus:outline-none focus:border-[#FF6B35] bg-[#FF6B35]/5 resize-none"
+        />
+      </div>
+
       {/* Action Buttons */}
       <div className="flex gap-2">
         <button 
@@ -148,20 +165,33 @@ const TagCard: React.FC<{
           Add
         </button>
         <button 
+          onClick={handleSave}
+          disabled={isLoading}
+          className="flex-1 bg-green-600 text-white px-1 py-1 rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50"
+        >
+          {isLoading ? 'Saving...' : 'Save'}
+        </button>
+        <button 
           onClick={onClose}
           className="flex-1 bg-[#FF6B35]/10 text-[#FF6B35] px-1 py-1 rounded-lg hover:bg-[#FF6B35]/20 transition-colors font-medium"
         >
-          Save
+          Close
         </button>
       </div>
     </div>
   );
 };
 
-const SpeakerCard: React.FC<SpeakerCardProps> = ({ speaker, isCompact = false }) => {
+const SpeakerCard: React.FC<SpeakerCardProps> = ({ 
+  speaker, 
+  isCompact = false, 
+  onSaveSpeaker, 
+  showSaveButton = true 
+}) => {
   const [isTagCardVisible, setIsTagCardVisible] = useState(false);
   const [isBookingModalVisible, setIsBookingModalVisible] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Add form data state to collect data from all steps
   const [formData, setFormData] = useState<FormData>({
@@ -187,7 +217,7 @@ const SpeakerCard: React.FC<SpeakerCardProps> = ({ speaker, isCompact = false })
   const router = useRouter(); // Correctly declare router here
 
   const handleViewProfile = () => {
-    router.push('/speakers_profile'); // Redirect on button click
+    router.push(`/speakers_profile/${speaker._id}`); // Redirect with speaker ID
   };
 
 
@@ -260,22 +290,41 @@ const SpeakerCard: React.FC<SpeakerCardProps> = ({ speaker, isCompact = false })
     setFormData(prev => ({ ...prev, ...stepData }));
   };
 
+  // Handle saving speaker with tags
+  const handleSaveSpeaker = async (tags: string[], notes: string) => {
+    if (!onSaveSpeaker) return;
+    
+    setIsSaving(true);
+    try {
+      await onSaveSpeaker(speaker._id, tags, notes);
+      setIsTagCardVisible(false);
+    } catch (error) {
+      console.error('Error saving speaker:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   if (isCompact) {
     // 2 column
     return (
       <>
         <div className="bg-white rounded-xl border border-[#FF6B35]/80 shadow-sm p-6 hover:shadow-md transition-shadow relative">
-          <div 
-            className="absolute top-4 right-4 cursor-pointer"
-            onClick={handleBookmarkClick}
-          >
-            <Bookmark className="w-5 h-5 text-[#FF6B35] fill-current hover:scale-110 transition-transform" />
-          </div>
+          {showSaveButton && (
+            <div 
+              className="absolute top-4 right-4 cursor-pointer"
+              onClick={handleBookmarkClick}
+            >
+              <Bookmark className="w-5 h-5 text-[#FF6B35] fill-current hover:scale-110 transition-transform" />
+            </div>
+          )}
 
           <TagCard
             isVisible={isTagCardVisible}
             onClose={() => setIsTagCardVisible(false)}
             position={{ top: 40, right: 0 }}
+            onSave={handleSaveSpeaker}
+            isLoading={isSaving}
           />
           
           {/* Top Section */}
@@ -339,7 +388,10 @@ const SpeakerCard: React.FC<SpeakerCardProps> = ({ speaker, isCompact = false })
 
           {/* Action Buttons */}
           <div className="flex gap-3">
-            <button className="flex-1 flex items-center justify-center gap-2 bg-white border border-[#FF6B35] text-[#FF6B35] px-4 py-2.5 rounded-lg hover:bg-orange-50 transition-colors text-sm font-medium">
+            <button 
+              onClick={handleViewProfile}
+              className="flex-1 flex items-center justify-center gap-2 bg-white border border-[#FF6B35] text-[#FF6B35] px-4 py-2.5 rounded-lg hover:bg-orange-50 transition-colors text-sm font-medium"
+            >
               <Eye className="w-4 h-4" />
               View Profile
             </button>
@@ -396,18 +448,22 @@ const SpeakerCard: React.FC<SpeakerCardProps> = ({ speaker, isCompact = false })
   return (
     <>
       <div className="bg-white rounded-xl border border-[#FF6B35] shadow-sm p-4 hover:shadow-md transition-shadow relative h-90">
-        <div 
-          className="absolute top-3 right-3 cursor-pointer"
-          onClick={handleBookmarkClick}
-        >
-          <Bookmark className="w-5 h-5 text-[#FF6B35] fill-current hover:scale-110 transition-transform" />
-        </div>
+        {showSaveButton && (
+          <div 
+            className="absolute top-3 right-3 cursor-pointer"
+            onClick={handleBookmarkClick}
+          >
+            <Bookmark className="w-5 h-5 text-[#FF6B35] fill-current hover:scale-110 transition-transform" />
+          </div>
+        )}
 
         {/* Tag Card */}
         <TagCard
           isVisible={isTagCardVisible}
           onClose={() => setIsTagCardVisible(false)}
           position={{ top: 40, right: 0 }}
+          onSave={handleSaveSpeaker}
+          isLoading={isSaving}
         />
         
         {/* Top Section */}

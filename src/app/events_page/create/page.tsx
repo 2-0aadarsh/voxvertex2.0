@@ -1,19 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { 
-  User, 
-  BarChart3, 
-  MessageCircle, 
-  Calendar, 
-  CalendarDays, 
-  CreditCard, 
-  AlertTriangle, 
-  HelpCircle, 
-  Settings,
-  Bell,
-  LogOut
-} from 'lucide-react'
 import { EventFormData } from '../types/eventTypes'
 import ProgressIndicator from '../components/ProgressIndicator'
 import CoreDetailsStep from '../components/steps/CoreDetailsStep'
@@ -22,6 +9,10 @@ import TicketingStep from '../components/steps/TicketingStep'
 import SpeakersStep from '../components/steps/SpeakersStep'
 import AddonsStep from '../components/steps/AddonsStep'
 import ReviewPublishStep from '../components/steps/ReviewPublishStep'
+import Sidebar from '@/components/Sidebar'
+import Navbar from '@/components/Navbar'
+import { useAuth } from '@/store/hooks'
+import { useGetCurrentUserQuery } from '@/store/slices/authSlice'
 
 export default function CreateEvent() {
   const [currentStep, setCurrentStep] = useState(1)
@@ -56,20 +47,34 @@ export default function CreateEvent() {
     'Review & Publish'
   ]
 
-  const menuItems = [
-    { icon: User, label: 'Profile', active: false },
-    { icon: BarChart3, label: 'Dashboard', active: false },
-    { icon: MessageCircle, label: 'Messages', active: false },
-    { icon: Calendar, label: 'Bookings', active: false },
-    { icon: CalendarDays, label: 'Events', active: true },
-    { icon: CreditCard, label: 'Payments', active: false },
-    { icon: AlertTriangle, label: 'Dispute', active: false },
-  ];
+  // Authentication hooks
+  const { user, isAuthenticated } = useAuth()
+  const { data: currentUserData } = useGetCurrentUserQuery()
 
-  const bottomMenuItems = [
-    { icon: HelpCircle, label: 'Support' },
-    { icon: Settings, label: 'Settings' },
-  ];
+  // Helper function to get profile image URL
+  const getProfileImageUrl = (profileImage: { data?: Buffer | string; contentType?: string; url?: string } | string | null | undefined) => {
+    if (!profileImage) {
+      return null;
+    }
+    
+    // Check if it's already a URL string
+    if (typeof profileImage === 'string') {
+      return profileImage;
+    }
+    
+    // Check if it has data and contentType (binary data)
+    if (profileImage.data && profileImage.contentType) {
+      const dataUrl = `data:${profileImage.contentType};base64,${profileImage.data.toString('base64')}`;
+      return dataUrl;
+    }
+    
+    // Check if it has a url property
+    if (profileImage.url) {
+      return profileImage.url;
+    }
+    
+    return null;
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -178,81 +183,17 @@ export default function CreateEvent() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Sidebar */}
-      <div className="fixed left-0 top-0 bottom-0 w-64 bg-white border-r border-gray-200">
-        <div className="p-4 h-full flex flex-col">
-
-          <div className="space-y-1 flex-1">
-            {menuItems.map((item, index) => {
-              const IconComponent = item.icon;
-              return (
-                <div
-                  key={index}
-                  className={`flex items-center space-x-3 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
-                    item.active
-                      ? 'bg-[#FF6B35]/10 text-[#FF6B35]'
-                      : 'text-gray-600 hover:bg-[#FF6B35]/5 hover:text-[#FF6B35]'
-                  }`}
-                >
-                  <IconComponent size={16} />
-                  <span className="text-sm font-medium">{item.label}</span>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="space-y-1 mb-4">
-            {bottomMenuItems.map((item, index) => {
-              const IconComponent = item.icon;
-              return (
-                <div
-                  key={index}
-                  className="flex items-center space-x-3 px-3 py-2 rounded-lg cursor-pointer text-gray-600 hover:bg-[#FF6B35]/5 hover:text-[#FF6B35] transition-colors"
-                >
-                  <IconComponent size={16} />
-                  <span className="text-sm font-medium">{item.label}</span>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="flex items-center justify-between p-3 border-t border-gray-200">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-                <User size={16} className="text-gray-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate hover:text-[#FF6B35] transition-colors cursor-pointer">John Doe</p>
-                <p className="text-xs text-gray-500 truncate hover:text-[#FF6B35] transition-colors cursor-pointer">John@gmail.com</p>
-              </div>
-            </div>
-            <button className="p-1.5 text-red-500 hover:text-[#FF6B35] hover:bg-[#FF6B35]/5 rounded-md transition-colors">
-              <LogOut size={14} />
-            </button>
-          </div>
-        </div>
-      </div>
+      <Navbar 
+        user={user || undefined}
+        currentUserData={currentUserData}
+        isAuthenticated={isAuthenticated}
+        forceHomepageStyle={true}
+        getProfileImageUrl={(url) => getProfileImageUrl(url)}
+      />
+      <Sidebar />
 
       {/* Main Content */}
       <div className="ml-64">
-        {/* Top Profile Bar */}
-        <div className="bg-white border-b border-gray-200 px-4 py-2">
-          <div className="flex justify-end">
-            <div className="flex items-center space-x-4">
-              <Bell size={16} className="text-gray-400 cursor-pointer hover:text-gray-600" />
-              <div className="flex items-center space-x-3">
-                <div className="text-right">
-                  <p className="text-sm font-medium text-gray-900">John Doe</p>
-                  <p className="text-xs text-gray-500">Senior Product Manager</p>
-                </div>
-                <div className="w-8 h-8 bg-[#FF6B35]/50 rounded-full text-black text-xs flex items-center justify-center font-medium">
-                  A
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Main Form Content */}
         <div className="p-6 bg-[#FF6B35]/10">
           {/* Form Card */}

@@ -1,9 +1,13 @@
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
-import { DisputeFormData, PartyInvolved } from '../../types/disputeTypes';
-import { Check } from 'lucide-react';
-import { useGetEventsQuery, useGetParticipantsByEventIdQuery } from '../../../../store/api/disputApi';
+import { useState, useEffect, useMemo } from "react";
+import { DisputeFormData, PartyInvolved } from "../../types/disputeTypes";
+import { Check } from "lucide-react";
+import {
+  useGetEventsQuery,
+  useGetParticipantsByEventIdQuery,
+} from "../../../../store/api/disputApi";
+import { p } from "framer-motion/client";
 
 interface PartiesInvolvedStepProps {
   formData: DisputeFormData;
@@ -15,21 +19,34 @@ interface SelectableParty extends PartyInvolved {
 }
 
 export default function PartiesInvolvedStep({
-  
   formData,
   onFormDataUpdate,
 }: PartiesInvolvedStepProps) {
-  const [activeTab, setActiveTab] = useState<'Speakers' | 'Participants'>('Participants');
+  const [activeTab, setActiveTab] = useState<"Speakers" | "Participants">(
+    "Participants"
+  );
   const [speakers, setSpeakers] = useState<SelectableParty[]>([]);
   const [participants, setParticipants] = useState<SelectableParty[]>([]);
 
-  const { data: eventsData } = useGetEventsQuery(undefined, { skip: !formData.eventId });
-  const { data: participantsData } = useGetParticipantsByEventIdQuery(formData.eventId!, {
+  const { data: eventsData } = useGetEventsQuery(undefined, {
     skip: !formData.eventId,
   });
-console.log("PartiesInvolvedStep rendered", formData);
-formData.partiesInvolved?.forEach((p) => console.log("party.userId:", p.userId));
+  const { data: participantsData } = useGetParticipantsByEventIdQuery(
+    formData.eventId!,
+    {
+      skip: !formData.eventId,
+    }
+  );
+  console.log("PartiesInvolvedStep rendered", formData);
+  // console.log("PartiesInvolvedStep rendered", formData);
 
+  formData.partiesInvolved?.forEach((p) => {
+    if (p?.userId) {
+      console.log("party.userId:", p.userId);
+    } else {
+      console.warn("Missing userId for party:", p);
+    }
+  });
 
   const selectedEvent = useMemo(() => {
     if (!eventsData || !formData.eventId) return null;
@@ -43,54 +60,90 @@ formData.partiesInvolved?.forEach((p) => console.log("party.userId:", p.userId))
   const restoreSelections = (list: SelectableParty[]) =>
     list.map((p) => ({
       ...p,
-      selected: formData.partiesInvolved?.some((f) => f.userId === p.userId ) || false,
+      selected: !!formData.partiesInvolved?.some(
+        (f) => (f.userId) === (p.userId)
+      ),
     }));
 
   // Populate speakers from selected event
   useEffect(() => {
-    console.log('selectedEvent.speakers:', selectedEvent.speakers);
+    console.log("selectedEvent.speakers:", selectedEvent.speakers);
 
     if (!selectedEvent) return;
-    const formatted: SelectableParty[] = selectedEvent.speakers.map((s: any) => ({
-      name: s.name || 'Unknown',
-      email: s.email || 'no-email@example.com',
-      userId: s.userId,
-      role: 'Speaker',
-      // selected: false,
-    }));
-    setSpeakers(restoreSelections(formatted));
-  }, [selectedEvent, formData.partiesInvolved]);
+    const formatted: SelectableParty[] = selectedEvent.speakers.map(
+      (s: any) => ({
+        name: s.name || "Unknown",
+        email: s.email || "no-email@example.com",
+        userId: (s.userId),
+        role: "Speaker",
+        selected:
+          formData.partiesInvolved?.some(
+            (f) => (f.userId) === (s.userId)
+          ) || false,
+      })
+    );
+    setSpeakers((prev) => {
+      if (JSON.stringify(prev) !== JSON.stringify(formatted)) {
+        return formatted;
+      }
+      return prev;
+    });
+  }, [selectedEvent.speakers, formData.partiesInvolved]);
 
   // Populate participants from API
   useEffect(() => {
     if (!participantsData?.participants) return;
-    const formatted: SelectableParty[] = participantsData.participants.map((p: any) => ({
-      name: p.name,
-      email: p.email,
-      phone: p.phone,
-      userId: p.userId || p._id,
-      role: 'Participant',
-      // selected: false,
-    }));
-    setParticipants(restoreSelections(formatted));
-  }, [participantsData, formData.partiesInvolved]);
-console.log("Submitting parties:", formData.partiesInvolved);
+    const formatted: SelectableParty[] = participantsData.participants.map(
+      (p: any) => ({
+        name: p.name,
+        email: p.email,
+        phone: p.phone,
+        userId: p.userId ?? "",
+        role: "Participant",
+        selected:
+          formData.partiesInvolved?.some(
+            (f) => f.userId === (p.userId ?? p._id)
+          ) || false,
+      })
+    );
+    setParticipants(
+      formatted.map((p) => ({
+        ...p,
+        selected:
+          formData.partiesInvolved?.some(
+            (f) => f.userId && f.userId === p.userId
+          ) || false,
+      }))
+    );
+  }, [participantsData]);
+  console.log("Submitting parties:", formData.partiesInvolved);
 
   // Merge selected parties
 
-
   // Toggle selection
- const toggleSelection = (party: SelectableParty, type: 'speakers' | 'participants') => {
-  if (type === 'speakers') {
-    setSpeakers((prev) =>
-      prev.map((p) => (p.userId === party.userId ? { ...p, selected: !p.selected } : p))
-    );
-  } else {
-    setParticipants((prev) =>
-      prev.map((p) => (p.userId === party.userId ? { ...p, selected: !p.selected } : p))
-    );
-  }
-};
+  const toggleSelection = (
+    party: SelectableParty,
+    type: "speakers" | "participants"
+  ) => {
+    if (type === "speakers") {
+      setSpeakers((prev) =>
+        prev.map((p) =>
+          (p.userId) === (party.userId)
+            ? { ...p, selected: !p.selected }
+            : p
+        )
+      );
+    } else {
+      setParticipants((prev) =>
+        prev.map((p) =>
+          (p.userId) === (party.userId)
+            ? { ...p, selected: !p.selected }
+            : p
+        )
+      );
+    }
+  };
+
   useEffect(() => {
     console.log("speaker is 130", speakers);
 
@@ -104,11 +157,15 @@ console.log("Submitting parties:", formData.partiesInvolved);
       userId,
       role,
     }));
-      const respondentIds = allSelected
-    .map((p) => p.userId)
-    .filter((id): id is string => !!id);
-    onFormDataUpdate({ partiesInvolved: allSelected, respondentId: respondentIds, });
-  }, [speakers, participants]);
+
+    const respondentIds = allSelected
+      .map((p) => (p.userId))
+  
+    onFormDataUpdate({
+      partiesInvolved: allSelected,
+      respondentId: respondentIds,
+    });
+  }, [speakers, participants, onFormDataUpdate]);
 
   const renderPartyList = () => {
     const list = activeTab === "Speakers" ? speakers : participants;
@@ -143,7 +200,6 @@ console.log("Submitting parties:", formData.partiesInvolved);
       </div>
     ));
   };
-
 
   return (
     <div className="space-y-6">

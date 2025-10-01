@@ -4,6 +4,7 @@ import { Mail, Phone, MapPin, Facebook, Instagram, Linkedin, Twitter } from 'luc
 import { useAuth } from '@/store/hooks';
 import { useGetCurrentUserQuery } from '@/store/slices/authSlice';
 import dynamic from 'next/dynamic';
+import Footer from '@/components/Footer';
 
 // Dynamic import for Navbar
 const Navbar = dynamic(() => import('@/components/Navbar'), {
@@ -287,136 +288,7 @@ export default function TermsAndConditions() {
       </div>
 
       {/* Footer Section */}
-      <footer className="bg-[#FF6B35] text-white pl-3">
-        {/* Main Footer Content */}
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
-
-            <div className="lg:col-span-2 min-w-[260px] max-w-sm">
-              <div className="w-32 h-20 mb-4">
-                <img 
-                  src="/Voxvertex.png" 
-                  alt="Voxvertex" 
-                  className="w-full h-full object-contain"
-                />
-              </div>
-              
-              <p className="text-sm leading-relaxed mb-6">
-                Empowering connections between guest lecturers and event organizers to create transformative events.
-              </p>
-              
-
-              <div className="newsletter mt-6">
-                <h3 className="text-base font-medium mb-3">Subscribe Our Newsletter</h3>
-                <div className="relative">
-                  <input
-                    type="email"
-                    placeholder=""
-                    className="w-full px-4 py-2 pr-20 text-black text-sm bg-white rounded-full border-0 outline-none placeholder-gray-500"
-                  />
-                  <button className="absolute right-1 top-1 bottom-1 px-3 sm:px-4 bg-white text-[#FF6B35] border border-[#FF6B35] text-xs sm:text-sm font-medium rounded-full shadow-lg hover:shadow-xl hover:bg-gray-50 transition-all">
-                    Submit
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Navigation Column */}
-            <div className="col-span-1">
-              <h3 className="text-base font-semibold mb-4">NAVIGATION</h3>
-              <ul className="space-y-2">
-                <li><a href="#" className="text-sm hover:underline transition-all">Home</a></li>
-                <li><a href="#" className="text-sm hover:underline transition-all">Events</a></li>
-                <li><a href="#" className="text-sm hover:underline transition-all">Blogs</a></li>
-                <li><a href="#" className="text-sm hover:underline transition-all">Podcast</a></li>
-                <li><a href="#" className="text-sm hover:underline transition-all">Courses</a></li>
-                <li><a href="#" className="text-sm hover:underline transition-all">About</a></li>
-                <li><a href="#" className="text-sm hover:underline transition-all">Contact</a></li>
-              </ul>
-            </div>
-
-            {/* Support Column */}
-            <div className="col-span-1">
-              <h3 className="text-base font-semibold mb-4">SUPPORT</h3>
-              <ul className="space-y-2">
-                <li><a href="#" className="text-sm hover:underline transition-all">FAQs</a></li>
-                <li><a href="#" className="text-sm hover:underline transition-all">Help Center</a></li>
-                <li><a href="/terms" className="text-sm hover:underline transition-all">Terms & Conditions</a></li>
-                <li><a href="#" className="text-sm hover:underline transition-all">Privacy Policy</a></li>
-              </ul>
-            </div>
-
-            {/* Get in Touch and Follow Us Combined for Mobile */}
-            <div className="col-span-1 lg:col-span-1 space-y-8 lg:space-y-0">
-              {/* Get in Touch */}
-              <div>
-                <h3 className="text-base font-semibold mb-4">GET IN TOUCH</h3>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Mail className="w-4 h-4 flex-shrink-0" />
-                    <span className="text-sm">info@voxvertex.com</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Phone className="w-4 h-4 flex-shrink-0" />
-                    <span className="text-sm">+91 7356459540</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                    <span className="text-sm leading-relaxed">
-                      C-162, IInd Floor, Swarn Jayanti Puram, Ghaziabad (201013)
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Follow Us */}
-              <div className="lg:hidden">
-                <h3 className="text-base font-semibold mb-4">FOLLOW US</h3>
-                <div className="flex gap-3">
-                  <a href="#" className="hover:opacity-80 transition-opacity">
-                    <Facebook className="w-5 h-5" />
-                  </a>
-                  <a href="#" className="hover:opacity-80 transition-opacity">
-                    <Instagram className="w-5 h-5" />
-                  </a>
-                  <a href="#" className="hover:opacity-80 transition-opacity">
-                    <Linkedin className="w-5 h-5" />
-                  </a>
-                  <a href="#" className="hover:opacity-80 transition-opacity">
-                    <Twitter className="w-5 h-5" />
-                  </a>
-                </div>
-              </div>
-            </div>
-
-            <div className="hidden lg:block col-span-1">
-              <h3 className="text-base font-semibold mb-4">FOLLOW US</h3>
-              <div className="flex gap-3">
-                <a href="#" className="hover:opacity-80 transition-opacity">
-                  <Facebook className="w-5 h-5" />
-                </a>
-                <a href="#" className="hover:opacity-80 transition-opacity">
-                  <Instagram className="w-5 h-5" />
-                </a>
-                <a href="#" className="hover:opacity-80 transition-opacity">
-                  <Linkedin className="w-5 h-5" />
-                </a>
-                <a href="#" className="hover:opacity-80 transition-opacity">
-                  <Twitter className="w-5 h-5" />
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-[#FF6B35] py-3 border-t border-white">
-          <div className="container mx-auto px-4">
-            <p className="text-center text-sm text-white">
-              Copyright © 2024 Voxvertex Solutions All rights reserved
-            </p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

@@ -1,35 +1,20 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import { 
   Search, 
-  Filter, 
-  Plus, 
   Eye, 
-  Edit, 
   Trash2, 
   Calendar, 
-  Users, 
-  DollarSign,
-  User, 
-  BarChart3, 
-  MessageCircle, 
-  CalendarDays, 
-  CreditCard, 
-  AlertTriangle, 
-  HelpCircle, 
-  Settings,
-  Bell,
-  LogOut,
   ChevronDown,
-  X
+  X,
+  AlertTriangle
 } from 'lucide-react'
 import Link from 'next/link'
-import Logo from '@/components/Logo'
 import { useAuth } from '@/store/hooks'
 import { useGetCurrentUserQuery } from '@/store/slices/authSlice'
-import { IoIosArrowDown } from 'react-icons/io'
+import Sidebar from '@/components/Sidebar'
+import Navbar from '@/components/Navbar'
 
 interface Event {
   id: string
@@ -48,8 +33,7 @@ export default function EventManagement() {
   const [eventToDelete, setEventToDelete] = useState<Event | null>(null)
   const [deleteConfirmation, setDeleteConfirmation] = useState('')
   
-  // Router and authentication hooks
-  const router = useRouter()
+  // Authentication hooks
   const { user, isAuthenticated } = useAuth()
   const { data: currentUserData } = useGetCurrentUserQuery()
 
@@ -136,21 +120,6 @@ export default function EventManagement() {
     return matchesSearch && matchesStatus
   })
 
-  const menuItems = [
-    { icon: User, label: 'Profile', active: false },
-    { icon: BarChart3, label: 'Dashboard', active: false },
-    { icon: MessageCircle, label: 'Messages', active: false },
-    { icon: Calendar, label: 'Bookings', active: false },
-    { icon: CalendarDays, label: 'Events', active: true },
-    { icon: CreditCard, label: 'Payments', active: false },
-    { icon: AlertTriangle, label: 'Dispute', active: false },
-  ];
-
-  const bottomMenuItems = [
-    { icon: HelpCircle, label: 'Support' },
-    { icon: Settings, label: 'Settings' },
-  ];
-
   const handleDeleteClick = (event: Event) => {
     setEventToDelete(event)
     setShowDeleteModal(true)
@@ -176,81 +145,18 @@ export default function EventManagement() {
       {showDeleteModal && (
         <div className="fixed inset-0 bg-[#FF6B35]/20 z-40"></div>
       )}
-      {/* Sidebar */}
-      <div className="fixed left-0 top-0 bottom-0 w-64 bg-white border-r border-gray-200">
-        <div className="p-4 h-full flex flex-col">
-          {/* Main Menu */}
-          <div className="space-y-1 flex-1">
-            {menuItems.map((item, index) => {
-              const IconComponent = item.icon;
-              return (
-                <div
-                  key={index}
-                  className={`flex items-center space-x-3 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
-                    item.active
-                      ? 'bg-[#FF6B35]/10 text-[#FF6B35]'
-                      : 'text-gray-600 hover:bg-[#FF6B35]/5 hover:text-[#FF6B35]'
-                  }`}
-                >
-                  <IconComponent size={16} />
-                  <span className="text-sm font-medium">{item.label}</span>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="space-y-1 mb-4">
-            {bottomMenuItems.map((item, index) => {
-              const IconComponent = item.icon;
-              return (
-                <div
-                  key={index}
-                  className="flex items-center space-x-3 px-3 py-2 rounded-lg cursor-pointer text-gray-600 hover:bg-[#FF6B35]/5 hover:text-[#FF6B35] transition-colors"
-                >
-                  <IconComponent size={16} />
-                  <span className="text-sm font-medium">{item.label}</span>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* User Profile with Logout */}
-          <div className="flex items-center justify-between p-3 border-t border-gray-200">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-                <User size={16} className="text-gray-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate hover:text-[#FF6B35] transition-colors cursor-pointer">John Doe</p>
-                <p className="text-xs text-gray-500 truncate hover:text-[#FF6B35] transition-colors cursor-pointer">John@gmail.com</p>
-              </div>
-            </div>
-            <button className="p-1.5 text-red-500 hover:text-[#FF6B35] hover:bg-[#FF6B35]/5 rounded-md transition-colors">
-              <LogOut size={14} />
-            </button>
-          </div>
-        </div>
-      </div>
+      
+      <Navbar 
+        user={user || undefined}
+        currentUserData={currentUserData}
+        isAuthenticated={isAuthenticated}
+        forceHomepageStyle={true}
+        getProfileImageUrl={getProfileImageUrl}
+      />
+      <Sidebar />
 
       {/* Main Content */}
-      <div className="ml-64 bg-orange-50 min-h-screen">
-        <div className="bg-white border-b border-gray-200 px-4 py-2">
-          <div className="flex justify-end">
-            <div className="flex items-center space-x-4">
-              <Bell size={16} className="text-gray-400 cursor-pointer hover:text-gray-600" />
-              <div className="flex items-center space-x-3">
-                <div className="text-right">
-                  <p className="text-sm font-medium text-gray-900">John Doe</p>
-                  <p className="text-xs text-gray-500">Senior Product Manager</p>
-                </div>
-                <div className="w-8 h-8 bg-[#FF6B35]/50 rounded-full text-black text-xs flex items-center justify-center font-medium">
-                  A
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
+      <div className="ml-64 pt-16 bg-orange-50 min-h-screen">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex justify-between items-center mb-8">
             <div>
@@ -389,7 +295,7 @@ export default function EventManagement() {
             {/* Modal Content */}
             <div className="mb-6">
               <p className="text-gray-600 mb-4">
-                Are you sure you want to delete "{eventToDelete.title}"? This action cannot be undone and will permanently remove the event and all associated data.
+                Are you sure you want to delete &ldquo;{eventToDelete.title}&rdquo;? This action cannot be undone and will permanently remove the event and all associated data.
               </p>
 
               {/* Warning Box */}

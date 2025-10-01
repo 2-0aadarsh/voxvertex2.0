@@ -1,45 +1,46 @@
 'use client';
 import React, { useState } from 'react';
 import { ChevronDown, Check, Search } from 'lucide-react';
+import Navbar from '@/components/Navbar';
 
-const Header: React.FC = () => (
-  <header className="bg-white border-b border-gray-200 px-6 py-3">
-    <div className="flex items-center justify-between">
-      {/* Logo */}
-      <div className="flex items-center">
-        <img src="/V.png" alt="Voxvertex Logo" className="h-8 w-12" />
-      </div>
+// const Header: React.FC = () => (
+//   <header className="bg-white border-b border-gray-200 px-6 py-3">
+//     <div className="flex items-center justify-between">
+//       {/* Logo */}
+//       <div className="flex items-center">
+//         <img src="/V.png" alt="Voxvertex Logo" className="h-8 w-12" />
+//       </div>
 
-      {/* Search Bar */}
-      <div className="flex-1 max-w-md mx-10">
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="Search Speaker"
-            className="w-full py-2 pl-10 pr-4 text-sm bg-gray-50 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className="h-4 w-4 text-gray-400" />
-          </div>
-        </div>
-      </div>
+//       {/* Search Bar */}
+//       <div className="flex-1 max-w-md mx-10">
+//         <div className="relative">
+//           <input
+//             type="text"
+//             placeholder="Search Speaker"
+//             className="w-full py-2 pl-10 pr-4 text-sm bg-gray-50 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+//           />
+//           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+//             <Search className="h-4 w-4 text-gray-400" />
+//           </div>
+//         </div>
+//       </div>
 
-      {/* Navigation */}
-      <nav className="flex items-center space-x-6">
-        <a href="#" className="text-sm text-gray-600 hover:text-gray-900">About</a>
-        <a href="#" className="text-sm text-gray-600 hover:text-gray-900">Speaker</a>
-        <a href="#" className="text-sm text-gray-600 hover:text-gray-900">Events</a>
-        <a href="#" className="text-sm font-medium" style={{ color: '#FF6B35' }}>Pricing</a>
-        <button 
-          className="text-sm text-white px-5 py-2 rounded-full font-medium"
-          style={{ backgroundColor: '#FF6B35' }}
-        >
-          login
-        </button>
-      </nav>
-    </div>
-  </header>
-);
+//       {/* Navigation */}
+//       <nav className="flex items-center space-x-6">
+//         <a href="#" className="text-sm text-gray-600 hover:text-gray-900">About</a>
+//         <a href="#" className="text-sm text-gray-600 hover:text-gray-900">Speaker</a>
+//         <a href="#" className="text-sm text-gray-600 hover:text-gray-900">Events</a>
+//         <a href="#" className="text-sm font-medium" style={{ color: '#FF6B35' }}>Pricing</a>
+//         <button 
+//           className="text-sm text-white px-5 py-2 rounded-full font-medium"
+//           style={{ backgroundColor: '#FF6B35' }}
+//         >
+//           login
+//         </button>
+//       </nav>
+//     </div>
+//   </header>
+// );
 
 const VoxvertexPricingPage = () => {
   const [isYearly, setIsYearly] = useState<boolean>(false);
@@ -58,7 +59,7 @@ const VoxvertexPricingPage = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <Header />
+      <Navbar />
 
       {/* Main Content */}
       <main className="max-w-10xl mx-auto px-4 sm:px-6 lg:px-8 py-16 bg-[#FF6B35]/10">

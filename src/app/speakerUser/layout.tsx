@@ -1,9 +1,11 @@
 "use client";
 
-import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { useEffect, Suspense } from "react";
 import dynamic from "next/dynamic";
+import Navbar from "@/components/Navbar";
+import { useAuth } from "@/store/hooks";
+import { useGetCurrentUserQuery } from "@/store/slices/authSlice";
 
 // Dynamic imports for better performance
 const ProfileHeader = dynamic(() => import("./components/header/ProfileHeader"), {
@@ -11,7 +13,7 @@ const ProfileHeader = dynamic(() => import("./components/header/ProfileHeader"),
   ssr: false
 });
 
-const Sidebar = dynamic(() => import("./components/sidebar/Sidebar"), {
+const Sidebar = dynamic(() => import("@/components/Sidebar"), {
   loading: () => <div className="w-64 bg-gray-100 animate-pulse h-screen"></div>,
   ssr: false
 });
@@ -81,10 +83,45 @@ export default function SpeakerUserLayout({
     window.scrollTo(0, 0);
   }, []);
 
+  // Authentication hooks
+  const { user, isAuthenticated } = useAuth();
+  const { data: currentUserData } = useGetCurrentUserQuery();
+
+  // Helper function to get profile image URL
+  const getProfileImageUrl = (profileImage: string | { data?: unknown; contentType?: string; url?: string } | null | undefined) => {
+    if (!profileImage) {
+      return null;
+    }
+    
+    // Check if it's already a URL string
+    if (typeof profileImage === 'string') {
+      return profileImage;
+    }
+    
+    // Check if it has data and contentType (binary data)
+    if (profileImage.data && profileImage.contentType) {
+      const dataUrl = `data:${profileImage.contentType};base64,${(profileImage.data as { toString: (encoding: string) => string }).toString('base64')}`;
+      return dataUrl;
+    }
+    
+    // Check if it has a url property
+    if (profileImage.url) {
+      return profileImage.url;
+    }
+    
+    return null;
+  };
+
   return (
     <div className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
       <Suspense fallback={<div className="h-32 bg-white border-b border-gray-200 animate-pulse"></div>}>
-        <ProfileHeader />
+        <Navbar 
+          user={user || undefined}
+          currentUserData={currentUserData}
+          isAuthenticated={isAuthenticated}
+          forceHomepageStyle={true}
+          getProfileImageUrl={(url) => getProfileImageUrl(url)}
+        />
       </Suspense>
       
       <div className="flex flex-col lg:flex-row items-stretch justify-between min-h-screen">

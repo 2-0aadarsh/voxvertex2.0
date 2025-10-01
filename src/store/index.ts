@@ -36,6 +36,8 @@ import speakerProfileReducer from './slices/speakerProfileSlice';
 import bookingReducer from './slices/bookingSlice';
 import messagingReducer from './slices/messagingSlice';
 import negotiationReducer from './slices/negotiationSlice';
+import organizerBookingsReducer from './slices/organizerBookingsSlice';
+import savedSpeakersReducer from './slices/savedSpeakersSlice';
 
 // Persist configuration
 const persistConfig = {
@@ -58,7 +60,9 @@ const persistConfig = {
     'speakerProfile',
     'booking',
     'messaging',
-    'negotiation'
+    'negotiation',
+    'organizerBookings',
+    'savedSpeakers'
   ],
 };
 
@@ -88,6 +92,8 @@ const rootReducer = combineReducers({
   booking: bookingReducer,
   messaging: messagingReducer,
   negotiation: negotiationReducer,
+  organizerBookings: organizerBookingsReducer,
+  savedSpeakers: savedSpeakersReducer,
 });
 
 // Persisted reducer
@@ -139,6 +145,8 @@ export const resetStore = () => {
   store.dispatch({ type: 'booking/resetBooking' });
   store.dispatch({ type: 'messaging/resetMessagingState' });
   store.dispatch({ type: 'negotiation/resetNegotiation' });
+  store.dispatch({ type: 'organizerBookings/clearOrganizerBookings' });
+  store.dispatch({ type: 'savedSpeakers/clearSavedSpeakers' });
   
   // Reset API cache
   store.dispatch(baseApi.util.resetApiState());
@@ -161,7 +169,9 @@ export const invalidateUserData = () => {
       'SpeakerProfile',
       'Conversation',
       'Message',
-      'Negotiation'
+      'Negotiation',
+      'OrganizerBooking',
+      'SavedSpeaker'
     ])
   );
 };
@@ -199,6 +209,8 @@ export {
   bookingReducer,
   messagingReducer,
   negotiationReducer,
+  organizerBookingsReducer,
+  savedSpeakersReducer,
   
   // API
   baseApi,

@@ -4,7 +4,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { useEffect } from "react";
 import ProfileHeader from "../newuser/components/header/ProfileHeader"
-import Sidebar from "./components/sidebar/Sidebar";
+// import Sidebar from "./components/sidebar/Sidebar";
+import Sidebar from "../../components/Sidebar";
 import AboutUser from "./components/sections/aboutUser/AboutUser"
 import Post from "../newuser/components/sections/posts/Posts"
 import WorkExperience from "../newuser/components/sections/workExperience/WorkExperience"
@@ -53,7 +54,6 @@ export default function ParticipantLayout({
           </main>
         </div>
       </div>
-      {children}
     </div>
   );
 }

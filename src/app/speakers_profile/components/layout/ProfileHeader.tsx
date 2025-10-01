@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { MapPin, Check } from 'lucide-react';
 import { Speaker } from '@/store/types';
 import Step1 from '../../../speakers/components/steps/step1';
@@ -124,9 +125,11 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ speaker }) => {
         <div className="relative flex-shrink-0">
           <div className="w-30 h-30 rounded-lg overflow-hidden border-2 border-white">
             {speaker.profileImageUrl ? (
-              <img
+              <Image
                 src={speaker.profileImageUrl}
-                alt={speaker.fullName}
+                alt={speaker.fullName || `${speaker.firstName || ''} ${speaker.lastName || ''}`.trim() || 'Speaker'}
+                width={120}
+                height={120}
                 className="w-full h-full object-cover"
               />
             ) : (
@@ -143,7 +146,9 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ speaker }) => {
         </div>
         
         <div className="flex-1 pt-0">
-          <h1 className="text-2xl font-semibold mb-1 text-black">{speaker.fullName}</h1>
+          <h1 className="text-2xl font-semibold mb-1 text-black">
+            {speaker.fullName || `${speaker.firstName || ''} ${speaker.lastName || ''}`.trim() || 'Speaker'}
+          </h1>
           <p className="text-sm opacity-90 mb-4">{speaker.professionalTitle || 'Speaker'}</p>
           {speaker.bio && (
             <p className="text-xs text-white/60 leading-relaxed mb-3">
@@ -221,7 +226,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ speaker }) => {
     formData={formData}
     onEdit={handleEdit}
     speakerId={speaker._id}
-    speakerName={speaker.fullName}
+    speakerName={speaker.fullName || `${speaker.firstName || ''} ${speaker.lastName || ''}`.trim() || 'Speaker'}
     speakerExpertise={speaker.areaOfExpertise || []}
   />
     </>

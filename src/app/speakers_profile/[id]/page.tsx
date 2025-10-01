@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { useAuth } from '@/store/hooks';
 import { useGetCurrentUserQuery } from '@/store/slices/authSlice';
 import { selectSpeakers, useGetSpeakersQuery } from '@/store/slices/speakersSlice';
@@ -15,36 +15,36 @@ const Navbar = dynamic(() => import('@/components/Navbar'), {
 });
 
 // Layout imports
-import ProfileHeader from './components/layout/ProfileHeader';
+import ProfileHeader from '../components/layout/ProfileHeader';
 
 // Profile imports
-import RatingsCard from './components/profile/RatingsCard';
-import TabNavigation from './components/profile/TabNavigation';
-import ExperienceSection from './components/profile/ExperienceSection';
-import Events from './components/profile/SpeakingSection';
-import EducationSection from './components/profile/EducationSection';
-import AwardsSection from './components/profile/AwardsSection';
-import VideosSection from './components/profile/VideosSection';
+import RatingsCard from '../components/profile/RatingsCard';
+import TabNavigation from '../components/profile/TabNavigation';
+import ExperienceSection from '../components/profile/ExperienceSection';
+import Events from '../components/profile/SpeakingSection';
+import EducationSection from '../components/profile/EducationSection';
+import AwardsSection from '../components/profile/AwardsSection';
+import VideosSection from '../components/profile/VideosSection';
 
 // Sidebar imports
-import AvailabilityCard from './components/sidebar/AvailabilityCard';
-import PricingCard from './components/sidebar/PricingCard';
-import FeedbackSection from './components/profile/FeedbackSection';
+import AvailabilityCard from '../components/sidebar/AvailabilityCard';
+import PricingCard from '../components/sidebar/PricingCard';
+import FeedbackSection from '../components/profile/FeedbackSection';
 
 const SpeakerProfile: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('Experience');
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   
-  // Get speaker ID from URL parameters
-  const searchParams = useSearchParams();
-  const speakerId = searchParams.get('id');
+  // Get speaker ID from URL parameters (using useParams for dynamic routes)
+  const params = useParams();
+  const speakerId = params.id as string;
 
   // Fetch detailed speaker profile data
   const { 
     data: detailedProfileData, 
     isLoading: isLoadingDetailedProfile, 
     error: detailedProfileError 
-  } = useGetDetailedSpeakerProfileQuery(speakerId!, {
+  } = useGetDetailedSpeakerProfileQuery(speakerId, {
     skip: !speakerId // Skip if no speakerId
   });
 
@@ -60,6 +60,14 @@ const SpeakerProfile: React.FC = () => {
   
   // Get detailed profile sections
   const detailedProfile = detailedProfileData?.data;
+
+  // Debug logging
+  console.log('🔍 Speaker Profile Debug:', {
+    speakerId,
+    speaker,
+    detailedProfileData: detailedProfileData?.data,
+    speakersData: speakersData?.data?.speakers?.slice(0, 2) // Show first 2 speakers for debugging
+  });
 
   // Authentication hooks
   const { user, isAuthenticated } = useAuth();

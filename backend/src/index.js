@@ -30,6 +30,7 @@ import negotiationRoutes from './routes/negotiationRoutes.js';
 import speakerSearchRoutes from './routes/speakerSearchRoutes.js';
 import bookSpeakerRoutes from'./routes/bookSpeakerRoutes.js';
 import tagSpeakerRoutes from "./routes/tagSpeakerRoutes.js";
+import savedSpeakerRoutes from "./routes/savedSpeakerRoutes.js";
 import speakerManagementRoutes from './routes/speakerManagementRoutes.js';
 import eventRegisterRoutes from './routes/eventRegisterRoutes.js'
 
@@ -138,6 +139,7 @@ app.use("/api/education", educationRoutes);
 app.use("/api/awards", awardRoutes);
 app.use("/api/book-speaker", bookSpeakerRoutes);
 app.use("/api/speakers", tagSpeakerRoutes);
+app.use("/api/saved-speakers", savedSpeakerRoutes);
 app.use('/api/speaker-management', speakerManagementRoutes);
 app.use('/api/negotiations', negotiationRoutes);
 app.use("/api/registrations", eventRegisterRoutes);

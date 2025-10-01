@@ -7,7 +7,7 @@ import dynamic from 'next/dynamic';
 import SpeakerManagementPage from './components/management';
 import SpeakerDatabasePage from './components/database';
 import DocumentsPage from './components/documents';
-import Sidebar from './components/parts/Sidebar';
+import Sidebar from '@/components/Sidebar';
 
 // Dynamic import for Navbar (same as Privacy Policy)
 const Navbar = dynamic(() => import('@/components/Navbar'), {
@@ -96,7 +96,7 @@ export default function BookingPage() {
                     Documents
                   </button>
                 </div>
-                <SpeakerDatabasePage onTabChange={handleTabClick} activeTab={activeTab} />
+                <SpeakerDatabasePage />
               </div>
             </div>
           </div>

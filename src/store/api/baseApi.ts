@@ -91,7 +91,9 @@ export const baseApi = createApi({
     'Booking',
     'Conversation',
     'Message',
-    'Negotiation'
+    'Negotiation',
+    'OrganizerBooking',
+    'SavedSpeaker'
   ],
   endpoints: () => ({}),
 });

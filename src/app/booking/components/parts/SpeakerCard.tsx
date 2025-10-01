@@ -1,8 +1,9 @@
 //app\booking\components\parts\SpeakerCard.tsx
 'use client';
 
-import React from 'react';
-import { Calendar, DollarSign, Clock, Calendar as CalendarIcon } from 'lucide-react';
+import React, { useState } from 'react';
+import Image from 'next/image';
+import { Calendar, DollarSign, Clock, Calendar as CalendarIcon, User } from 'lucide-react';
 
 interface Speaker {
   id: string;
@@ -14,15 +15,20 @@ interface Speaker {
   status: 'In Progress' | 'Confirmed' | 'Declined';
   tags: string[];
   timeAgo: string;
+  bookingId?: string;
+  originalBooking?: any;
 }
 
 interface SpeakerCardProps {
   speaker: Speaker;
   showAttachButton?: boolean;
   isMiddleTop?: boolean;
+  onViewDetails?: (bookingId: string) => void;
 }
 
-export default function SpeakerCard({ speaker, showAttachButton = false, isMiddleTop = false }: SpeakerCardProps) {
+export default function SpeakerCard({ speaker, showAttachButton = false, onViewDetails }: SpeakerCardProps) {
+  const [imageError, setImageError] = useState(false);
+  
   const getTagColor = () => {
     return 'bg-[#FF6B35]/10 text-[#FF6B35] border border-[#FF6B35]';
   };
@@ -31,11 +37,20 @@ export default function SpeakerCard({ speaker, showAttachButton = false, isMiddl
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 border-l-4 border-l-[#FF6B35] p-4 hover:shadow-md transition-shadow">
       {/* Speaker Header */}
       <div className="flex items-start space-x-3 mb-4">
-        <img 
-          src={speaker.image} 
-          alt={speaker.name}
-          className="w-12 h-12 rounded-full object-cover"
-        />
+        {imageError || !speaker.image ? (
+          <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center">
+            <User size={20} className="text-gray-400" />
+          </div>
+        ) : (
+          <Image 
+            src={speaker.image} 
+            alt={speaker.name}
+            width={48}
+            height={48}
+            className="w-12 h-12 rounded-full object-cover"
+            onError={() => setImageError(true)}
+          />
+        )}
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-gray-900 text-xs truncate">{speaker.name}</h3>
           <p className="text-[10px] text-gray-600 mt-1 leading-tight">{speaker.expertise}</p>
@@ -72,6 +87,14 @@ export default function SpeakerCard({ speaker, showAttachButton = false, isMiddl
           <Clock size={10} />
           <span className="text-[10px]">{speaker.timeAgo}</span>
         </div>
+        {speaker.bookingId && (
+          <button
+            onClick={() => onViewDetails?.(speaker.bookingId!)}
+            className="text-[10px] text-[#FF6B35] hover:text-[#FF6B35]/80 font-medium"
+          >
+            View Details
+          </button>
+        )}
       </div>
 
       {/* Attach to Events Button (only for Confirmed speakers) */}

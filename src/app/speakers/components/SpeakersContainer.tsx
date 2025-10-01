@@ -138,30 +138,6 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
     { skip: !hasActiveFilters } // Only fetch if filters are active
   );
 
-<<<<<<< HEAD
-=======
-  // Debug logging for filtered query
-  console.log('🔍 Filtered query debug:', {
-    hasActiveFilters,
-    skip: !hasActiveFilters,
-    queryParams: {
-      q: debouncedSearchQuery,
-      location: filters.location,
-      expertise: filters.expertise,
-      topics: filters.topics,
-      yearsOfExperience: filters.yearsOfExperience,
-      availabilityDate: filters.availabilityDate,
-      eventTypes: filters.eventTypes,
-      deliveryModes: filters.deliveryModes,
-      minFee: filters.priceRange.min,
-      maxFee: filters.priceRange.max,
-    },
-    isLoading: isLoadingFiltered,
-    error: filteredError,
-    data: filteredSpeakersData
-  });
-  
->>>>>>> 92a26e2 (implemented the chatting with negotitaion functionality)
   // Get suggestions for autocomplete (commented out for now to avoid unused variables)
   // const {
   //   data: suggestionsData,

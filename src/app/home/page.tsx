@@ -576,10 +576,11 @@ export default function EventManagementPage() {
           />
         </Suspense>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="grid grid-cols-12 gap-4">
-            {/* Left Sidebar - Featured Speakers */}
-            <div className="col-span-3">
+        {/* Hero Section - Full Width on Mobile/Tablet, Contained on Desktop */}
+        <div className="lg:max-w-7xl lg:mx-auto lg:px-6 xl:px-8">
+          <div className="lg:grid lg:grid-cols-12 lg:gap-6">
+            {/* Left Sidebar - Featured Speakers - Hidden on mobile/tablet */}
+            <div className="hidden lg:block lg:col-span-3">
               <div className="bg-white rounded-lg p-3 mb-4">
                 <h2 className="text-base font-semibold mb-3 text-[#00425D]">Featured Speakers</h2>
                 <div className="space-y-10">
@@ -656,43 +657,102 @@ export default function EventManagementPage() {
             </div>
 
             {/* Main Content */}
-            <div className="col-span-9">
-              {/* Hero Section - Full Width */}
-              <div className="relative rounded-2xl overflow-hidden mb-4 h-70">
+            <div className="lg:col-span-9">
+              {/* Hero Section - Full Width on Mobile/Tablet, Contained on Desktop */}
+              <div className="relative overflow-hidden mb-3 sm:mb-4 h-48 sm:h-56 lg:h-64 xl:h-70 lg:rounded-xl xl:rounded-2xl">
                 <img
                   src="https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1400&h=320&fit=crop"
                   alt="Conference speaker"
                   className="w-full h-full object-cover"
                 />
-                <div className="absolute inset-0 flex items-center justify-center px-12">
-                  <div className="bg-white/85 rounded-2xl p-7 max-w-xl text-center">
-                    <h1 className="text-3xl font-extrabold text-gray-800 mb-1">
+                <div className="absolute inset-0 flex items-center justify-center px-4 sm:px-6 lg:px-12">
+                  <div className="bg-white/85 rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-7 max-w-sm sm:max-w-lg lg:max-w-xl text-center">
+                    <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-gray-800 mb-1">
                       Build Better Events,
                     </h1>
-                    <h2 className="text-3xl font-extrabold text-gray-800 mb-2">
+                    <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-gray-800 mb-2">
                       Book Brighter Speakers.
                     </h2>
-                    <p className="text-gray-700 mb-3 text-sm leading-tight">
+                    <p className="text-gray-700 mb-3 text-xs sm:text-sm leading-tight">
                       Discover inspiring voices, share knowledge, and build meaningful connections in our vibrant speaker community
                     </p>
-                    <button className="bg-orange-500 hover:bg-orange-600 text-white px-5 py-2 rounded-lg font-medium text-sm">
+                    <button className="bg-orange-500 hover:bg-orange-600 text-white px-4 sm:px-5 py-2 rounded-lg font-medium text-xs sm:text-sm">
                       Join the Community
                     </button>
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-12 gap-4">
-                {/* Posts Column with Scroll and Orange Sidebar */}
-                <div className="col-span-8">
+              {/* Mobile Featured Speakers - Horizontal Scroll */}
+              <div className="lg:hidden px-3 sm:px-4 mb-4">
+                <div className="bg-white rounded-lg p-3">
+                  <h2 className="text-base font-semibold mb-3 text-[#00425D]">Featured Speakers</h2>
+                  <div className="flex overflow-x-auto space-x-3 pb-2 scrollbar-hide">
+                    {repeatedSpeakers.map((speaker, index) => (
+                      <div key={index} className="flex-shrink-0 w-48 bg-gray-50 rounded-lg p-3">
+                        <div className="flex items-start gap-3">
+                          <img
+                            src={speaker.image}
+                            alt={speaker.name}
+                            className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-xs text-gray-900 mb-1">{speaker.name}</h3>
+                            <p className="text-xs text-gray-600 font-medium mb-1">{speaker.title}</p>
+                            <p className="text-xs text-gray-500 leading-tight line-clamp-2">{speaker.description}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Mobile Top 5 Speakers - Horizontal Scroll with Auto-scrolling */}
+              <div className="lg:hidden px-3 sm:px-4 mb-4">
+                <div className="bg-white rounded-lg p-3">
+                  <h2 className="text-base font-semibold mb-3 text-[#00425D]">Top 5 Speakers</h2>
+                  <div className="relative overflow-hidden">
+                    <div 
+                      className="flex transition-transform ease-linear"
+                      style={{
+                        transform: `translateX(-${(speakerScrollPosition % (topSpeakers.length * 120))}px)`,
+                        width: `${topSpeakers.length * 2 * 120}px`
+                      }}
+                    >
+                      {/* Duplicate speakers array for seamless loop */}
+                      {[...topSpeakers, ...topSpeakers].map((speaker, index) => (
+                        <div key={index} className="flex-shrink-0 w-28 mx-1">
+                          <div className="bg-gray-100 rounded-lg p-2 text-center">
+                            <img
+                              src={speaker.image}
+                              alt={speaker.name}
+                              className="w-12 h-12 rounded-full mx-auto mb-2 object-cover"
+                            />
+                            <p className="text-xs font-medium text-gray-900 mb-1 truncate">{speaker.name}</p>
+                            <p className="text-xs text-gray-600 mb-1 truncate">{speaker.title}</p>
+                            <p className="text-xs text-gray-500 leading-tight text-center px-1">{speaker.bio}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="px-3 sm:px-4 lg:px-0">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4">
+
+                  {/* Posts Column with Scroll and Orange Sidebar */}
+                  <div className="lg:col-span-8">
                   <div className="relative">
                    
                     
                     {/* Scrollable Posts Container */}
                     <div 
-                      className="h-[945px] overflow-y-auto scrollbar-thin scrollbar-thumb-orange-300 scrollbar-track-gray-100 pl-4"
+                      className="h-[600px] sm:h-[700px] lg:h-[800px] xl:h-[945px] overflow-y-auto scrollbar-thin scrollbar-thumb-orange-300 scrollbar-track-gray-100 pl-2 sm:pl-4"
                     >
-                      <div className="space-y-4 pr-2">
+                      <div className="space-y-3 sm:space-y-4 pr-2">
                         {feedLoading && feedPosts.length === 0 ? (
                           <div className="flex items-center justify-center h-32">
                             <div className="flex items-center space-x-2">
@@ -728,13 +788,13 @@ export default function EventManagementPage() {
                             const authorName = post.userName || `${post.user?.firstName} ${post.user?.lastName}`;
                             
                             return (
-                              <div key={post._id} className="bg-white rounded-lg p-3">
-                                <div className="flex items-center space-x-2 mb-2">
+                              <div key={post._id} className="bg-white rounded-lg p-3 sm:p-4">
+                                <div className="flex items-center space-x-2 sm:space-x-3 mb-2 sm:mb-3">
                                   {profileImageUrl ? (
                                     <img
                                       src={profileImageUrl}
                                       alt={authorName}
-                                      className="w-8 h-8 rounded-full object-cover"
+                                      className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover"
                                       onError={(e) => {
                                         console.error('Profile image failed to load:', profileImageUrl);
                                         e.currentTarget.style.display = 'none';
@@ -746,7 +806,7 @@ export default function EventManagementPage() {
                                     />
                                   ) : null}
                                   <div 
-                                    className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs"
+                                    className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs sm:text-sm"
                                     style={{
                                       display: profileImageUrl ? 'none' : 'flex',
                                     }}
@@ -754,15 +814,15 @@ export default function EventManagementPage() {
                                     {authorName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
                                   </div>
                                   <div>
-                                    <h3 className="font-semibold text-xs">{authorName}</h3>
+                                    <h3 className="font-semibold text-xs sm:text-sm">{authorName}</h3>
                                     <span className="text-xs text-gray-400">{formatTimeAgo(post.createdAt)}</span>
                                   </div>
                                 </div>
 
                                 {post.title && (
-                                  <h2 className="text-sm font-semibold mb-2 text-[#00425D]">{post.title}</h2>
+                                  <h2 className="text-sm sm:text-base font-semibold mb-2 sm:mb-3 text-[#00425D]">{post.title}</h2>
                                 )}
-                                <p className="text-gray-500 text-xs mb-3 leading-tight">
+                                <p className="text-gray-500 text-xs sm:text-sm mb-3 sm:mb-4 leading-tight">
                                   {post.caption}
                                 </p>
                                 
@@ -775,13 +835,13 @@ export default function EventManagementPage() {
                                   </Suspense>
                                 )}
                                 
-                                <div className="flex items-center space-x-4 text-xs text-gray-400">
+                                <div className="flex items-center space-x-4 sm:space-x-6 text-xs sm:text-sm text-gray-400">
                                   <button 
-                                    className={`flex items-center space-x-1 transition-colors duration-200 ${post.isLiked ? 'text-red-500' : 'hover:text-red-500'}`}
+                                    className={`flex items-center space-x-1 sm:space-x-2 transition-colors duration-200 ${post.isLiked ? 'text-red-500' : 'hover:text-red-500'}`}
                                     onClick={() => handleLikeToggle(post._id)}
                                   >
                                     <Heart 
-                                      className={`w-3 h-3 transition-all duration-200 ${
+                                      className={`w-3 h-3 sm:w-4 sm:h-4 transition-all duration-200 ${
                                         post.isLiked 
                                           ? 'fill-red-500 text-red-500' 
                                           : 'fill-none text-gray-400 hover:text-red-500'
@@ -790,28 +850,28 @@ export default function EventManagementPage() {
                                     <span className={post.isLiked ? 'text-red-500' : ''}>{post.likesCount}</span>
                                   </button>
                                   <button 
-                                    className={`flex items-center space-x-1 hover:text-blue-500 ${commentingPostId === post._id ? 'text-blue-500' : ''}`}
+                                    className={`flex items-center space-x-1 sm:space-x-2 hover:text-blue-500 ${commentingPostId === post._id ? 'text-blue-500' : ''}`}
                                     onClick={() => handleCommentClick(post._id)}
                                   >
-                                    <MessageCircle className="w-3 h-3" />
+                                    <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4" />
                                     <span>{post.commentsCount}</span>
                                   </button>
                                 </div>
 
                                 {/* Comment Section */}
                                 {commentingPostId === post._id && (
-                                  <div className="mt-3 pt-3 border-t border-gray-100">
+                                  <div className="mt-3 sm:mt-4 pt-3 border-t border-gray-100">
                                     {/* Existing Comments Display */}
                                     {postComments && postComments.length > 0 ? (
                                       <div className="mb-3">
                                         <Suspense fallback={<div className="h-32 bg-gray-50 rounded-lg flex items-center justify-center"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500"></div></div>}>
                                           <CustomVerticalScrollbarV2 
-                                            maxHeight="200px"
+                                            maxHeight="150px"
                                             scrollbarColor="#FF6B35"
                                             trackColor="rgba(255,107,53,0.06)"
                                             showArrows={true}
                                           >
-                                          <div className="space-y-2 pr-8">
+                                          <div className="space-y-2 pr-4 sm:pr-8">
                                             {(viewingAllComments.has(post._id) ? postComments : postComments.slice(0, 3)).map((comment: { userName?: string; content: string; createdAt: string; userProfileImage?: any; userProfileImageUrl?: string; user?: any }, index: number) => {
                                               // Debug comment data
                                               console.log('🔍 Comment Debug:', {
@@ -828,8 +888,8 @@ export default function EventManagementPage() {
                                               const displayName = comment.userName || `${comment.user?.firstName} ${comment.user?.lastName}`;
                                               
                                               return (
-                                              <div key={index} className="flex items-start space-x-2">
-                                                <div className="w-5 h-5 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center flex-shrink-0">
+                                              <div key={index} className="flex items-start space-x-2 sm:space-x-3">
+                                                <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center flex-shrink-0">
                                                   {profileImageUrl ? (
                                                     <img
                                                       src={profileImageUrl}
@@ -856,10 +916,10 @@ export default function EventManagementPage() {
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                   <div className="bg-gray-50 rounded-lg px-3 py-2">
-                                                    <p className="text-xs font-medium text-gray-900 mb-1">
+                                                    <p className="text-xs sm:text-sm font-medium text-gray-900 mb-1">
                                                       {displayName || 'Anonymous'}
                                                     </p>
-                                                    <p className="text-xs text-gray-700 leading-relaxed">
+                                                    <p className="text-xs sm:text-sm text-gray-700 leading-relaxed">
                                                       {comment.content}
                                                     </p>
                                                   </div>
@@ -899,8 +959,8 @@ export default function EventManagementPage() {
 
                                     {/* Comment Input */}
                                     {isAuthenticated ? (
-                            <div className="flex items-center space-x-2">
-                                        <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center flex-shrink-0">
+                            <div className="flex items-center space-x-2 sm:space-x-3 mt-3">
+                                        <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center flex-shrink-0">
                                           {getProfileImageUrl(user?.profileImageUrl || currentUserData?.user?.profileImageUrl || user?.profileImage || currentUserData?.user?.profileImage) ? (
                                             <img
                                               src={getProfileImageUrl(user?.profileImageUrl || currentUserData?.user?.profileImageUrl || user?.profileImage || currentUserData?.user?.profileImage) || ''}
@@ -941,7 +1001,7 @@ export default function EventManagementPage() {
                                             value={commentText}
                                             onChange={(e) => setCommentText(e.target.value)}
                                             onKeyPress={(e) => handleCommentKeyPress(e, post._id)}
-                                            className="w-full px-3 py-2 text-xs border border-gray-200 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                            className="w-full px-3 py-2 text-xs sm:text-sm border border-gray-200 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                                             autoFocus
                                           />
                                         </div>
@@ -982,40 +1042,40 @@ export default function EventManagementPage() {
                   </div>
                 </div>
 
-                {/* Right Sidebar */}
-                <div className="col-span-4">
+                  {/* Right Sidebar */}
+                  <div className="lg:col-span-4">
                   {/* Promoted Events */}
-                  <div className="bg-white rounded-lg overflow-hidden mb-4 relative">
+                  <div className="bg-white rounded-lg overflow-hidden mb-3 sm:mb-4 relative">
                     <div className="absolute left-0 top-0 w-1 h-full bg-orange-500 z-10"></div>
 
                     <div className="p-3 pb-1">
-                      <h2 className="text-base font-bold text-[#00425D] mb-3">Promoted Events</h2>
+                      <h2 className="text-sm sm:text-base font-bold text-[#00425D] mb-3">Promoted Events</h2>
                     </div>
 
                    
-                    <div className="relative h-[280px] overflow-hidden">
+                    <div className="relative h-[240px] sm:h-[280px] overflow-hidden">
                       <div
-                        className={`flex flex-col transition-transform ease-in-out duration-[2000ms] space-y-3`}
+                        className={`flex flex-col transition-transform ease-in-out duration-[2000ms] space-y-2 sm:space-y-3`}
                         style={{
-                          transform: `translateY(-${currentEventIndex * 280}px)`,
+                          transform: `translateY(-${currentEventIndex * (window.innerWidth < 640 ? 240 : 280)}px)`,
                         }}
                       >
                         {extendedEvents.map((event, index) => (
                           <div
                             key={index}
-                            className="h-[280px] flex-shrink-0 px-3"
+                            className="h-[240px] sm:h-[280px] flex-shrink-0 px-3"
                           >
                             <img
                               src={event.image}
                               alt={event.title}
-                              className="w-full h-24 object-cover rounded-lg mb-2"
+                              className="w-full h-20 sm:h-24 object-cover rounded-lg mb-2"
                             />
                             <div className="px-0">
-                              <h3 className="font-bold text-sm mb-1 text-gray-900">{event.title}</h3>
+                              <h3 className="font-bold text-xs sm:text-sm mb-1 text-gray-900">{event.title}</h3>
                               <p className="text-xs text-gray-600 mb-2 leading-tight line-clamp-3">
                                 {event.description}
                               </p>
-                              <button className="w-full bg-orange-500 hover:bg-orange-600 text-white py-2 rounded-lg text-xs font-semibold transition-colors">
+                              <button className="w-full bg-orange-500 hover:bg-orange-600 text-white py-1.5 sm:py-2 rounded-lg text-xs font-semibold transition-colors">
                                 Ticket & Info
                               </button>
                             </div>
@@ -1026,17 +1086,17 @@ export default function EventManagementPage() {
                   </div>
 
                   {/* Upcoming Events */}
-                  <div className="bg-white rounded-lg p-3 mb-4">
-                    <h2 className="text-base font-semibold mb-3 text-[#00425D]">Upcoming Events</h2>
-                    <div className="space-y-6">
+                  <div className="bg-white rounded-lg p-3 mb-3 sm:mb-4">
+                    <h2 className="text-sm sm:text-base font-semibold mb-3 text-[#00425D]">Upcoming Events</h2>
+                    <div className="space-y-4 sm:space-y-6">
                       {upcomingEvents.map((event, index) => (
                         <div key={index} className="border-l-4 border-orange-500 pl-2">
-                          <h3 className="font-medium text-xs">{event.name}</h3>
+                          <h3 className="font-medium text-xs sm:text-sm">{event.name}</h3>
                           <div className="flex items-center text-xs text-gray-500 mt-0.5">
-                            <Calendar className="w-3 h-3 mr-1" />
-                            <span className="mr-2">{event.date}</span>
-                            <MapPin className="w-3 h-3 mr-1" />
-                            <span>{event.location}</span>
+                            <Calendar className="w-3 h-3 mr-1 flex-shrink-0" />
+                            <span className="mr-2 truncate">{event.date}</span>
+                            <MapPin className="w-3 h-3 mr-1 flex-shrink-0" />
+                            <span className="truncate">{event.location}</span>
                           </div>
                         </div>
                       ))}
@@ -1045,17 +1105,17 @@ export default function EventManagementPage() {
 
                   {/* Advertisements with Auto-scrolling Images */}
 <div className="bg-white rounded-lg p-3">
-  <h2 className="text-base font-semibold mb-3">Advertisements</h2>
-  <div className="h-50 overflow-hidden relative rounded-lg">
+  <h2 className="text-sm sm:text-base font-semibold mb-3">Advertisements</h2>
+  <div className="h-40 sm:h-50 overflow-hidden relative rounded-lg">
     <div 
       className="flex flex-col transition-transform ease-linear"
       style={{
-        transform: `translateY(-${(adScrollPosition % (adImages.length * 160))}px)`,
-        height: `${adImages.length * 2 * 160}px`
+        transform: `translateY(-${(adScrollPosition % (adImages.length * 140))}px)`,
+        height: `${adImages.length * 2 * 140}px`
       }}
     >
                        {[...adImages, ...adImages].map((image, index) => (
-        <div key={index} className="flex-shrink-0 w-full h-120 mb-2">
+        <div key={index} className="flex-shrink-0 w-full h-32 sm:h-40 mb-2">
           <img
             src={image}
             alt={`Advertisement ${index + 1}`}
@@ -1066,6 +1126,7 @@ export default function EventManagementPage() {
     </div>
   </div>
 </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1076,12 +1137,12 @@ export default function EventManagementPage() {
       {/* Event Management Features Section */}
       <div className="bg-white">
         {/* Header section with white background */}
-        <div className="container mx-auto px-6 py-12">
-          <div className="text-center mb-12">
-            <h1 className="text-3xl font-bold text-[#00425D] mb-4 leading-tight max-w-4xl mx-auto">
+        <div className="container mx-auto px-4 sm:px-6 py-8 sm:py-12">
+          <div className="text-center mb-8 sm:mb-12">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-[#00425D] mb-3 sm:mb-4 leading-tight max-w-4xl mx-auto">
               Everything You Need for a Successful Event, All in One Place
             </h1>
-            <p className="text-gray-600 text-base max-w-2xl mx-auto leading-relaxed">
+            <p className="text-gray-600 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed px-4">
               Streamline your event management with our comprehensive platform designed to
               handle every aspect of professional speaking engagements
             </p>
@@ -1089,7 +1150,7 @@ export default function EventManagementPage() {
         </div>
 
         {/* Background image section */}
-        <div className="bg-gray-50 relative overflow-hidden min-h-[600px]">
+        <div className="bg-gray-50 relative overflow-hidden min-h-[400px] sm:min-h-[500px] lg:min-h-[600px]">
           {/* Background image */}
           <div className="absolute inset-0">
             <img 
@@ -1100,18 +1161,18 @@ export default function EventManagementPage() {
           </div>
 
           {/* Feature cards content */}
-          <div className="relative z-10 container mx-auto px-8 py-50">
+          <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16">
            
             {/* Feature cards */}
-            <div className="max-w-7xl mx-auto space-y-12 px-4">
+            <div className="max-w-7xl mx-auto space-y-8 sm:space-y-10 lg:space-y-12 px-2 sm:px-4">
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 items-start">
                 {/* Milestone-Based Escrow - Left (higher) */}
-                <div className="feature-card bg-white/55 backdrop-blur-sm rounded-lg p-6 shadow-lg border border-white transition-all duration-300 hover:bg-white/90 hover:rotate-1 hover:scale-[1.02] w-full max-w-lg">
-                  <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center mb-3">
-                    <CreditCard className="w-4 h-4 text-orange-600" />
+                <div className="feature-card bg-white/55 backdrop-blur-sm rounded-lg p-4 sm:p-6 shadow-lg border border-white transition-all duration-300 hover:bg-white/90 hover:rotate-1 hover:scale-[1.02] w-full max-w-lg mx-auto md:mx-0">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 bg-orange-100 rounded-lg flex items-center justify-center mb-2 sm:mb-3">
+                    <CreditCard className="w-3 h-3 sm:w-4 sm:h-4 text-orange-600" />
                   </div>
-                  <h3 className="text-base font-bold mb-2" style={{ color: '#00425D' }}>Milestone-Based Escrow</h3>
+                  <h3 className="text-sm sm:text-base font-bold mb-2" style={{ color: '#00425D' }}>Milestone-Based Escrow</h3>
                   <p className="text-gray-600 text-xs leading-relaxed">
                     Secure staged payments that protect both organizers and
                     speakers throughout the entire event process, ensuring trust
@@ -1119,11 +1180,11 @@ export default function EventManagementPage() {
                   </p>
                 </div>
 
-                <div className="feature-card bg-white/55 backdrop-blur-sm rounded-lg p-6 shadow-lg border border-white transition-all duration-300 hover:bg-white/90 hover:-rotate-1 hover:scale-[1.02] w-full max-w-lg md:ml-auto md:mt-16">
-                  <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center mb-3">
-                    <Monitor className="w-4 h-4 text-orange-600" />
+                <div className="feature-card bg-white/55 backdrop-blur-sm rounded-lg p-4 sm:p-6 shadow-lg border border-white transition-all duration-300 hover:bg-white/90 hover:-rotate-1 hover:scale-[1.02] w-full max-w-lg mx-auto md:ml-auto md:mt-8 lg:mt-16">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 bg-orange-100 rounded-lg flex items-center justify-center mb-2 sm:mb-3">
+                    <Monitor className="w-3 h-3 sm:w-4 sm:h-4 text-orange-600" />
                   </div>
-                  <h3 className="text-base font-bold mb-2" style={{ color: '#00425D' }}>The Accountability Engine</h3>
+                  <h3 className="text-sm sm:text-base font-bold mb-2" style={{ color: '#00425D' }}>The Accountability Engine</h3>
                   <p className="text-gray-600 text-xs leading-relaxed">
                     Double-blind review system that provides unbiased feedback
                     and maintains high standards across the platform.
@@ -1131,13 +1192,13 @@ export default function EventManagementPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 items-start">
             
-                <div className="feature-card bg-white/55 backdrop-blur-sm rounded-lg p-6 shadow-lg border border-white transition-all duration-300 hover:bg-white/90 hover:rotate-1 hover:scale-[1.02] w-full max-w-lg">
-                  <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center mb-3">
-                    <UserCheck className="w-4 h-4 text-orange-600" />
+                <div className="feature-card bg-white/55 backdrop-blur-sm rounded-lg p-4 sm:p-6 shadow-lg border border-white transition-all duration-300 hover:bg-white/90 hover:rotate-1 hover:scale-[1.02] w-full max-w-lg mx-auto md:mx-0">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 bg-orange-100 rounded-lg flex items-center justify-center mb-2 sm:mb-3">
+                    <UserCheck className="w-3 h-3 sm:w-4 sm:h-4 text-orange-600" />
                   </div>
-                  <h3 className="text-base font-bold mb-2" style={{ color: '#00425D' }}>Source Vetted Professionals</h3>
+                  <h3 className="text-sm sm:text-base font-bold mb-2" style={{ color: '#00425D' }}>Source Vetted Professionals</h3>
                   <p className="text-gray-600 text-xs leading-relaxed">
                     Access verified speakers with authenticated credentials and
                     identity badges, ensuring quality and reliability for your
@@ -1145,11 +1206,11 @@ export default function EventManagementPage() {
                   </p>
                 </div>
 
-                <div className="feature-card bg-white/55 backdrop-blur-sm rounded-lg p-6 shadow-lg border border-white transition-all duration-300 hover:bg-white/90 hover:-rotate-1 hover:scale-[1.02] w-full max-w-lg md:ml-auto md:mt-16">
-                  <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center mb-3">
-                    <Grid3X3 className="w-4 h-4 text-orange-600" />
+                <div className="feature-card bg-white/55 backdrop-blur-sm rounded-lg p-4 sm:p-6 shadow-lg border border-white transition-all duration-300 hover:bg-white/90 hover:-rotate-1 hover:scale-[1.02] w-full max-w-lg mx-auto md:ml-auto md:mt-8 lg:mt-16">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 bg-orange-100 rounded-lg flex items-center justify-center mb-2 sm:mb-3">
+                    <Grid3X3 className="w-3 h-3 sm:w-4 sm:h-4 text-orange-600" />
                   </div>
-                  <h3 className="text-base font-bold mb-2" style={{ color: '#00425D' }}>3-Stage Dispute Resolution</h3>
+                  <h3 className="text-sm sm:text-base font-bold mb-2" style={{ color: '#00425D' }}>3-Stage Dispute Resolution</h3>
                   <p className="text-gray-600 text-xs leading-relaxed">
                     Fair, structured process for resolving disagreements with
                     mediation and arbitration options.
@@ -1157,13 +1218,13 @@ export default function EventManagementPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 items-start">
                 {/* Centralized Action Center - Left (higher) */}
-                <div className="feature-card bg-white/55 backdrop-blur-sm rounded-lg p-6 shadow-lg border border-white transition-all duration-300 hover:bg-white/90 hover:rotate-1 hover:scale-[1.02] w-full max-w-lg">
-                  <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center mb-3">
-                    <Target className="w-4 h-4 text-orange-600" />
+                <div className="feature-card bg-white/55 backdrop-blur-sm rounded-lg p-4 sm:p-6 shadow-lg border border-white transition-all duration-300 hover:bg-white/90 hover:rotate-1 hover:scale-[1.02] w-full max-w-lg mx-auto md:mx-0">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 bg-orange-100 rounded-lg flex items-center justify-center mb-2 sm:mb-3">
+                    <Target className="w-3 h-3 sm:w-4 sm:h-4 text-orange-600" />
                   </div>
-                  <h3 className="text-base font-bold mb-2" style={{ color: '#00425D' }}>Centralized Action Center</h3>
+                  <h3 className="text-sm sm:text-base font-bold mb-2" style={{ color: '#00425D' }}>Centralized Action Center</h3>
                   <p className="text-gray-600 text-xs leading-relaxed">
                     Smart dashboard that consolidates all event tasks,
                     communications, and deadlines in one intuitive
@@ -1171,11 +1232,11 @@ export default function EventManagementPage() {
                   </p>
                 </div>
 
-                <div className="feature-card bg-white/55 backdrop-blur-sm rounded-lg p-6 shadow-lg border border-white transition-all duration-300 hover:bg-white/90 hover:-rotate-1 hover:scale-[1.02] w-full max-w-lg md:ml-auto md:mt-16">
-                  <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center mb-3">
-                    <Clipboard className="w-4 h-4 text-orange-600" />
+                <div className="feature-card bg-white/55 backdrop-blur-sm rounded-lg p-4 sm:p-6 shadow-lg border border-white transition-all duration-300 hover:bg-white/90 hover:-rotate-1 hover:scale-[1.02] w-full max-w-lg mx-auto md:ml-auto md:mt-8 lg:mt-16">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 bg-orange-100 rounded-lg flex items-center justify-center mb-2 sm:mb-3">
+                    <Clipboard className="w-3 h-3 sm:w-4 sm:h-4 text-orange-600" />
                   </div>
-                  <h3 className="text-base font-bold mb-2" style={{ color: '#00425D' }}>All-in-One Event Publishing</h3>
+                  <h3 className="text-sm sm:text-base font-bold mb-2" style={{ color: '#00425D' }}>All-in-One Event Publishing</h3>
                   <p className="text-gray-600 text-xs leading-relaxed">
                     Create custom-branded event pages with integrated
                     ticketing, communications, and promotional tools.
@@ -1260,6 +1321,23 @@ export default function EventManagementPage() {
         .pdf-fullscreen .react-pdf__Page {
           max-width: 90vw;
           max-height: 90vh;
+        }
+        
+        /* Hide scrollbar for horizontal scroll */
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+        
+        /* Line clamp utility */
+        .line-clamp-2 {
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
         }
       `}</style>
     </div>

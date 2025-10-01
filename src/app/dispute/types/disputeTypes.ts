@@ -90,10 +90,34 @@ export interface TimelineMessage {
 // ---- Dispute Record ----
 export interface Dispute {
   _id: string
+  dispute:Dispute
+  disputeId: string; 
   title:string
   description: string;
-  complainant: { firstName: string; lastName: string };
-  respondent: { firstName: string; lastName: string };
+  category:string
+complainant: {
+    _id: string
+    firstName: string
+    lastName: string
+    email: string
+  }
+  respondent: Array<{
+    _id: string
+    firstName: string
+    lastName: string
+    email: string
+  }>
+    messages: Array<{
+    sender: string
+    content: string
+    timestamp: string
+    messageType: string
+    isInternal: boolean
+    _id: string
+    attachments: any[]
+    readBy: any[]
+  }>
+  priority:string
   eventName: string
   disputeReason: string
   partiesInvolved: string      
@@ -106,6 +130,27 @@ export interface Dispute {
   dateFiled: Date
   managedBy?: string
   createdAt: string;
+  timeline: TimelineMessage[] 
+}
+export interface DisputeDetail {
+  _id: string;
+  disputeId: string;
+  title: string;
+  description: string;
+  complainant: PartyInvolved;
+  respondent: PartyInvolved;
+  currentStage: DisputeStage;
+  status: DisputeStatus;
+  disputeAmount: number;
+  disputeCurrency: string;
+  dateFiled: string;
+  timeline: TimelineMessage[];
+  messages: {
+    id: string;
+    sender: PartyInvolved;
+    message: string;
+    timestamp: string;
+  }[];
 }
 
 // ---- Evidence Detail ----

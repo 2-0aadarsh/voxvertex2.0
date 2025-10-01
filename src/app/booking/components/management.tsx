@@ -1,105 +1,113 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import Sidebar from './parts/Sidebar';
-
 import SpeakerCard from './parts/SpeakerCard';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { 
+  useGetOrganizerBookingsQuery,
+  selectOrganizerBookings,
+  selectOrganizerBookingsStats,
+  selectOrganizerBookingsLoading,
+  selectOrganizerBookingsError,
+  type Booking
+} from '@/store/slices/organizerBookingsSlice';
+import { useAuth } from '@/store/hooks';
 
-interface Speaker {
-  id: string;
-  name: string;
-  expertise: string;
-  date: string;
-  price: number;
-  image: string;
-  status: 'In Progress' | 'Confirmed' | 'Declined';
-  tags: string[];
-  timeAgo: string;
-}
-
-export default function SpeakerManagementPage({ onTabChange, activeTab }: { onTabChange?: (tab: string) => void; activeTab?: string }) {
+export default function SpeakerManagementPage({ onTabChange }: { onTabChange?: (tab: string) => void; activeTab?: string }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [tagFilter, setTagFilter] = useState('All Tags');
-  const router = useRouter();
+  const { isAuthenticated } = useAuth();
+
+  // Redux state selectors
+  const bookings = useSelector(selectOrganizerBookings);
+  const stats = useSelector(selectOrganizerBookingsStats);
+  const isLoading = useSelector(selectOrganizerBookingsLoading);
+  const error = useSelector(selectOrganizerBookingsError);
+
+  // RTK Query hook for fetching data
+  const { 
+    data: apiData, 
+    error: apiError, 
+    isLoading: apiLoading,
+    refetch 
+  } = useGetOrganizerBookingsQuery(undefined, {
+    skip: !isAuthenticated, // Only fetch if authenticated
+  });
+
+  // Update local state when API data changes
+  useEffect(() => {
+    if (apiData) {
+      // Data is automatically handled by RTK Query
+      console.log('📊 Organizer bookings loaded:', apiData);
+    }
+  }, [apiData]);
 
   const handleAddSpeaker = () => {
     // Navigate to add speaker page
     console.log('Navigate to add speaker page');
   };
 
-  // Sample speakers data
-  const speakers: Speaker[] = [
-    {
-      id: '1',
-      name: 'Sarah Johnson',
-      expertise: 'Artificial Intelligence & Machine Learning',
-      date: 'May 10, 2024',
-      price: 12000,
-      image: 'https://images.unsplash.com/photo-1494790108755-2616b612b886?w=150&h=150&fit=crop&crop=face',
-      status: 'In Progress',
-      tags: ['Conference & Summits', 'Workshops'],
-      timeAgo: '3 hours ago'
-    },
-    {
-      id: '2',
-      name: 'Sarah Johnson',
-      expertise: 'Artificial Intelligence & Machine Learning',
-      date: 'May 10, 2024',
-      price: 12000,
-      image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
-      status: 'In Progress',
-      tags: ['Conference & Summits', 'Workshops'],
-      timeAgo: '5 hours ago'
-    },
-    {
-      id: '3',
-      name: 'Sarah Johnson',
-      expertise: 'Artificial Intelligence & Machine Learning',
-      date: 'May 10, 2024',
-      price: 12000,
-      image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face',
-      status: 'Confirmed',
-      tags: ['Conference & Summits', 'Workshops'],
-      timeAgo: '3 hours ago'
-    },
-    {
-      id: '4',
-      name: 'Sarah Johnson',
-      expertise: 'Artificial Intelligence & Machine Learning',
-      date: 'May 10, 2024',
-      price: 12000,
-      image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
-      status: 'Confirmed',
-      tags: ['Conference & Summits', 'Workshops'],
-      timeAgo: '3 hours ago'
-    },
-    {
-      id: '5',
-      name: 'Sarah Johnson',
-      expertise: 'Artificial Intelligence & Machine Learning',
-      date: 'May 10, 2024',
-      price: 12000,
-      image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face',
-      status: 'Declined',
-      tags: ['Conference & Summits', 'Workshops'],
-      timeAgo: '3 hours ago'
-    },
-    {
-      id: '6',
-      name: 'Sarah Johnson',
-      expertise: 'Artificial Intelligence & Machine Learning',
-      date: 'May 10, 2024',
-      price: 12000,
-      image: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face',
-      status: 'Declined',
-      tags: ['Conference & Summits', 'Workshops'],
-      timeAgo: '3 hours ago'
-    }
-  ];
+  const handleRefresh = () => {
+    refetch();
+  };
 
-  const getStatusConfig = (status: Speaker['status']) => {
+  const handleViewDetails = (bookingId: string) => {
+    // Navigate to booking details or open modal
+    console.log('View details for booking:', bookingId);
+    // TODO: Implement navigation to booking details page
+  };
+
+  // Convert Booking to Speaker format for compatibility
+  const convertBookingToSpeaker = React.useCallback((booking: Booking) => ({
+    id: booking._id,
+    name: `${booking.speaker.firstName} ${booking.speaker.lastName}`,
+    expertise: booking.speaker.expertise,
+    date: new Date(booking.date).toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    }),
+    price: booking.compensationAndArrangements.primaryCompensation.speakerFeeAmount,
+    image: booking.speaker.profileImageUrl || '',
+    status: getDisplayStatus(booking.status),
+    tags: [booking.eventDetails.type],
+    timeAgo: booking.timeAgo,
+    bookingId: booking.bookingId,
+    originalBooking: booking as any
+  }), []);
+
+  const getDisplayStatus = (status: string): 'In Progress' | 'Confirmed' | 'Declined' => {
+    switch (status) {
+      case 'pending':
+      case 'negotiating':
+        return 'In Progress';
+      case 'accepted':
+        return 'Confirmed';
+      case 'declined':
+      case 'cancelled':
+        return 'Declined';
+      default:
+        return 'In Progress';
+    }
+  };
+
+  // Get speakers from Redux state or API data
+  const speakers = React.useMemo(() => {
+    const data = bookings || apiData?.data;
+    if (!data) return [];
+
+    const allBookings = [
+      ...data.inProgress.map(convertBookingToSpeaker),
+      ...data.confirmed.map(convertBookingToSpeaker),
+      ...data.declined.map(convertBookingToSpeaker),
+    ];
+
+    return allBookings;
+  }, [bookings, apiData, convertBookingToSpeaker]);
+
+  const getStatusConfig = (status: 'In Progress' | 'Confirmed' | 'Declined') => {
     switch (status) {
       case 'In Progress':
         return { 
@@ -144,6 +152,58 @@ export default function SpeakerManagementPage({ onTabChange, activeTab }: { onTa
     'Declined': filteredSpeakers.filter(s => s.status === 'Declined')
   };
 
+  // Loading state
+  if (apiLoading || isLoading) {
+    return (
+      <div className="min-h-screen bg-white">
+        <Sidebar />
+        <div className="ml-64 p-6">
+          <div className="bg-[#FF6B35]/50 px-6 py-4 rounded-md mb-6">
+            <h1 className="text-2xl font-bold text-black mb-2">Speaker Management</h1>
+            <p className="text-white">Manage your speakers, bookings, and payments in one place</p>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow-sm border border-gray-300 p-6 min-h-[calc(100vh-280px)] flex items-center justify-center">
+            <div className="text-center">
+              <Loader2 className="w-8 h-8 animate-spin text-[#FF6B35] mx-auto mb-4" />
+              <p className="text-gray-600">Loading speaker bookings...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (apiError || error) {
+    const errorMessage = (apiError as { data?: { message?: string } })?.data?.message || error || 'Failed to load speaker bookings';
+    return (
+      <div className="min-h-screen bg-white">
+        <Sidebar />
+        <div className="ml-64 p-6">
+          <div className="bg-[#FF6B35]/50 px-6 py-4 rounded-md mb-6">
+            <h1 className="text-2xl font-bold text-black mb-2">Speaker Management</h1>
+            <p className="text-white">Manage your speakers, bookings, and payments in one place</p>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow-sm border border-gray-300 p-6 min-h-[calc(100vh-280px)] flex items-center justify-center">
+            <div className="text-center">
+              <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-4" />
+              <p className="text-red-600 mb-4">{errorMessage}</p>
+              <button
+                onClick={handleRefresh}
+                className="bg-[#FF6B35] text-white px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-[#FF6B35]/90 font-medium mx-auto"
+              >
+                <RefreshCw size={16} />
+                <span>Retry</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-white">
       <Sidebar />
@@ -182,15 +242,26 @@ export default function SpeakerManagementPage({ onTabChange, activeTab }: { onTa
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-xl font-bold text-gray-900">Speaker Management</h2>
-                <p className="text-gray-600 text-sm">Manage your speaker relationships and bookings</p>
+                <p className="text-gray-600 text-sm">
+                  {stats ? `${stats.total} total bookings • ${stats.inProgress} in progress • ${stats.confirmed} confirmed • ${stats.declined} declined` : 'Manage your speaker relationships and bookings'}
+                </p>
               </div>
-              <button 
-                onClick={handleAddSpeaker}
-                className="bg-[#FF6B35] text-white px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-[#FF6B35]/90 font-medium"
-              >
-                <Plus size={16} />
-                <span>Add Speaker</span>
-              </button>
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={handleRefresh}
+                  className="text-gray-600 hover:text-[#FF6B35] p-2 rounded-lg hover:bg-gray-100"
+                  title="Refresh data"
+                >
+                  <RefreshCw size={16} />
+                </button>
+                <button 
+                  onClick={handleAddSpeaker}
+                  className="bg-[#FF6B35] text-white px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-[#FF6B35]/90 font-medium"
+                >
+                  <Plus size={16} />
+                  <span>Add Speaker</span>
+                </button>
+              </div>
             </div>
 
             {/* Search and Filter Controls */}
@@ -219,7 +290,7 @@ export default function SpeakerManagementPage({ onTabChange, activeTab }: { onTa
             {/* Kanban Board */}
             <div className="grid grid-cols-3 gap-6 h-full">
               {Object.entries(groupedSpeakers).map(([status, speakers]) => {
-                const statusConfig = getStatusConfig(status as Speaker['status']);
+                const statusConfig = getStatusConfig(status as 'In Progress' | 'Confirmed' | 'Declined');
                 return (
                   <div key={status} className="flex flex-col h-full">
                     {/* Column Header */}
@@ -234,12 +305,12 @@ export default function SpeakerManagementPage({ onTabChange, activeTab }: { onTa
                     
                     {/* Speaker Cards - Stretch to bottom */}
                     <div className={`${statusConfig.bgColor} ${statusConfig.borderColor} border-1 border-t-0 rounded-b-xl p-4 space-y-4 flex-1`}>
-                      {speakers.map((speaker, index) => (
+                      {speakers.map((speaker) => (
                         <SpeakerCard 
                           key={speaker.id} 
                           speaker={speaker}
                           showAttachButton={status === 'Confirmed'}
-                          isMiddleTop={status === 'Confirmed' && index === 0}
+                          onViewDetails={handleViewDetails}
                         />
                       ))}
                     </div>
