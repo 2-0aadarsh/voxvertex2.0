@@ -22,6 +22,7 @@ import Event from '../models/event.js';
 export const createDispute = async (req, res) => {
   try {
     if (!req.user) {
+      console.log('Authentication required in createDispute controller', req.user);
       return res.status(401).json({ success: false, message: 'Authentication required' });
     }
 
@@ -111,16 +112,21 @@ export const createDispute = async (req, res) => {
 
       // 3) Global user fallback
       if (!respondent) {
-        const result = await UserService.getUserById(respondentObjId || rId);
-        if (result?.user) {
-          respondent = {
-            _id: result.user._id,
-            firstName: result.user.firstName || 'N/A',
-            lastName: result.user.lastName || '',
-            email: result.user.email || '',
-            phone: result.user.mobileNo || null,
-            role: 'User',
-          };
+        try {
+          const result = await UserService.getUserById(respondentObjId || rId);
+          if (result?.user) {
+            respondent = {
+              _id: result.user._id,
+              firstName: result.user.firstName || 'N/A',
+              lastName: result.user.lastName || '',
+              email: result.user.email || '',
+              phone: result.user.mobileNo || null,
+              role: 'User',
+            };
+          }
+        } catch (userError) {
+          console.log(`⚠️ User not found for ID: ${respondentObjId || rId}`, userError.message);
+          // Continue without this respondent
         }
       }
 

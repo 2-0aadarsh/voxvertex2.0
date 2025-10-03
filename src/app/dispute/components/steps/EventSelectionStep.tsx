@@ -14,15 +14,16 @@ export default function EventSelectionStep({ formData, onFormDataUpdate }: Event
   
 
   // Transform events data if needed
-  const events = eventsData
-    ? [...(eventsData?.data?.upcoming || []), ...(eventsData?.data?.past || [])]
-    : [];
+  // const events = eventsData
+  //   ? [...(eventsData?.data?.upcoming || []), ...(eventsData?.data?.past || [])]
+  //   : [];
+  const events = eventsData?.data?.events || [];
 
   const handleSelectEvent = (event: any) => {
     onFormDataUpdate({
-      eventName: event.topic,
+      eventName: event.eventName,
       eventId: event._id,
-      eventDate: event.eventDate,
+      eventDate: event.startDate,
     });
   };
 
@@ -42,9 +43,9 @@ export default function EventSelectionStep({ formData, onFormDataUpdate }: Event
               : 'border-gray-200 hover:border-orange-300'
           }`}
         >
-          <h4 className="font-medium text-gray-900">{event.topic}</h4>
+          <h4 className="font-medium text-gray-900">{event.eventName}</h4>
           <p className="text-sm text-gray-500">
-            {event.eventDate ? new Date(event.eventDate).toLocaleDateString() : 'Date not available'}
+            {event.startDate ? new Date(event.startDate).toLocaleDateString() : 'Date not available'}
           </p>
         </div>
       ))}

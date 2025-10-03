@@ -93,7 +93,8 @@ export const baseApi = createApi({
     'Message',
     'Negotiation',
     'OrganizerBooking',
-    'SavedSpeaker'
+    'SavedSpeaker',
+    'EnhancedEvent'
   ],
   endpoints: () => ({}),
 });

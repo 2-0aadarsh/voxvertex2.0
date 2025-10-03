@@ -38,6 +38,7 @@ import messagingReducer from './slices/messagingSlice';
 import negotiationReducer from './slices/negotiationSlice';
 import organizerBookingsReducer from './slices/organizerBookingsSlice';
 import savedSpeakersReducer from './slices/savedSpeakersSlice';
+import enhancedEventReducer from './slices/enhancedEventSlice';
 
 // Persist configuration
 const persistConfig = {
@@ -62,7 +63,8 @@ const persistConfig = {
     'messaging',
     'negotiation',
     'organizerBookings',
-    'savedSpeakers'
+    'savedSpeakers',
+    'enhancedEvent'
   ],
 };
 
@@ -71,6 +73,23 @@ const authPersistConfig = {
   key: 'auth',
   storage,
   whitelist: ['user', 'isAuthenticated', 'token', 'role'],
+};
+
+// Custom middleware to suppress File object serialization warnings
+const ignoreFileObjectsMiddleware = (store: any) => (next: any) => (action: any) => {
+  // Suppress warnings for File objects in enhancedEvent formData
+  if (action.type?.includes('enhancedEvent') && action.payload?.image instanceof File) {
+    // Create a sanitized action without the File object for logging
+    const sanitizedAction = {
+      ...action,
+      payload: {
+        ...action.payload,
+        image: `File(${action.payload.image.name})`
+      }
+    };
+    return next(action);
+  }
+  return next(action);
 };
 
 // Root reducer
@@ -94,6 +113,7 @@ const rootReducer = combineReducers({
   negotiation: negotiationReducer,
   organizerBookings: organizerBookingsReducer,
   savedSpeakers: savedSpeakersReducer,
+  enhancedEvent: enhancedEventReducer,
 });
 
 // Persisted reducer
@@ -106,6 +126,7 @@ export const store = configureStore({
     getDefaultMiddleware({
       serializableCheck: {
         ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
+        ignoredPaths: ['enhancedEvent.formData.image'], // Ignore File objects in enhancedEvent
       },
       immutableCheck: {
         warnAfter: 128,
@@ -113,7 +134,7 @@ export const store = configureStore({
       serializableStateInvariantCheck: {
         warnAfter: 128,
       },
-    }).concat(baseApi.middleware).concat(disputeApi.middleware), // Add both APIs middleware
+    }).concat(baseApi.middleware).concat(disputeApi.middleware).concat(ignoreFileObjectsMiddleware), // Add both APIs middleware
   devTools: process.env.NODE_ENV !== 'production',
   preloadedState: undefined,
 });
@@ -147,6 +168,7 @@ export const resetStore = () => {
   store.dispatch({ type: 'negotiation/resetNegotiation' });
   store.dispatch({ type: 'organizerBookings/clearOrganizerBookings' });
   store.dispatch({ type: 'savedSpeakers/clearSavedSpeakers' });
+  store.dispatch({ type: 'enhancedEvent/resetForm' });
   
   // Reset API cache
   store.dispatch(baseApi.util.resetApiState());
@@ -171,7 +193,8 @@ export const invalidateUserData = () => {
       'Message',
       'Negotiation',
       'OrganizerBooking',
-      'SavedSpeaker'
+      'SavedSpeaker',
+      'EnhancedEvent'
     ])
   );
 };
@@ -211,6 +234,7 @@ export {
   negotiationReducer,
   organizerBookingsReducer,
   savedSpeakersReducer,
+  enhancedEventReducer,
   
   // API
   baseApi,

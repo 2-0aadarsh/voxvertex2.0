@@ -20,7 +20,7 @@ export const disputeApi = createApi({
     // Disputes endpoints
     getDisputes: builder.query<{ disputes: Dispute[]; pagination: any }, { status?: string; stage?: string; page?: number }>({
       query: ({ status, stage, page = 1 }) => {
-        let params = new URLSearchParams();
+        const params = new URLSearchParams();
         if (status) params.append('status', status);
         if (stage) params.append('stage', stage);
         params.append('page', page.toString());
@@ -53,8 +53,8 @@ export const disputeApi = createApi({
     
 
     // Events endpoints (added here too)
-    getEvents: builder.query<{ data: { upcoming: any[]; past: any[] } }, void>({
-      query: () => '/events/',
+    getEvents: builder.query<{ success: boolean; message: string; data: { events: any[]; pagination: any } }, void>({
+      query: () => '/enhanced-events/user/me',
       providesTags: ['Events'],
     }),
     getEventById: builder.query<any, string>({

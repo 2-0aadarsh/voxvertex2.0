@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { 
   Search, 
   Eye, 
@@ -8,129 +8,130 @@ import {
   Calendar, 
   ChevronDown,
   X,
-  AlertTriangle
+  AlertTriangle,
+  Edit
 } from 'lucide-react'
 import Link from 'next/link'
 import { useAuth } from '@/store/hooks'
 import { useGetCurrentUserQuery } from '@/store/slices/authSlice'
+import { 
+  useGetUserEventsQuery, 
+  useDeleteEventMutation
+} from '@/store/slices/enhancedEventSlice'
 import Sidebar from '@/components/Sidebar'
 import Navbar from '@/components/Navbar'
-
-interface Event {
-  id: string
-  title: string
-  date: string
-  status: 'Published' | 'Draft' | 'Postponed'
-  attendees: string
-  revenue: string
-}
+import type { EnhancedEvent } from './types/eventTypes'
 
 export default function EventManagement() {
-  const [events, setEvents] = useState<Event[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('All Statuses')
   const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [eventToDelete, setEventToDelete] = useState<Event | null>(null)
+  const [eventToDelete, setEventToDelete] = useState<EnhancedEvent | null>(null)
   const [deleteConfirmation, setDeleteConfirmation] = useState('')
+  const [currentPage] = useState(1)
   
   // Authentication hooks
   const { user, isAuthenticated } = useAuth()
   const { data: currentUserData } = useGetCurrentUserQuery()
+  
+  // API hooks
+  const { 
+    data: eventsData, 
+    isLoading: isLoadingEvents,
+    error: eventsError,
+    refetch: refetchEvents 
+  } = useGetUserEventsQuery({
+    page: currentPage,
+    limit: 10,
+    status: statusFilter === 'All Statuses' ? undefined : statusFilter.toLowerCase() as 'draft' | 'published' | 'cancelled'
+  })
+  
+  const [deleteEvent, { isLoading: isDeleting }] = useDeleteEventMutation()
 
   // Helper function to get profile image URL
-  const getProfileImageUrl = (profileImage: { data?: Buffer | string; contentType?: string; url?: string } | string | null) => {
-    if (!profileImage) {
+  const getProfileImageUrl = (url: string | null | undefined) => {
+    if (!url) {
       return null;
     }
     
-    // Check if it's already a URL string
-    if (typeof profileImage === 'string') {
-      return profileImage;
-    }
-    
-    // Check if it has data and contentType (binary data)
-    if (profileImage.data && profileImage.contentType) {
-      const dataUrl = `data:${profileImage.contentType};base64,${profileImage.data.toString('base64')}`;
-      return dataUrl;
-    }
-    
-    // Check if it has a url property
-    if (profileImage.url) {
-      return profileImage.url;
+    // If it's already a URL string, return it
+    if (typeof url === 'string') {
+      return url;
     }
     
     return null;
   };
 
-  // Sample event data
-  useEffect(() => {
-    const sampleEvents: Event[] = [
-      {
-        id: '1',
-        title: 'Innovate 2025',
-        date: 'Sep 4, 2025',
-        status: 'Published',
-        attendees: '250/300',
-        revenue: '$12,500'
-      },
-      {
-        id: '2',
-        title: 'Tech Summit 2025',
-        date: 'Sep 10, 2025',
-        status: 'Draft',
-        attendees: '0/500',
-        revenue: '$0'
-      },
-      {
-        id: '3',
-        title: 'AI Conference',
-        date: 'Sep 15, 2025',
-        status: 'Published',
-        attendees: '180/200',
-        revenue: '$9,000'
-      },
-      {
-        id: '4',
-        title: 'Digital Marketing Workshop',
-        date: 'Sep 20, 2025',
-        status: 'Postponed',
-        attendees: '50/100',
-        revenue: '$2,500'
-      }
-    ]
-    setEvents(sampleEvents)
-  }, [])
+  // Get events from API
+  const events = eventsData?.data?.events || []
+  
+  // Debug logging
+  console.log('🔍 Events Page Debug:', {
+    eventsData,
+    events,
+    eventsCount: events.length,
+    isLoading: isLoadingEvents,
+    error: eventsError
+  })
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Published':
+      case 'published':
         return 'bg-green-100 text-green-800'
-      case 'Draft':
+      case 'draft':
         return 'bg-yellow-100 text-yellow-800'
-      case 'Postponed':
+      case 'cancelled':
         return 'bg-red-100 text-red-800'
       default:
         return 'bg-gray-100 text-gray-800'
     }
   }
 
-  const filteredEvents = events.filter(event => {
-    const matchesSearch = event.title.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === 'All Statuses' || event.status === statusFilter
+  const getStatusDisplayName = (status: string) => {
+    switch (status) {
+      case 'published':
+        return 'Published'
+      case 'draft':
+        return 'Draft'
+      case 'cancelled':
+        return 'Cancelled'
+      default:
+        return status
+    }
+  }
+
+  const filteredEvents = events.filter((event: EnhancedEvent) => {
+    const matchesSearch = event.eventName.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesStatus = statusFilter === 'All Statuses' || event.status === statusFilter.toLowerCase()
     return matchesSearch && matchesStatus
   })
 
-  const handleDeleteClick = (event: Event) => {
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    })
+  }
+
+  const handleDeleteClick = (event: EnhancedEvent) => {
     setEventToDelete(event)
     setShowDeleteModal(true)
   }
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (deleteConfirmation === 'DELETE' && eventToDelete) {
-      setEvents(events.filter(e => e.id !== eventToDelete.id))
-      setShowDeleteModal(false)
-      setEventToDelete(null)
-      setDeleteConfirmation('')
+      try {
+        await deleteEvent(eventToDelete._id).unwrap()
+        setShowDeleteModal(false)
+        setEventToDelete(null)
+        setDeleteConfirmation('')
+        // Refetch events to update the list
+        refetchEvents()
+      } catch (error) {
+        console.error('Failed to delete event:', error)
+        // Handle error (show toast notification, etc.)
+      }
     }
   }
 
@@ -156,7 +157,7 @@ export default function EventManagement() {
       <Sidebar />
 
       {/* Main Content */}
-      <div className="ml-64 pt-16 bg-orange-50 min-h-screen">
+      <div className="ml-64  bg-orange-50 min-h-screen">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex justify-between items-center mb-8">
             <div>
@@ -216,27 +217,47 @@ export default function EventManagement() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredEvents.map((event) => (
-                    <tr key={event.id} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="py-4 px-4">
-                        <div className="font-medium text-gray-900">{event.title}</div>
+                  {isLoadingEvents ? (
+                    <tr>
+                      <td colSpan={6} className="py-8 text-center text-gray-500">
+                        Loading events...
                       </td>
-                      <td className="py-4 px-4 text-gray-600">{event.date}</td>
+                    </tr>
+                  ) : filteredEvents.map((event: EnhancedEvent) => (
+                    <tr key={event._id} className="border-b border-gray-100 hover:bg-gray-50">
+                      <td className="py-4 px-4">
+                        <div className="font-medium text-gray-900">{event.eventName}</div>
+                      </td>
+                      <td className="py-4 px-4 text-gray-600">{formatDate(event.startDate)}</td>
                       <td className="py-4 px-4">
                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(event.status)}`}>
-                          {event.status}
+                          {getStatusDisplayName(event.status)}
                         </span>
                       </td>
-                      <td className="py-4 px-4 text-gray-600">{event.attendees}</td>
-                      <td className="py-4 px-4 text-gray-600">{event.revenue}</td>
+                      <td className="py-4 px-4 text-gray-600">
+                        {event.totalTicketsSold || 0}/{event.totalCapacity || 0}
+                      </td>
+                      <td className="py-4 px-4 text-gray-600">
+                        ${event.totalRevenue || 0}
+                      </td>
                       <td className="py-4 px-4">
                         <div className="flex items-center space-x-1">
-                          <button className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50">
+                          <Link 
+                            href={`/events_view/${event._id}`}
+                            className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50"
+                          >
                             <Eye className="w-4 h-4" />
-                          </button>
+                          </Link>
+                          {/* <Link 
+                            href={`/events_page/edit/${event._id}`}
+                            className="p-2 text-gray-400 hover:text-green-600 rounded-lg hover:bg-green-50"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Link> */}
                           <button 
                             onClick={() => handleDeleteClick(event)}
-                            className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50"
+                            disabled={isDeleting}
+                            className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 disabled:opacity-50"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -295,7 +316,7 @@ export default function EventManagement() {
             {/* Modal Content */}
             <div className="mb-6">
               <p className="text-gray-600 mb-4">
-                Are you sure you want to delete &ldquo;{eventToDelete.title}&rdquo;? This action cannot be undone and will permanently remove the event and all associated data.
+                Are you sure you want to delete &ldquo;{eventToDelete.eventName}&rdquo;? This action cannot be undone and will permanently remove the event and all associated data.
               </p>
 
               {/* Warning Box */}

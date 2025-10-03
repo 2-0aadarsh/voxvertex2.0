@@ -18,7 +18,7 @@ const ProfileHeader = dynamic(
   }
 );
 
-const Sidebar = dynamic(() => import("../../components/Sidebar"), {
+const Sidebar = dynamic(() => import("@/components/Sidebar"), {
   loading: () => <div className="w-64 bg-gray-100"></div>,
   ssr: false,
 });
@@ -117,13 +117,14 @@ export default function NewUserLayout({
           <div className="h-32 bg-white border-b border-gray-200 animate-pulse"></div>
         }
       >
-        <Navbar 
+        {/* <Navbar 
           user={user || undefined}
           currentUserData={currentUserData}
           isAuthenticated={isAuthenticated}
           forceHomepageStyle={true}
           getProfileImageUrl={(url) => getProfileImageUrl(url)}
-        />
+        /> */}
+        <ProfileHeader />
       </Suspense>
 
       <div className="flex flex-col lg:flex-row min-h-screen">

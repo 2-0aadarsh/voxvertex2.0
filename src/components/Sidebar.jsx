@@ -91,12 +91,12 @@ const Sidebar = ({ userRole = "newuser" }) => {
         currentPath === "/speakerUser" ||
         currentPath === "/participant",
     },
-    {
-      icon: <MdOutlineDashboard />,
-      label: "Dashboard",
-      href: "/dashboard",
-      active: currentPath === "/dashboard",
-    },
+    // {          /////*********** /////////
+    //   icon: <MdOutlineDashboard />,
+    //   label: "Analytics",
+    //   href: "/analytics",
+    //   active: currentPath === "/analytics",
+    // },
     {
       icon: <LuMessageCircleMore />,
       label: "Messages",
@@ -112,7 +112,7 @@ const Sidebar = ({ userRole = "newuser" }) => {
     {
       icon: <CalendarDays />,
       label: "Events",
-      href: "/events",
+      href: "/events_page",
       active: currentPath === "/events" || currentPath.startsWith("/events"),
     },
     {

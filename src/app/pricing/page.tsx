@@ -1,7 +1,9 @@
 'use client';
 import React, { useState } from 'react';
-import { ChevronDown, Check, Search } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import Navbar from '@/components/Navbar';
+import { useAuth } from '@/store/hooks';
+import { useGetCurrentUserQuery } from '@/store/slices/authSlice';
 
 // const Header: React.FC = () => (
 //   <header className="bg-white border-b border-gray-200 px-6 py-3">
@@ -46,6 +48,35 @@ const VoxvertexPricingPage = () => {
   const [isYearly, setIsYearly] = useState<boolean>(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
+  // Authentication hooks
+  const { user, isAuthenticated } = useAuth();
+  const { data: currentUserData } = useGetCurrentUserQuery();
+
+  // Helper function to get profile image URL
+  const getProfileImageUrl = (profileImage: unknown) => {
+    if (!profileImage) return null;
+    
+    // Handle string URLs
+    if (typeof profileImage === 'string') {
+      if (profileImage.startsWith('http')) return profileImage;
+      return `https://res.cloudinary.com/demo/image/fetch/${profileImage}`;
+    }
+    
+    // Handle object with data and contentType (Buffer)
+    if (typeof profileImage === 'object' && (profileImage as any).data && (profileImage as any).contentType) {
+      const dataUrl = `data:${(profileImage as any).contentType};base64,${((profileImage as any).data as { toString: (encoding: string) => string }).toString('base64')}`;
+      return dataUrl;
+    }
+    
+    // Handle object with url property
+    if (typeof profileImage === 'object' && (profileImage as any).url) {
+      if ((profileImage as any).url.startsWith('http')) return (profileImage as any).url;
+      return `https://res.cloudinary.com/demo/image/fetch/${(profileImage as any).url}`;
+    }
+    
+    return null;
+  };
+
   const toggleFaq = (index: number) => {
     setOpenFaq(openFaq === index ? null : index);
   };
@@ -59,7 +90,13 @@ const VoxvertexPricingPage = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <Navbar />
+      <Navbar 
+        user={user || undefined}
+        currentUserData={currentUserData}
+        isAuthenticated={isAuthenticated}
+        forceHomepageStyle={true}
+        getProfileImageUrl={getProfileImageUrl}
+      />
 
       {/* Main Content */}
       <main className="max-w-10xl mx-auto px-4 sm:px-6 lg:px-8 py-16 bg-[#FF6B35]/10">
@@ -199,7 +236,7 @@ const VoxvertexPricingPage = () => {
                 {openFaq === index && (
                   <div className="pb-4 text-gray-600 border-b border-gray-200">
                     {index === 0 && (
-                      <p>After your trial, you'll be prompted to choose a billing plan (monthly or yearly) to continue using the Pro features. If you choose not to subscribe, your account will be limited to managing one active event.</p>
+                      <p>After your trial, you&apos;ll be prompted to choose a billing plan (monthly or yearly) to continue using the Pro features. If you choose not to subscribe, your account will be limited to managing one active event.</p>
                     )}
                     {index === 1 && (
                       <p>Yes, absolutely. You can cancel your Pro plan anytime from your billing dashboard. You will retain Pro features until the end of your current billing cycle.</p>
