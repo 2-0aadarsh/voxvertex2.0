@@ -3,6 +3,10 @@
 import { 
   Calendar, CreditCard, CheckCircle, AlertCircle, Settings, Crown, Zap, BarChart3, Shield, Users, Globe, MessageSquare, Award, TrendingUp, X, ChevronDown, Clock } from 'lucide-react';
 import { useState } from 'react';
+import { useGetPlansQuery, SubscriptionPlan, 
+        useGetPaymentMethodsQuery, PaymentMethod
+ } from "../../../store/api/paymentApi";
+ import { useAuth } from "@/store/hooks";
 
 interface Plan {
   id: string;
@@ -13,54 +17,88 @@ interface Plan {
   savings?: string;
   savePercent?: string;
   badge?: string;
-  selected: boolean;
+  selected?: boolean;
 }
 
 interface PaymentOption {
   id: string;
   number: string;
   type: string;
-  label: string;
+  label?: string;
 }
 
 export default function Subscription() {
-  const plans: Plan[] = [
-    {
-      id: '1month',
-      title: 'Monthly',
-      subtitle: 'Billed monthly',
-      price: '$9.99/mo',
-      selected: false
-    },
-    {
-      id: '6months',
-      title: '6 Months',
-      subtitle: 'Billed every 6 months',
-      price: '$8.49/mo',
-      total: '$50.95 total',
-      savings: 'Save $8.99',
-      savePercent: 'Save 15% compared to monthly',
-      badge: 'Most Popular',
-      selected: false
-    },
-    {
-      id: '12months',
-      title: 'Yearly',
-      subtitle: 'Billed every 12 months',
-      price: '$7.49/mo',
-      total: '$89.91 total',
-      savings: 'Save $29.97',
-      savePercent: 'Save 25% compared to monthly',
-      selected: false
-    }
-  ];
+   const { user } = useAuth(); // get the logged-in user
+  const userId = user?._id;
+ 
+
+  // const plans: Plan[] = [
+  //   {
+  //     id: '1month',
+  //     title: 'Monthly',
+  //     subtitle: 'Billed monthly',
+  //     price: '$9.99/mo',
+  //     selected: false
+  //   },
+  //   {
+  //     id: '6months',
+  //     title: '6 Months',
+  //     subtitle: 'Billed every 6 months',
+  //     price: '$8.49/mo',
+  //     total: '$50.95 total',
+  //     savings: 'Save $8.99',
+  //     savePercent: 'Save 15% compared to monthly',
+  //     badge: 'Most Popular',
+  //     selected: false
+  //   },
+  //   {
+  //     id: '12months',
+  //     title: 'Yearly',
+  //     subtitle: 'Billed every 12 months',
+  //     price: '$7.49/mo',
+  //     total: '$89.91 total',
+  //     savings: 'Save $29.97',
+  //     savePercent: 'Save 25% compared to monthly',
+  //     selected: false
+  //   }
+  // ];
 
   const [showModal, setShowModal] = useState<boolean>(false);
   const [selectedPlan, setSelectedPlan] = useState<string>('1month');
   const [showPaymentOptions, setShowPaymentOptions] = useState<boolean>(false);
-  const [selectedPayment, setSelectedPayment] = useState<string>('4242');
+  const [selectedPayment, setSelectedPayment] = useState<string>();
   const [autoRenewal, setAutoRenewal] = useState<boolean>(true);
   const [showTrialStatus, setShowTrialStatus] = useState<boolean>(false);
+
+ const { data: plansData, isLoading: plansLoading, isError: plansError } = useGetPlansQuery();
+const { data: paymentMethods, isLoading: paymentsLoading, isError: paymentsError } = useGetPaymentMethodsQuery(userId!, {
+  skip: !userId,
+});
+
+   
+
+ if (plansLoading || paymentsLoading) return <div>Loading...</div>;
+if (plansError || paymentsError) return <div>Error loading data</div>;
+
+  console.log("userId:", userId); // must print the actual id
+console.log("paymentMethods:", paymentMethods); // will now show array or undefined
+
+
+  // Map API response to UI-friendly structure
+const plans: Plan[] =
+  plansData?.map((plan: SubscriptionPlan) => ({
+    id: plan._id,
+    title: plan.name,
+    subtitle: plan.billingPeriod,
+    price: `$${plan.pricePerMonth.toFixed(2)}/mo`,
+    total:
+      plan.totalAmount !== plan.pricePerMonth
+        ? `$${plan.totalAmount.toFixed(2)} total`
+        : undefined,
+    savePercent: plan.discountText || undefined,
+    badge: plan.planType === "6months" ? "Most Popular" : undefined, // Example rule
+  })) || [];
+
 
   const handleStartTrial = () => {
     // Add the trial start logic here
@@ -89,21 +127,29 @@ export default function Subscription() {
     }
   };
   
-  const paymentOptions: PaymentOption[] = [
-    {
-      id: '4242',
-      number: '**** **** **** 4242',
-      type: 'VISA',
-      label: 'Default'
-    },
-    {
-      id: '5555',
-      number: '**** **** **** 5555',
-      type: 'Mastercard',
-      label: ''
-    }
-  ];
-
+  // const paymentOptions: PaymentOption[] = [
+  //   {
+  //     id: '4242',
+  //     number: '**** **** **** 4242',
+  //     type: 'VISA',
+  //     label: 'Default'
+  //   },
+  //   {
+  //     id: '5555',
+  //     number: '**** **** **** 5555',
+  //     type: 'Mastercard',
+  //     label: ''
+  //   }
+  // ];
+  
+  const paymentOptions: PaymentOption[] =
+    paymentMethods?.map((method) => ({
+      id: method._id,
+      number: method.details?.last4 ? `**** **** **** ${method.details.last4}` : "**** **** **** ****",
+      type: method.type,
+      label: method.isDefault ? "Default" : "",
+    })) || [];
+    console.log("log from subscription, payment method", paymentMethods)
   return (
     <div className="space-y-6">
       {showTrialStatus ? (

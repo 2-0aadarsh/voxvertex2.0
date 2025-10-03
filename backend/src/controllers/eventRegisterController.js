@@ -27,7 +27,7 @@ export const registerEvent = async (req, res) => {
       return res.status(400).json({ error: "Missing registrant details" });
     }
 
-    // Validate registrant in EnhancedUser collection
+    // ✅ Validate registrant in EnhancedUser collection
     const existingRegistrant = await EnhancedUser.findOne({
       email: registrant.email.toLowerCase().trim()
     });
@@ -40,7 +40,7 @@ export const registerEvent = async (req, res) => {
     }
     registrant.userId = existingRegistrant._id;
 
-    // Validate extras if provided
+    // ✅ Validate extras if provided
     const invalidExtras = [];
     for (const extra of extras) {
       if (!extra?.email) continue;
@@ -61,7 +61,7 @@ export const registerEvent = async (req, res) => {
       });
     }
 
-    // 1. Find event
+    // ✅ 1. Find event
     const event = await Event.findById(eventId);
     if (!event) return res.status(404).json({ error: "Event not found" });
 
@@ -69,24 +69,24 @@ export const registerEvent = async (req, res) => {
       return res.status(400).json({ error: "No tickets available for this event" });
     }
 
-    // 2. Find selected ticket
+    // ✅ 2. Find selected ticket
     const selectedTicket = event.tickets.find(ticket => ticket._id.toString() === ticketId);
     if (!selectedTicket) return res.status(404).json({ error: "Selected ticket not found" });
 
-    // 3. Calculate total participants
+    // ✅ 3. Calculate total participants
     const participantCount = 1 + (extras?.length || 0);
     if (selectedTicket.quantity < participantCount) {
       return res.status(400).json({ error: "Not enough tickets available" });
     }
 
-    // 4. Calculate total amount
+    // ✅ 4. Calculate total amount
     const totalAmount = (selectedTicket.price || 0) * participantCount;
 
-    // Reserve tickets
+    // ✅ Reserve tickets
     selectedTicket.quantity -= participantCount;
     await event.save();
 
-    // 5. Create registration
+    // ✅ 5. Create registration (status = initiated if payment required)
     const registration = await Registration.create({
       event: event._id,
       ticket: {
@@ -102,6 +102,7 @@ export const registerEvent = async (req, res) => {
       paymentStatus: totalAmount > 0 ? "initiated" : "paid",
     });
 
+    // ✅ 6. If free registration (amount 0) → confirm immediately
     if (totalAmount === 0) {
       await sendConfirmationEmail(registration, event);
       registration.confirmationSent = true;
@@ -114,15 +115,28 @@ export const registerEvent = async (req, res) => {
       });
     }
 
+    // ✅ 7. Otherwise → Create Razorpay payment order
+    const paymentOrder = await createPaymentOrder({
+      amount: totalAmount,
+      registrationId: registration._id,
+      userId: registrant.userId
+    });
+
+    // Save orderId into registration
+    registration.paymentOrderId = paymentOrder.id;
+    await registration.save();
+
+    // ✅ 8. Return response with payment details
     res.json({
       message: "Registration created successfully. Proceed to payment.",
       registrationId: registration._id,
       totalAmount,
-      currency: "INR"
+      currency: "INR",
+      paymentOrder
     });
 
   } catch (err) {
-    console.error(err);
+    console.error("Register Event Error:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -132,55 +146,116 @@ export const registerEvent = async (req, res) => {
  * STEP 2: Create Razorpay Order for Payment
  * This endpoint is called after user confirms details and clicks "Pay"
  */
-export const createPaymentForEventRegistration= async (req, res) => {
+export const createPaymentForEventRegistration = async (req, res) => {
   try {
-     console.log("📌 createPaymentForEventRegistration called with ID:", req.params.id);
-    const registration = await Registration.findById(req.params.id).populate("event");
+    const { paymentMethodId } = req.body; // frontend must send chosen method
+    console.log("📌 createPaymentForEventRegistration called with ID:", req.params.id);
 
-      if (!registration) {
-      console.error("❌ Registration not found for ID:", req.params.id);
+    const registration = await Registration.findById(req.params.id).populate("event");
+    if (!registration) {
       return res.status(404).json({ error: "Registration not found" });
     }
 
     if (registration.paymentStatus === "paid") {
-      console.warn("⚠️ Payment already completed for this registration.");
       return res.status(400).json({ error: "Payment already completed" });
     }
-    console.log("✅ Registration found:", registration._id, "Total Amount:", registration.totalAmount);
-    
-    // Create Razorpay order for this registration
-    const order = await createPaymentOrder(
-      registration.totalAmount * 100, // convert to paise
-      "INR",
-     `registration_${registration._id}`
-    );
-    console.log("📦 Order created:", order);
 
-    if (!order || !order.orderId) {
-      console.error("❌ Failed to create payment order");
+    // Load registrant user
+    const user = await EnhancedUser.findById(registration.registrant.userId);
+    if (!user) {
+      return res.status(404).json({ error: "Registrant user not found" });
+    }
+    if (!user.paymentMethods || user.paymentMethods.length === 0) {
+    return res.status(400).json({ 
+        message: "No payment method found. Please add a payment method first." 
+    });
+}
+    // Find chosen payment method
+    const selectedMethod = user.getPaymentMethodById(paymentMethodId);
+    if (!selectedMethod) {
+      return res.status(400).json({ error: "Invalid or missing payment method" });
+    }
+
+    console.log("✅ Payment method selected:", selectedMethod.type);
+
+    // ---- CASE 1: Wallet Payment ----
+    if (selectedMethod.type === "wallet") {
+      if (user.wallet.availableBalance < registration.totalAmount) {
+        return res.status(400).json({ error: "Insufficient wallet balance" });
+      }
+
+      // Deduct wallet balance
+      user.wallet.availableBalance -= registration.totalAmount;
+      await user.save();
+
+      // Mark registration as paid
+      registration.paymentStatus = "paid";
+      registration.paymentProvider = "wallet";
+      registration.paymentProviderData = {
+        paymentMethodId,
+        type: "wallet",
+        debitedAmount: registration.totalAmount,
+      };
+      await registration.save();
+
+      // Send confirmation email
+      await sendConfirmationEmail(registration, registration.event);
+      registration.confirmationSent = true;
+      await registration.save();
+
+      return res.json({
+        message: "Payment successful via wallet",
+        registrationId: registration._id,
+        totalAmount: registration.totalAmount,
+        currency: registration.currency,
+      });
+    }
+
+    // ---- CASE 2: Razorpay ----
+ // ---- CASE 2: Razorpay ----
+if (selectedMethod.type === "upi" || selectedMethod.type === "card" || selectedMethod.type === "netbanking") {
+  try {
+    const order = await createPaymentOrder({
+      amount: registration.totalAmount,
+      registrationId: registration._id,
+      userId: registration.registrant.userId
+    });
+
+    console.log("Razorpay order created:", order);
+
+    if (!order || !order.id) {
       return res.status(500).json({ error: "Failed to create payment order" });
     }
 
-    registration.paymentProvider = order.provider;
-    registration.paymentProviderData = { orderId: order.orderId };
-    registration.paymentStatus = "pending"; // mark as pending until verified
+    registration.paymentProvider = "razorpay";
+    registration.paymentProviderData = { orderId: order.id, paymentMethodId };
+    registration.paymentStatus = "pending"; // until verified
     await registration.save();
 
-    console.log("✅ Registration updated with payment order:", registration.paymentProviderData);
-
-    res.json({
+    return res.json({
       message: "Payment order created successfully",
       registrationId: registration._id,
-      orderId: order.orderId,
+      orderId: order.id,
       amount: order.amount,
       currency: order.currency,
-      keyId: process.env.RAZORPAY_KEY_ID || "mock_key" // fallback for local testing
+      keyId: process.env.RAZORPAY_KEY_ID || "mock_key"
     });
   } catch (err) {
-    console.error(err);
+    console.error("❌ Razorpay order creation failed:", err); // log full error
+    return res.status(500).json({ error: "Failed to create payment order", details: err.message });
+  }
+}
+
+
+    // ---- CASE 3: Unsupported method ----
+    return res.status(400).json({ error: "Payment method not supported yet" });
+
+  } catch (err) {
+    console.error("❌ Payment creation error:", err);
     res.status(500).json({ error: err.message });
   }
 };
+
 
 /**
  * STEP 3: Verify Payment after Razorpay success

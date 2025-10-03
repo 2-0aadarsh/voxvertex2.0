@@ -1,14 +1,9 @@
-
 'use client';
 
-import { useState } from 'react';
-import { useAuth } from "@/store/hooks";
-import {    useGetPaymentMethodsQuery, PaymentMethod,
-  useGetBalanceQuery
- } from "../../../store/api/paymentApi";
-import { Plus, TrendingUp, Clock, CheckCircle,
-   Info, MoveUpRight, Wallet, X, CreditCard, 
-   Building2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import axios from "axios";
+import { useGetBalanceQuery, useGetTransactionsQuery, useCreateRazorpayOrderMutation } from "../../../store/api/paymentApi";
+import { Plus, TrendingUp, Clock, CheckCircle, Info, MoveUpRight, Wallet, X, CreditCard, Building2 } from 'lucide-react';
 
 // Mock PaymentData type
 interface PaymentData {
@@ -20,16 +15,19 @@ interface PaymentData {
   dailyWithdrawalLimit: number;
   dailyTransactionLimit: number;
 }
+interface RazorpayPaymentResponse {
+  razorpay_payment_id: string;
+  razorpay_order_id: string;
+  razorpay_signature: string;
+}
 
 interface OverviewProps {
   data: PaymentData;
 }
-interface PaymentOption {
-  id: string;
-  number: string;
-  type: string;
-  name: string;
-  label: string;
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
 }
 
 export default function Overview({ data = sampleData }: OverviewProps) {
@@ -38,21 +36,7 @@ export default function Overview({ data = sampleData }: OverviewProps) {
   const [amount, setAmount] = useState('');
   const [isAmountFocused, setIsAmountFocused] = useState(false);
   const [isPaymentMethodSelected, setIsPaymentMethodSelected] = useState(false);
-  const [selectedPayment, setSelectedPayment] = useState<string | null>(null);
-
-    const { user } = useAuth();
-  const userId = user?._id;
-
- const { data: paymentMethods, isLoading: isLoadingPM, isError: isErrorPM } =
-  useGetPaymentMethodsQuery(userId!, {
-    skip: !userId,
-  });
-
-const { data: balance, isLoading: isLoadingBalance, isError: isErrorBalance } =
-  useGetBalanceQuery(userId, {
-    skip: !userId, // skip if no user
-  });
-
+   const [createRazorpayOrder] = useCreateRazorpayOrderMutation();
 
   const openAddFundsModal = () => {
     setIsAddFundsModalOpen(true);
@@ -60,7 +44,48 @@ const { data: balance, isLoading: isLoadingBalance, isError: isErrorBalance } =
       document.body.style.overflow = 'hidden';
     }
   };
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    document.body.appendChild(script);
+  }, []);
 
+  const openAddFundsModalTest = async () => {
+    try {
+      // 1️⃣ Call backend to create order
+      const order = await createRazorpayOrder({ amount: 400 }).unwrap();
+
+      // 2️⃣ Razorpay options
+      const options = {
+        key: "rzp_test_ROdEsIazD0xmRD", // Only public key here
+        amount: order.amount,
+        currency: order.currency,
+        name: "Voxvertex",
+        description: "Payment Description",
+        order_id: order.id,
+        handler: function (response: RazorpayPaymentResponse) {
+          // Payment success callback
+          console.log("Payment Success:", response);
+        },
+        // prefill: {
+        //   name: "John Doe",
+        //   email: "john@example.com",
+        //   contact: "1234567890",
+        // },
+        theme: {
+          color: "#3399cc",
+        },
+      };
+
+      // 3️⃣ Open Razorpay Checkout
+      const rzp1 = new window.Razorpay(options);
+      rzp1.open();
+    } catch (error) {
+      console.error("Payment failed:", error);
+    }
+  };
+ 
   const closeAddFundsModal = () => {
     setIsAddFundsModalOpen(false);
     if (typeof window !== 'undefined') {
@@ -95,15 +120,6 @@ const { data: balance, isLoading: isLoadingBalance, isError: isErrorBalance } =
     closeWithdrawModal();
   };
 
-    const paymentOptions: PaymentOption[] =
-    paymentMethods?.map((method) => ({
-      id: method._id,
-      number: method.details?.last4 ? `•••• ${method.details.last4}` : '•••• •••• •••• ••••',
-      type: method.type,
-      name: method.details?.name || 'Unknown',
-      label: method.isDefault ? 'Default' : '',
-    })) || [];
-
   // Mock data for withdraw modal
   const clearedEventRevenue = 2500.00;
   const podiumPlatformFee = 250.00;
@@ -119,42 +135,25 @@ const { data: balance, isLoading: isLoadingBalance, isError: isErrorBalance } =
             <Wallet className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
              
             </div>
-             <div className="flex justify-between items-start">
-        <div>
-          <h2 className="text-base sm:text-lg font-medium">Total Balance</h2>
-          <div className="flex items-center gap-2 mt-1">
-            <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
-            <span className="text-xs sm:text-sm bg-white/20 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full">
-              Verified Account
-            </span>
-          </div>
-        </div>
-        <Info className="w-4 h-4 sm:w-5 sm:h-5 text-white/60" />
-      </div>
+            <div>
+              <h2 className="text-base sm:text-lg font-medium">Total Balance</h2>
+              <div className="flex items-center gap-2 mt-1">
+                <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="text-xs sm:text-sm bg-white/20 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full">Verified Account</span>
+              </div>
+            </div>
           </div>
           <Info className="w-4 h-4 sm:w-5 sm:h-5 text-white/60" />
         </div>
         
-       <div className="mb-4 sm:mb-6 md:mb-8">
-        {isLoadingBalance ? (
-          <div className="text-lg text-white/70">Loading...</div>
-        ) : isErrorBalance ? (
-          <div className="text-red-400">Failed to load balance</div>
-        ) : (
-          <>
-            <div className="text-2xl sm:text-3xl md:text-4xl font-bold mb-1 sm:mb-2">
-              ₹{(balance?.totalBalance ?? (balance?.availableBalance ?? 0) + (balance?.pendingBalance ?? 0)).toLocaleString()}
-            </div>
-            <p className="text-sm sm:text-base text-white/80">
-              Available across all payment methods
-            </p>
-          </>
-        )}
-      </div>
+        <div className="mb-4 sm:mb-6 md:mb-8">
+          <div className="text-2xl sm:text-3xl md:text-4xl font-bold mb-1 sm:mb-2">${data.totalBalance.toLocaleString()}</div>
+          <p className="text-sm sm:text-base text-white/80">Available across all payment methods</p>
+        </div>
 
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
           <button 
-            onClick={openAddFundsModal}
+            onClick={openAddFundsModalTest}
             className="flex-1 bg-white/30 hover:bg-white/20 transition-colors rounded-lg sm:rounded-xl py-2.5 sm:py-3 flex items-center justify-center gap-2 font-medium text-sm sm:text-base"
           >
             <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -330,33 +329,23 @@ const { data: balance, isLoading: isLoadingBalance, isError: isErrorBalance } =
                 </div>
               </div>
 
-                <div className="space-y-2 relative">
-      {paymentOptions.map((option) => {
-        const isSelected = selectedPayment === option.id;
-
-        return (
-          <div
-            key={option.id}
-            onClick={() => setSelectedPayment(option.id)}
-            className={`w-full px-4 py-2 border-1 rounded-lg sm:rounded-xl bg-gray-50 flex items-center gap-3 cursor-pointer transition-colors hover:bg-gray-100 ${
-              isSelected ? 'border-[#FF6B35]' : 'border-gray-200'
-            }`}
-          >
-            <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
-            <div>
-              <div className="text-sm sm:text-base font-medium text-gray-900">
-                {option.type === 'card' ? `Card ${option.number}` : `Bank ${option.number}`} {option.label && `(${option.label})`}
+              <div className="relative">
+                <div 
+                  onClick={() => setIsPaymentMethodSelected(!isPaymentMethodSelected)}
+                  className={`w-full px-4 py-2 border-1 rounded-lg sm:rounded-xl bg-gray-50 flex items-center gap-3 cursor-pointer transition-colors hover:bg-gray-100 ${
+                    isPaymentMethodSelected ? 'border-[#FF6B35]' : 'border-gray-200'
+                  }`}
+                >
+                  <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
+                  <div>
+                    <div className="text-sm sm:text-base font-medium text-gray-900">Visa •••• 4242</div>
+                    <div className="text-xs sm:text-sm text-gray-600">John Doe</div>
+                  </div>
+                </div>
+                <label className="absolute -top-2.5 sm:-top-3 left-4 bg-white px-2 text-[#FF6B35] text-xs sm:text-sm font-medium">
+                  Payment Method
+                </label>
               </div>
-              <div className="text-xs sm:text-sm text-gray-600">{option.name}</div>
-            </div>
-          </div>
-        );
-      })}
-
-      <label className="absolute -top-2.5 sm:-top-3 left-4 bg-white px-2 text-[#FF6B35] text-xs sm:text-sm font-medium">
-        Payment Method
-      </label>
-    </div>
 
               <p className="text-xs sm:text-sm text-gray-600">
                 Funds will be charged to your default payment method.
@@ -494,3 +483,4 @@ const sampleData: PaymentData = {
   dailyWithdrawalLimit: 10,
   dailyTransactionLimit: 50
 };
+

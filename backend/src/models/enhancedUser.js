@@ -1,6 +1,16 @@
 import mongoose from "mongoose";
 
 // Enhanced User Schema with role-based functionality
+
+const paymentMethodSchema = new mongoose.Schema({
+  type: { type: String, enum: ["card", "paypal", "upi", "netbanking"], required: true },
+  details: { type: Object, required: true }, // store masked or tokenized data (never raw card PAN in production)
+  isDefault: { type: Boolean, default: false },
+  addedAt: { type: Date, default: Date.now },
+  verified: { type: Boolean, default: false } // For bank account verification flows
+}, { _id: true });
+
+
 const enhancedUserSchema = new mongoose.Schema({
   // Basic Information (unchangeable after registration)
   firstName: {
@@ -114,6 +124,25 @@ const enhancedUserSchema = new mongoose.Schema({
       portfolio: String
     }
   },
+  // Payment Information
+  paymentMethods: [paymentMethodSchema],
+
+wallet: {
+  availableBalance: { type: Number, default: 0 },
+  pendingBalance: { type: Number, default: 0 }
+},
+transactions: [{
+  type: mongoose.Schema.Types.ObjectId,
+  ref: 'Transaction'
+}],
+subscription: {
+  planId: { type: mongoose.Schema.Types.ObjectId, ref: 'Subscription' },
+  startDate: Date,
+  endDate: Date,
+  isActive: { type: Boolean, default: false },
+  paymentMethod: { type: String, enum: ['card', 'paypal', 'upi', 'wallet'] },
+  autoRenew: { type: Boolean, default: false }
+},
   
   // Account Status
   isEmailVerified: {
@@ -215,6 +244,90 @@ enhancedUserSchema.methods.addCommentedPost = function(postId) {
   }
   return this;
 };
+
+// Add funds
+enhancedUserSchema.methods.addFunds = async function(amount, paymentMethod) {
+  const Transaction = mongoose.model('Transaction');
+  const transaction = await Transaction.create({
+    user: this._id,
+    amount,
+    type: 'add',
+    status: 'completed', // you can simulate pending if needed
+    paymentMethod
+  });
+
+  this.pendingBalance += amount;
+  this.transactions.push(transaction._id);
+  await this.save();
+  return transaction;
+};
+// Helper: add payment method (instance method)
+enhancedUserSchema.methods.addPaymentMethod = async function (pm) {
+  // pm: { type, details, isDefault }
+  if (pm.isDefault) {
+    this.paymentMethods.forEach(m => m.isDefault = false);
+  }
+  this.paymentMethods.push(pm);
+  await this.save();
+  return this.paymentMethods[this.paymentMethods.length - 1];
+};
+
+// Helper: get a payment method by id
+enhancedUserSchema.methods.getPaymentMethodById = function (paymentMethodId) {
+  return this.paymentMethods.id(paymentMethodId);
+};
+
+// Add funds helper (creates a transaction in provider and updates balances)
+enhancedUserSchema.methods.creditPending = async function (amount) {
+  // move amount to pendingBalance
+  this.wallet.pendingBalance += amount;
+  await this.save();
+  return this.wallet;
+};
+
+// Move pending -> available (clear funds)
+enhancedUserSchema.methods.clearPendingToAvailable = async function (amount) {
+  if (this.wallet.pendingBalance < amount) throw new Error('Not enough pending balance');
+  this.wallet.pendingBalance -= amount;
+  this.wallet.availableBalance += amount;
+  await this.save();
+  return this.wallet;
+};
+
+// Subscribe to plan
+// enhancedUserSchema.methods.subscribeToPlan = async function(planId, paymentMethod) {
+//   const SubscriptionPlan = mongoose.model('SubscriptionPlan');
+//   const Transaction = mongoose.model('Transaction');
+
+//   const plan = await SubscriptionPlan.findById(planId);
+//   if (!plan) throw new Error('Plan not found');
+
+//   const startDate = new Date();
+//   const endDate = new Date(startDate.getTime() + plan.trialDays * 24*60*60*1000);
+
+//   this.subscription = {
+//     plan: planId,
+//     startDate,
+//     endDate,
+//     isActive: true,
+//     paymentMethod,
+//     autoRenew: true
+//   };
+
+//   // Create transaction (0 for trial)
+//   const transaction = await Transaction.create({
+//     user: this._id,
+//     amount: 0,
+//     type: 'subscription',
+//     status: 'completed',
+//     paymentMethod
+//   });
+
+//   this.transactions.push(transaction._id);
+//   await this.save();
+//   return { subscription: this.subscription, transaction };
+// };
+
 
 const EnhancedUser = mongoose.models.EnhancedUser || mongoose.model("EnhancedUser", enhancedUserSchema);
 export default EnhancedUser;

@@ -12,6 +12,7 @@ export const authenticateJWT = async (req, res, next) => {
     console.log('🔐 Request URL:', req.url);
     console.log('🔐 Request method:', req.method);
     console.log('🔐 Cookies:', req.cookies);
+    // console.log('🔐 Authorization header:', req.header('Authorization'));
     
     // Get token from cookies or Authorization header
     const accessToken = req.cookies.accessToken || 
@@ -62,6 +63,12 @@ export const authenticateJWT = async (req, res, next) => {
             code: 'USER_NOT_FOUND'
           });
         }
+
+        req.user = user;
+        req.tokenData = decoded;
+        req.accessToken = accessToken;
+        console.log('🔐 AUTHENTICATION SUCCESS - proceeding to controller');
+        return next();
       } catch (accessError) {
         // Access token is invalid/expired, try refresh token
         console.log('Access token invalid, trying refresh token:', accessError.message);
@@ -105,6 +112,17 @@ export const authenticateJWT = async (req, res, next) => {
             code: 'USER_NOT_FOUND'
           });
         }
+
+        // Generate new token pair
+        const tokens = generateTokenPair(user);
+        
+        // Set new cookies including user role
+        setAllAuthCookies(res, tokens, user);
+        
+        req.user = user;
+        req.tokenData = { ...decoded, refreshed: true };
+        req.accessToken = tokens.accessToken; 
+        return next();
       } catch (refreshError) {
         console.log('🔐 Refresh token error:', refreshError.message);
         return res.status(401).json({
