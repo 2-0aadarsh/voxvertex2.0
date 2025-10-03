@@ -36,10 +36,27 @@ export const authenticateJWT = async (req, res, next) => {
     if (accessToken) {
       try {
         const decoded = verifyAccessToken(accessToken);
+        console.log('🔐 Decoded token payload:', decoded);
         
         // Get fresh user data
-        const { user } = await UserService.getUserById(decoded.id);
-        if (!user) {
+        try {
+          const { user } = await UserService.getUserById(decoded.id);
+          if (!user) {
+            console.log('🔐 User not found for ID:', decoded.id);
+            return res.status(401).json({
+              success: false,
+              message: 'User not found',
+              code: 'USER_NOT_FOUND'
+            });
+          }
+
+          req.user = user;
+          req.tokenData = decoded;
+          console.log('🔐 AUTHENTICATION SUCCESS - proceeding to controller');
+          return next();
+        } catch (userError) {
+          console.log('🔐 Error getting user by ID:', userError.message);
+          console.log('🔐 Token ID:', decoded.id);
           return res.status(401).json({
             success: false,
             message: 'User not found',
@@ -54,7 +71,7 @@ export const authenticateJWT = async (req, res, next) => {
         return next();
       } catch (accessError) {
         // Access token is invalid/expired, try refresh token
-        console.log('Access token invalid, trying refresh token');
+        console.log('Access token invalid, trying refresh token:', accessError.message);
       }
     }
 
@@ -62,10 +79,33 @@ export const authenticateJWT = async (req, res, next) => {
     if (refreshToken) {
       try {
         const decoded = verifyRefreshToken(refreshToken);
+        console.log('🔐 Decoded refresh token payload:', decoded);
         
         // Get fresh user data
-        const { user } = await UserService.getUserById(decoded.id);
-        if (!user) {
+        try {
+          const { user } = await UserService.getUserById(decoded.id);
+          if (!user) {
+            console.log('🔐 User not found for refresh token ID:', decoded.id);
+            return res.status(401).json({
+              success: false,
+              message: 'User not found',
+              code: 'USER_NOT_FOUND'
+            });
+          }
+
+          // Generate new token pair
+          const tokens = generateTokenPair(user);
+          
+          // Set new cookies including user role
+          setAllAuthCookies(res, tokens, user);
+          
+          req.user = user;
+          req.tokenData = { ...decoded, refreshed: true };
+          console.log('🔐 REFRESH TOKEN SUCCESS - proceeding to controller');
+          return next();
+        } catch (userError) {
+          console.log('🔐 Error getting user by refresh token ID:', userError.message);
+          console.log('🔐 Refresh Token ID:', decoded.id);
           return res.status(401).json({
             success: false,
             message: 'User not found',
@@ -84,6 +124,7 @@ export const authenticateJWT = async (req, res, next) => {
         req.accessToken = tokens.accessToken; 
         return next();
       } catch (refreshError) {
+        console.log('🔐 Refresh token error:', refreshError.message);
         return res.status(401).json({
           success: false,
           message: 'Session expired. Please login again.',

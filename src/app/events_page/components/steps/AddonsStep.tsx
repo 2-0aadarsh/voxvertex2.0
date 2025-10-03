@@ -21,9 +21,9 @@ function AddonsStep({ formData, onFormDataUpdate }: AddonsStepProps) {
     })
   }
 
-  const totalCost = (formData.addons.featureOnHome ? 50 : 0) + 
-                   (formData.addons.includeInNewsletter ? 25 : 0) + 
-                   (formData.addons.socialMediaPromotion ? 30 : 0)
+  const totalCost = (formData.addons.featureOnHome ? 0 : 0) + 
+                   (formData.addons.includeInNewsletter ? 0 : 0) + 
+                   (formData.addons.socialMediaPromotion ? 0 : 0)
 
   return (
     <div className="space-y-6 p-6">

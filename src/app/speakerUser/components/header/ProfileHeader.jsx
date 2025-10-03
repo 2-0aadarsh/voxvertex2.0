@@ -18,9 +18,7 @@ const ProfileHeader = () => {
     <header className="relative w-full h-20 bg-[#FFFFFF] flex items-center justify-between px-6 text-[#000000] shadow-sm">
       {/* Logo Section */}
       <div className="flex items-center">
-        <div onClick={handleLogoClick} className="cursor-pointer">
-          <Logo />
-        </div>
+        <Logo />
       </div>
 
       {/* Right Section - Notifications and Profile */}

@@ -7,7 +7,10 @@ export interface Speaker {
   firstName: string;
   lastName: string;
   profileImageUrl: string;
-  expertise: string;
+  expertise?: string;
+  professionalTitle?: string;
+  bio?: string;
+  areaOfExpertise?: string[];
 }
 
 export interface EventDetails {

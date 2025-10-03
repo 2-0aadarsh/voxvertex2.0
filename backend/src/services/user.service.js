@@ -64,10 +64,21 @@ class UserService {
    */
   async getUserById(userId) {
     try {
+      console.log('🔍 UserService.getUserById called with ID:', userId);
+      console.log('🔍 User ID type:', typeof userId);
+      
+      // Validate userId
+      if (!userId) {
+        throw new Error('User ID is required');
+      }
+      
       const user = await EnhancedUser.findById(userId).select('-password');
       if (!user) {
+        console.log('🔍 User not found in database for ID:', userId);
         throw new Error('User not found');
       }
+      
+      console.log('🔍 User found:', user.firstName, user.lastName, user.email);
       
       const profile = await EnhancedProfile.findOne({ user: userId });
       
@@ -76,6 +87,7 @@ class UserService {
         profile
       };
     } catch (error) {
+      console.log('🔍 UserService.getUserById error:', error.message);
       throw new Error(`Failed to get user: ${error.message}`);
     }
   }

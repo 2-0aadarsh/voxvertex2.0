@@ -26,10 +26,11 @@ interface ReviewPublishStepProps {
   }
   onStepChange: (step: number) => void
   onSubmit: () => void
+  onSaveDraft: () => void
   isLoading: boolean
 }
 
-export default function ReviewPublishStep({ formData, onStepChange, onSubmit, isLoading }: ReviewPublishStepProps) {
+export default function ReviewPublishStep({ formData, onStepChange, onSubmit, onSaveDraft, isLoading }: ReviewPublishStepProps) {
   return (
     <div className="space-y-6">
       <div className="space-y-6 pl-6 pr-6">
@@ -227,6 +228,7 @@ export default function ReviewPublishStep({ formData, onStepChange, onSubmit, is
       <div className="flex justify-center space-x-4 pt-6">
         <button
           type="button"
+          onClick={onSaveDraft}
           className="px-8 py-2 border-2 border-[#FF6B35] rounded-full text-[#FF6B35] hover:bg-gray-50 font-medium"
         >
           Save as Draft

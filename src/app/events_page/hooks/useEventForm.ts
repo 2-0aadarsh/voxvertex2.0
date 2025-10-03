@@ -1,0 +1,368 @@
+// ============================================================================
+// EVENT FORM HOOK - Custom Hook for Event Form Management
+// ============================================================================
+
+import { useCallback, useMemo } from 'react';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import {
+  setCurrentStep,
+  nextStep,
+  previousStep,
+  updateFormData,
+  updateCoreDetails,
+  updateBrandingContent,
+  updateTicketing,
+  updateSpeakers,
+  updateAddons,
+  updateStatus,
+  setLoading,
+  setError,
+  clearError,
+  saveDraft,
+  clearDraft,
+  resetForm,
+  loadEventForEditing,
+  selectEventForm,
+  selectCurrentStep,
+  selectFormData,
+  selectEventLoading,
+  selectEventError,
+  selectIsDraft,
+  selectLastSaved,
+  validateStep1,
+  validateStep2,
+  validateStep3,
+  validateStep4,
+  validateStep5,
+  validateStep6,
+  validateAllSteps,
+  useCreateEventMutation,
+  useUpdateEventMutation,
+  useValidateEventMutation,
+  useUploadBannerImageMutation,
+  type EventFormData,
+  type EventStep,
+  type EventValidation,
+  type EnhancedEvent,
+  type CreateEventRequest
+} from '@/store/slices/enhancedEventSlice';
+
+export const useEventForm = () => {
+  const dispatch = useAppDispatch();
+  
+  // Selectors
+  const formState = useAppSelector(selectEventForm);
+  const currentStep = useAppSelector(selectCurrentStep);
+  const formData = useAppSelector(selectFormData);
+  const isLoading = useAppSelector(selectEventLoading);
+  const error = useAppSelector(selectEventError);
+  const isDraft = useAppSelector(selectIsDraft);
+  const lastSaved = useAppSelector(selectLastSaved);
+  
+  // API mutations
+  const [createEvent, { isLoading: isCreating }] = useCreateEventMutation();
+  const [updateEvent, { isLoading: isUpdating }] = useUpdateEventMutation();
+  const [validateEvent] = useValidateEventMutation();
+  const [uploadBannerImage, { isLoading: isUploading }] = useUploadBannerImageMutation();
+  
+  // Step navigation
+  const goToStep = useCallback((step: EventStep) => {
+    dispatch(setCurrentStep(step));
+  }, [dispatch]);
+  
+  const goToNextStep = useCallback(() => {
+    dispatch(nextStep());
+  }, [dispatch]);
+  
+  const goToPreviousStep = useCallback(() => {
+    dispatch(previousStep());
+  }, [dispatch]);
+  
+  // Form data updates
+  const updateForm = useCallback((data: Partial<EventFormData>) => {
+    dispatch(updateFormData(data));
+  }, [dispatch]);
+  
+  const updateStep1 = useCallback((data: Parameters<typeof updateCoreDetails>[0]) => {
+    dispatch(updateCoreDetails(data));
+  }, [dispatch]);
+  
+  const updateStep2 = useCallback((data: Parameters<typeof updateBrandingContent>[0]) => {
+    dispatch(updateBrandingContent(data));
+  }, [dispatch]);
+  
+  const updateStep3 = useCallback((data: Parameters<typeof updateTicketing>[0]) => {
+    dispatch(updateTicketing(data));
+  }, [dispatch]);
+  
+  const updateStep4 = useCallback((data: Parameters<typeof updateSpeakers>[0]) => {
+    dispatch(updateSpeakers(data));
+  }, [dispatch]);
+  
+  const updateStep5 = useCallback((data: Parameters<typeof updateAddons>[0]) => {
+    dispatch(updateAddons(data));
+  }, [dispatch]);
+  
+  const updateEventStatus = useCallback((status: 'draft' | 'published') => {
+    dispatch(updateStatus(status));
+  }, [dispatch]);
+  
+  // Validation
+  const validateCurrentStep = useCallback((): EventValidation => {
+    switch (currentStep) {
+      case 1:
+        return validateStep1(formData);
+      case 2:
+        return validateStep2(formData);
+      case 3:
+        return validateStep3(formData);
+      case 4:
+        return validateStep4(formData);
+      case 5:
+        return validateStep5(formData);
+      case 6:
+        return validateStep6(formData);
+      default:
+        return { isValid: false, errors: {} };
+    }
+  }, [currentStep, formData]);
+  
+  const validateAllStepsData = useCallback(() => {
+    return validateAllSteps(formData);
+  }, [formData]);
+  
+  // File upload
+  const uploadImage = useCallback(async (file: File): Promise<string | null> => {
+    try {
+      const formData = new FormData();
+      formData.append('bannerImage', file);
+      
+      const result = await uploadBannerImage(formData).unwrap();
+      
+      if (result.success && result.data?.url) {
+        return result.data.url;
+      } else {
+        throw new Error(result.error || 'Upload failed');
+      }
+    } catch (error) {
+      console.error('Image upload error:', error);
+      dispatch(setError(error instanceof Error ? error.message : 'Image upload failed'));
+      return null;
+    }
+  }, [uploadBannerImage, dispatch]);
+  
+  // Transform form data to API format
+  const transformToAPIFormat = useCallback((): CreateEventRequest => {
+    return {
+      eventName: formData.eventName,
+      startDate: formData.startDate,
+      endDate: formData.endDate,
+      eventMode: formData.eventMode,
+      format: formData.format,
+      location: formData.location,
+      eventUrl: formData.eventUrl,
+      description: formData.description,
+      bannerImage: formData.bannerImageUrl,
+      tags: formData.tags,
+      ticketTypes: formData.ticketTypes.map(ticket => ({
+        ...ticket,
+        price: typeof ticket.price === 'string' ? parseFloat(ticket.price) : ticket.price,
+        quantity: typeof ticket.quantity === 'string' ? parseInt(ticket.quantity) : ticket.quantity,
+        discount: ticket.discount ? {
+          ...ticket.discount,
+          value: typeof ticket.discount.value === 'string' ? parseFloat(ticket.discount.value) : ticket.discount.value,
+          maxUses: ticket.discount.maxUses ? (typeof ticket.discount.maxUses === 'string' ? parseInt(ticket.discount.maxUses) : ticket.discount.maxUses) : undefined
+        } : undefined
+      })),
+      speakers: formData.speakers,
+      addons: formData.addons,
+      status: formData.status
+    };
+  }, [formData]);
+  
+  // Create event
+  const createNewEvent = useCallback(async (overrideBannerImage?: string, statusOverride?: string): Promise<EnhancedEvent | null> => {
+    try {
+      dispatch(setLoading(true));
+      dispatch(clearError());
+      
+      // Validate all steps before creating
+      const validation = validateAllStepsData();
+      const hasErrors = Object.values(validation).some(step => !step.isValid);
+      
+      if (hasErrors) {
+        const errorMessages = Object.values(validation)
+          .flatMap(step => Object.values(step.errors))
+          .join(', ');
+        throw new Error(`Validation failed: ${errorMessages}`);
+      }
+      
+      // Transform data to API format
+      const eventData = transformToAPIFormat();
+      
+      // Override banner image if provided
+      if (overrideBannerImage) {
+        eventData.bannerImage = overrideBannerImage;
+      }
+      
+      // Override status if provided
+      if (statusOverride) {
+        eventData.status = statusOverride as 'draft' | 'published';
+      }
+      
+      // Create event
+      const result = await createEvent(eventData).unwrap();
+      
+      if (result.success && result.data) {
+        dispatch(clearDraft());
+        dispatch(resetForm());
+        return result.data;
+      } else {
+        throw new Error(result.error || 'Failed to create event');
+      }
+    } catch (error) {
+      console.error('Create event error:', error);
+      dispatch(setError(error instanceof Error ? error.message : 'Failed to create event'));
+      return null;
+    } finally {
+      dispatch(setLoading(false));
+    }
+  }, [dispatch, validateAllStepsData, transformToAPIFormat, createEvent]);
+  
+  // Update existing event
+  const updateExistingEvent = useCallback(async (eventId: string): Promise<EnhancedEvent | null> => {
+    try {
+      dispatch(setLoading(true));
+      dispatch(clearError());
+      
+      // Validate all steps before updating
+      const validation = validateAllStepsData();
+      const hasErrors = Object.values(validation).some(step => !step.isValid);
+      
+      if (hasErrors) {
+        const errorMessages = Object.values(validation)
+          .flatMap(step => Object.values(step.errors))
+          .join(', ');
+        throw new Error(`Validation failed: ${errorMessages}`);
+      }
+      
+      // Transform data to API format
+      const eventData = transformToAPIFormat();
+      
+      // Update event
+      const result = await updateEvent({ _id: eventId, ...eventData }).unwrap();
+      
+      if (result.success && result.data) {
+        dispatch(clearDraft());
+        return result.data;
+      } else {
+        throw new Error(result.error || 'Failed to update event');
+      }
+    } catch (error) {
+      console.error('Update event error:', error);
+      dispatch(setError(error instanceof Error ? error.message : 'Failed to update event'));
+      return null;
+    } finally {
+      dispatch(setLoading(false));
+    }
+  }, [dispatch, validateAllStepsData, transformToAPIFormat, updateEvent]);
+  
+  // Load event for editing
+  const loadEvent = useCallback((event: EnhancedEvent) => {
+    dispatch(loadEventForEditing(event));
+  }, [dispatch]);
+  
+  // Save draft
+  const saveAsDraft = useCallback(() => {
+    dispatch(saveDraft());
+  }, [dispatch]);
+  
+  // Reset form
+  const resetEventForm = useCallback(() => {
+    dispatch(resetForm());
+  }, [dispatch]);
+  
+  // Clear error
+  const clearFormError = useCallback(() => {
+    dispatch(clearError());
+  }, [dispatch]);
+  
+  // Computed values
+  const isStepValid = useMemo(() => {
+    const validation = validateCurrentStep();
+    return validation.isValid;
+  }, [validateCurrentStep]);
+  
+  const canProceedToNext = useMemo(() => {
+    return isStepValid && currentStep < 6;
+  }, [isStepValid, currentStep]);
+  
+  const canGoToPrevious = useMemo(() => {
+    return currentStep > 1;
+  }, [currentStep]);
+  
+  const isFormComplete = useMemo(() => {
+    const validation = validateAllStepsData();
+    return Object.values(validation).every(step => step.isValid);
+  }, [validateAllStepsData]);
+  
+  const totalLoading = useMemo(() => {
+    return isLoading || isCreating || isUpdating || isUploading;
+  }, [isLoading, isCreating, isUpdating, isUploading]);
+  
+  return {
+    // State
+    formState,
+    currentStep,
+    formData,
+    isLoading: totalLoading,
+    error,
+    isDraft,
+    lastSaved,
+    
+    // Step navigation
+    goToStep,
+    goToNextStep,
+    goToPreviousStep,
+    
+    // Form updates
+    updateForm,
+    updateStep1,
+    updateStep2,
+    updateStep3,
+    updateStep4,
+    updateStep5,
+    updateEventStatus,
+    
+    // Validation
+    validateCurrentStep,
+    validateAllStepsData,
+    isStepValid,
+    canProceedToNext,
+    canGoToPrevious,
+    isFormComplete,
+    
+    // File upload
+    uploadImage,
+    isUploading,
+    
+    // Event operations
+    createNewEvent,
+    updateExistingEvent,
+    loadEvent,
+    
+    // Draft management
+    saveAsDraft,
+    
+    // Utilities
+    resetEventForm,
+    clearFormError,
+    
+    // API states
+    isCreating,
+    isUpdating,
+  };
+};
+
+export default useEventForm;
+

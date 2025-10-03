@@ -1,5 +1,5 @@
-import { Calendar, Plus, X, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { Calendar, X, Trash2 } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
 
 interface TicketingStepProps {
   formData: {
@@ -21,15 +21,68 @@ interface TicketingStepProps {
       }
     }>
   }
-  onFormDataUpdate: (data: any) => void
+  onFormDataUpdate: (data: { ticketTypes: Array<{
+    name: string
+    price: string
+    quantity: string
+    features?: string[]
+    discount?: {
+      enabled: boolean
+      name: string
+      type: 'percentage' | 'fixed'
+      value: string
+      maxUses: string
+      startDate: string
+      endDate: string
+      code: string
+      description: string
+    }
+  }> }) => void
 }
 
 export default function TicketingStep({ formData, onFormDataUpdate }: TicketingStepProps) {
   const [newFeatureText, setNewFeatureText] = useState('')
   const [showFeatureInput, setShowFeatureInput] = useState<{[key: number]: boolean}>({})
+  const [hasInitialized, setHasInitialized] = useState(false)
 
   const ticketCount = formData.ticketTypes?.length || 0
   const isCompressed = ticketCount > 1
+  
+  // Debug logging
+  console.log('🎫 TicketingStep render:', {
+    formData,
+    ticketTypes: formData.ticketTypes,
+    ticketCount,
+    isCompressed
+  })
+
+  // Add a default ticket if none exist - only on initial load
+  useEffect(() => {
+    if (!hasInitialized && (!formData.ticketTypes || formData.ticketTypes.length === 0)) {
+      console.log('🎫 No tickets found, adding default ticket')
+      const defaultTicket = {
+        name: '',
+        price: '',
+        quantity: '',
+        features: [],
+        discount: {
+          enabled: true,
+          name: '',
+          type: 'percentage' as const,
+          value: '0',
+          maxUses: '50',
+          startDate: '',
+          endDate: '',
+          code: 'XXJKQNI',
+          description: ''
+        }
+      }
+      onFormDataUpdate({
+        ticketTypes: [defaultTicket]
+      })
+      setHasInitialized(true)
+    }
+  }, [hasInitialized, formData.ticketTypes, onFormDataUpdate])
 
   const addTicketTier = () => {
     const currentTickets = formData.ticketTypes || []
@@ -40,7 +93,7 @@ export default function TicketingStep({ formData, onFormDataUpdate }: TicketingS
       features: [],
       discount: {
         enabled: true,
-        name: 'Name',
+        name: '',
         type: 'percentage' as const,
         value: '0',
         maxUses: '50',
@@ -62,31 +115,39 @@ export default function TicketingStep({ formData, onFormDataUpdate }: TicketingS
     })
   }
 
-  const updateTicketTier = (index: number, field: string, value: any) => {
+  const updateTicketTier = (index: number, field: string, value: string | number | boolean) => {
+    console.log('🔍 updateTicketTier called:', { index, field, value })
     const currentTickets = formData.ticketTypes || []
-    const newTickets = [...currentTickets]
     
-    if (field.includes('discount.')) {
-      const discountField = field.split('.')[1]
-      if (!newTickets[index].discount) {
-        newTickets[index].discount = {
-          enabled: false,
-          name: '',
-          type: 'percentage',
-          value: '',
-          maxUses: '',
-          startDate: '',
-          endDate: '',
-          code: '',
-          description: ''
-        }
-      }
-      (newTickets[index].discount as any)[discountField] = value
-    } else {
-      (newTickets[index] as any)[field] = value
+    if (index >= currentTickets.length) {
+      console.error('❌ Invalid ticket index:', index)
+      return
     }
     
+    const newTickets = currentTickets.map((ticket, i) => {
+      if (i !== index) return ticket
+      
+      if (field.includes('discount.')) {
+        const discountField = field.split('.')[1]
+        const updatedDiscount = {
+          ...ticket.discount,
+          [discountField]: value
+        }
+        return {
+          ...ticket,
+          discount: updatedDiscount
+        }
+      } else {
+        return {
+          ...ticket,
+          [field]: value
+        }
+      }
+    })
+    
+    console.log('📋 New tickets after update:', newTickets)
     onFormDataUpdate({ ticketTypes: newTickets })
+    console.log('✅ onFormDataUpdate called')
   }
 
   const addFeature = (ticketIndex: number, featureText?: string) => {
@@ -94,13 +155,16 @@ export default function TicketingStep({ formData, onFormDataUpdate }: TicketingS
     if (!textToAdd.trim()) return
     
     const currentTickets = formData.ticketTypes || []
-    const newTickets = [...currentTickets]
+    const newTickets = currentTickets.map((ticket, index) => {
+      if (index !== ticketIndex) return ticket
+      
+      const updatedFeatures = [...(ticket.features || []), textToAdd]
+      return {
+        ...ticket,
+        features: updatedFeatures
+      }
+    })
     
-    if (!newTickets[ticketIndex].features) {
-      newTickets[ticketIndex].features = []
-    }
-    
-    newTickets[ticketIndex].features!.push(textToAdd)
     onFormDataUpdate({ ticketTypes: newTickets })
     setNewFeatureText('')
     setShowFeatureInput(prev => ({ ...prev, [ticketIndex]: false }))
@@ -108,11 +172,15 @@ export default function TicketingStep({ formData, onFormDataUpdate }: TicketingS
 
   const removeFeature = (ticketIndex: number, featureIndex: number) => {
     const currentTickets = formData.ticketTypes || []
-    const newTickets = [...currentTickets]
-    
-    if (newTickets[ticketIndex].features) {
-      newTickets[ticketIndex].features!.splice(featureIndex, 1)
-    }
+    const newTickets = currentTickets.map((ticket, index) => {
+      if (index !== ticketIndex) return ticket
+      
+      const updatedFeatures = (ticket.features || []).filter((_, i) => i !== featureIndex)
+      return {
+        ...ticket,
+        features: updatedFeatures
+      }
+    })
     
     onFormDataUpdate({ ticketTypes: newTickets })
   }
@@ -141,19 +209,6 @@ export default function TicketingStep({ formData, onFormDataUpdate }: TicketingS
     setShowFeatureInput(prev => ({ ...prev, [ticketIndex]: !prev[ticketIndex] }))
   }
 
-  const incrementQuantity = (ticketIndex: number) => {
-    const currentTickets = formData.ticketTypes || []
-    const currentQuantity = parseInt(currentTickets[ticketIndex].quantity) || 0
-    updateTicketTier(ticketIndex, 'quantity', (currentQuantity + 1).toString())
-  }
-
-  const decrementQuantity = (ticketIndex: number) => {
-    const currentTickets = formData.ticketTypes || []
-    const currentQuantity = parseInt(currentTickets[ticketIndex].quantity) || 0
-    if (currentQuantity > 0) {
-      updateTicketTier(ticketIndex, 'quantity', (currentQuantity - 1).toString())
-    }
-  }
 
   return (
     <div className="space-y-6 pl-3 pr-3">
@@ -177,7 +232,7 @@ export default function TicketingStep({ formData, onFormDataUpdate }: TicketingS
               <div className="text-gray-500 mb-4">
                 <Calendar className="w-12 h-12 mx-auto mb-2 text-gray-300" />
                 <p>No ticket tiers added yet</p>
-                <p className="text-sm">Click "Add Ticket Tier" to create your first ticket type</p>
+                <p className="text-sm">Click &quot;Add Ticket Tier&quot; to create your first ticket type</p>
               </div>
             </div>
           )}
@@ -199,8 +254,11 @@ export default function TicketingStep({ formData, onFormDataUpdate }: TicketingS
                   <div className="relative">
                     <input
                       type="text"
-                      value={ticket.name}
-                      onChange={(e) => updateTicketTier(index, 'name', e.target.value)}
+                      value={ticket.name || ''}
+                      onChange={(e) => {
+                        console.log('📝 Ticket name onChange:', { index, value: e.target.value, currentValue: ticket.name })
+                        updateTicketTier(index, 'name', e.target.value)
+                      }}
                       className="w-full px-3 py-2 border border-[#FF6B35] rounded-lg bg-white focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35] text-gray-900 placeholder-gray-400"
                       placeholder="Eg. Early Bird"
                     />
@@ -212,8 +270,11 @@ export default function TicketingStep({ formData, onFormDataUpdate }: TicketingS
                   <div className="relative">
                     <input
                       type="number"
-                      value={ticket.price}
-                      onChange={(e) => updateTicketTier(index, 'price', e.target.value)}
+                      value={ticket.price || ''}
+                      onChange={(e) => {
+                        console.log('💰 Ticket price onChange:', { index, value: e.target.value, currentValue: ticket.price })
+                        updateTicketTier(index, 'price', e.target.value)
+                      }}
                       className="w-full px-3 py-2 border border-[#FF6B35] rounded-lg bg-white focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35] text-gray-900 placeholder-gray-400"
                       placeholder="0"
                     />
@@ -288,7 +349,7 @@ export default function TicketingStep({ formData, onFormDataUpdate }: TicketingS
                     {!showFeatureInput[index] && (
                       <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg bg-white">
                         <p className="text-gray-400 mb-1">No features added yet</p>
-                        <p className="text-gray-400 text-sm">Click "Add Feature" to specify what's included with this ticket</p>
+                        <p className="text-gray-400 text-sm">Click &quot;Add Feature&quot; to specify what&apos;s included with this ticket</p>
                       </div>
                     )}
                   </div>
@@ -362,7 +423,7 @@ export default function TicketingStep({ formData, onFormDataUpdate }: TicketingS
                     {(!ticket.features || ticket.features.length === 0) && !showFeatureInput[index] && (
                       <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg bg-white">
                         <p className="text-gray-400 mb-1">No features added yet</p>
-                        <p className="text-gray-400 text-sm">Click "Add Feature" to add ticket features</p>
+                        <p className="text-gray-400 text-sm">Click &quot;Add Feature&quot; to add ticket features</p>
                       </div>
                     )}
                   </div>

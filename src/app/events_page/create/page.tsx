@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { EventFormData } from '../types/eventTypes'
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import ProgressIndicator from '../components/ProgressIndicator'
 import CoreDetailsStep from '../components/steps/CoreDetailsStep'
 import BrandingContentStep from '../components/steps/BrandingContentStep'
@@ -13,29 +13,36 @@ import Sidebar from '@/components/Sidebar'
 import Navbar from '@/components/Navbar'
 import { useAuth } from '@/store/hooks'
 import { useGetCurrentUserQuery } from '@/store/slices/authSlice'
+import useEventForm from '../hooks/useEventForm'
+import { EventStep } from '../types/eventTypes'
 
 export default function CreateEvent() {
-  const [currentStep, setCurrentStep] = useState(1)
-  const [formData, setFormData] = useState<EventFormData>({
-    eventName: '',
-    startDate: '',
-    endDate: '',
-    eventMode: 'offline',
-    location: '',
-    description: '',
-    image: null,
-    tags: [],
-    ticketTypes: [],
-    speakers: [],
-    format: 'virtual',
-    eventUrl: '',
-    addons: {
-      featureOnHome: false,
-      includeInNewsletter: false,
-      socialMediaPromotion: true
-    }
-  })
-  const [isLoading, setIsLoading] = useState(false)
+  const router = useRouter()
+  
+  // Event form hook
+  const {
+    currentStep,
+    formData,
+    isLoading,
+    error,
+    isDraft,
+    lastSaved,
+    goToStep,
+    goToNextStep,
+    goToPreviousStep,
+    updateStep1,
+    updateStep2,
+    updateStep3,
+    updateStep4,
+    updateStep5,
+    canProceedToNext,
+    canGoToPrevious,
+    createNewEvent,
+    saveAsDraft,
+    uploadImage,
+    updateEventStatus,
+    clearFormError
+  } = useEventForm()
 
   const totalSteps = 6
   const stepTitles = [
@@ -47,9 +54,22 @@ export default function CreateEvent() {
     'Review & Publish'
   ]
 
-  // Authentication hooks
+  // Authentication hooks - simplified
   const { user, isAuthenticated } = useAuth()
   const { data: currentUserData } = useGetCurrentUserQuery()
+  
+  // Simple check - only redirect to login if no auth cookies at all
+  useEffect(() => {
+    const hasAuthCookies = document.cookie.includes('accessToken') || document.cookie.includes('refreshToken')
+    
+    if (!hasAuthCookies) {
+      console.log('❌ No auth cookies found, redirecting to login')
+      router.push('/home')
+      return
+    }
+    
+    console.log('✅ Auth cookies found, proceeding with event creation')
+  }, [router])
 
   // Helper function to get profile image URL
   const getProfileImageUrl = (profileImage: { data?: Buffer | string; contentType?: string; url?: string } | string | null | undefined) => {
@@ -78,49 +98,101 @@ export default function CreateEvent() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
-  }
-
-  const updateFormData = (data: Partial<EventFormData>) => {
-    setFormData(prev => ({ ...prev, ...data }))
+    updateStep1({ [name]: value })
   }
 
   const handleNext = () => {
-    if (currentStep < totalSteps) {
-      setCurrentStep(currentStep + 1)
+    console.log('🔍 Next Button Clicked - Debug Info:', {
+      canProceedToNext,
+      currentStep,
+      formData: {
+        eventName: formData.eventName,
+        startDate: formData.startDate,
+        endDate: formData.endDate,
+        eventMode: formData.eventMode,
+        format: formData.format,
+        location: formData.location,
+        eventUrl: formData.eventUrl
+      }
+    })
+    
+    if (canProceedToNext) {
+      goToNextStep()
+    } else {
+      console.log('❌ Cannot proceed to next step - validation failed')
     }
   }
 
   const handlePrevious = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1)
+    if (canGoToPrevious) {
+      goToPreviousStep()
     }
   }
 
   const handleSubmit = async () => {
-    setIsLoading(true)
     try {
-      const response = await fetch('http://localhost:3004/api/events', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(formData)
-      })
-
-      if (response.ok) {
-        alert('Event created successfully!')
-        window.location.href = '/events_page'
-      } else {
-        alert('Failed to create event')
+      // Determine the final banner image URL
+      let finalBannerImageUrl = formData.bannerImageUrl
+      
+      // Handle banner image upload/fallback
+      if (formData.image) {
+        console.log('📸 Uploading banner image...')
+        
+        try {
+          const imageUrl = await uploadImage(formData.image)
+          if (imageUrl) {
+            console.log('✅ Banner image uploaded successfully:', imageUrl)
+            finalBannerImageUrl = imageUrl
+          } else {
+            throw new Error('Upload returned no URL')
+          }
+        } catch (uploadError) {
+          console.warn('⚠️ Banner image upload failed, using fallback image:', uploadError)
+          
+          // Use fallback image URL for development mode
+          const fallbackImageUrl = 'https://images.unsplash.com/photo-1506765515384-028b60a970df?q=80&w=1169&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
+          console.log('🔄 Using fallback banner image:', fallbackImageUrl)
+          finalBannerImageUrl = fallbackImageUrl
+        }
+      } else if (!formData.bannerImageUrl) {
+        // If no image is uploaded and no bannerImageUrl exists, use fallback
+        const fallbackImageUrl = 'https://images.unsplash.com/photo-1506765515384-028b60a970df?q=80&w=1169&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
+        console.log('🔄 No banner image provided, using fallback:', fallbackImageUrl)
+        finalBannerImageUrl = fallbackImageUrl
+      }
+      
+      // Set status to "published" before creating the event
+      console.log('📝 Setting event status to "published"')
+      updateEventStatus('published')
+      
+      // Clear the File object from state to avoid Redux serialization warnings
+      if (formData.image) {
+        console.log('🧹 Clearing File object from Redux state')
+        updateStep2({ bannerImage: null })
+      }
+      
+      // Create the event with the final banner image URL and published status
+      console.log('🎯 Creating event with banner image:', finalBannerImageUrl)
+      const event = await createNewEvent(finalBannerImageUrl, 'published')
+      
+      if (event) {
+        // Redirect to events page on success
+        router.push('/events_page')
       }
     } catch (error) {
-      console.error('Error creating event:', error)
-      alert('Error creating event')
-    } finally {
-      setIsLoading(false)
+      console.error('❌ Error in handleSubmit:', error)
     }
+  }
+
+  const handleSaveDraft = () => {
+    saveAsDraft()
+    // Show success message or notification
+    console.log('Draft saved successfully!')
+  }
+
+  const handleStepChange = (stepNumber: number) => {
+    console.log(`🔄 Navigating to step ${stepNumber}`)
+    goToStep(stepNumber as EventStep) // Cast to EventStep type
   }
 
   const renderStepContent = () => {
@@ -138,7 +210,7 @@ export default function CreateEvent() {
           <BrandingContentStep 
             formData={formData}
             onInputChange={handleInputChange}
-            onFormDataUpdate={updateFormData}
+            onFormDataUpdate={updateStep2}
           />
         )
       
@@ -146,32 +218,74 @@ export default function CreateEvent() {
         return (
           <TicketingStep 
             formData={formData}
-            onFormDataUpdate={updateFormData}
+            onFormDataUpdate={updateStep3}
           />
         )
       
       case 4:
         return (
           <SpeakersStep 
-            formData={formData}
-            onFormDataUpdate={updateFormData}
+            formData={{ speakers: formData.speakersArray || [] }}
+            onFormDataUpdate={(data) => {
+              // Convert legacy speakers array to new format
+              const speakersArray = data.speakers || []
+              const manualSpeakers = speakersArray.filter((speaker: { speakerId?: string }) => !speaker.speakerId).map((speaker: { name: string; title: string; bio: string; image?: string }) => ({
+                image: speaker.image || '',
+                name: speaker.name,
+                title: speaker.title,
+                bio: speaker.bio
+              }))
+              const platformSpeakers = (speakersArray as Array<{ speakerId: string; bookingId: string; name: string; title: string; bio: string; image?: string }>)
+                .filter((speaker) => speaker.speakerId)
+                // @ts-expect-error - Type compatibility issue with legacy Speaker interface
+                .map((speaker) => ({
+                  speakerId: speaker.speakerId,
+                  bookingId: speaker.bookingId, // This will now be the MongoDB ObjectId
+                  speakerDetails: {
+                    fullName: speaker.name,
+                    professionalTitle: speaker.title,
+                    bio: speaker.bio,
+                    profileImageUrl: speaker.image || ''
+                  }
+                }))
+              updateStep4({
+                speakers: {
+                  manualSpeakers,
+                  platformSpeakers
+                },
+                speakersArray
+              })
+            }}
           />
         )
       
       case 5:
         return (
           <AddonsStep 
-            formData={formData}
-            onFormDataUpdate={updateFormData}
+            formData={{ addons: formData.addons }}
+            onFormDataUpdate={updateStep5}
           />
         )
       
       case 6:
         return (
           <ReviewPublishStep 
-            formData={formData}
-            onStepChange={setCurrentStep}
+            formData={{
+              eventName: formData.eventName,
+              startDate: formData.startDate,
+              endDate: formData.endDate,
+              eventMode: formData.eventMode,
+              location: formData.location,
+              description: formData.description,
+              image: formData.image,
+              tags: formData.tags,
+              ticketTypes: formData.ticketTypes,
+              speakers: formData.speakersArray || [],
+              addons: formData.addons
+            }}
+            onStepChange={handleStepChange}
             onSubmit={handleSubmit}
+            onSaveDraft={handleSaveDraft}
             isLoading={isLoading}
           />
         )
@@ -180,6 +294,7 @@ export default function CreateEvent() {
         return null
     }
   }
+
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -200,7 +315,23 @@ export default function CreateEvent() {
           <div className="bg-white rounded-xl shadow-sm border-1 border-[#FF6B35]/50 max-w-4xl mx-auto">
             {/* Header */}
             <div className="p-6 pb-4 border-b border-gray-200">
-              <h1 className="text-xl font-semibold text-[#FF6B35] text-center mb-6">Create New Event</h1>
+              <div className="flex justify-between items-center mb-6">
+                <h1 className="text-xl font-semibold text-[#FF6B35]">Create New Event</h1>
+                <div className="flex items-center space-x-4">
+                  {isDraft && (
+                    <span className="text-sm text-gray-500">
+                      Draft saved {lastSaved ? new Date(lastSaved).toLocaleTimeString() : ''}
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleSaveDraft}
+                    className="px-4 py-2 text-sm border border-[#FF6B35] text-[#FF6B35] rounded-lg hover:bg-[#FF6B35]/5 transition-colors"
+                  >
+                    Save Draft
+                  </button>
+                </div>
+              </div>
               
               {/* Progress Indicator */}
               <ProgressIndicator 
@@ -217,13 +348,27 @@ export default function CreateEvent() {
                 {renderStepContent()}
               </div>
 
+              {/* Error Display */}
+              {error && (
+                <div className="mx-4 mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-red-600 text-sm">{error}</p>
+                  <button
+                    type="button"
+                    onClick={clearFormError}
+                    className="mt-2 text-red-500 hover:text-red-700 text-sm underline"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              )}
+
               {/* Navigation Buttons */}
               {currentStep < 6 && (
                 <div className="flex justify-center space-x-3 mt-8">
                   <button
                     type="button"
                     onClick={handlePrevious}
-                    disabled={currentStep === 1}
+                    disabled={!canGoToPrevious}
                     className="px-6 py-2 text-sm border-2 border-[#FF6B35] text-[#FF6B35] rounded-full hover:bg-[#FF6B35]/5 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Previous
@@ -232,7 +377,8 @@ export default function CreateEvent() {
                   <button
                     type="button"
                     onClick={handleNext}
-                    className="px-6 py-2 text-sm bg-[#FF6B35] text-white rounded-full hover:bg-[#e55a2b] transition-colors font-medium"
+                    disabled={!canProceedToNext}
+                    className="px-6 py-2 text-sm bg-[#FF6B35] text-white rounded-full hover:bg-[#e55a2b] transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Next
                   </button>

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { IoIosArrowDown } from "react-icons/io";
 import Logo from "./Logo";
+import { useAuth } from "@/store/hooks";
 
 interface NavbarProps {
   showSearch?: boolean;
@@ -42,6 +43,28 @@ const Navbar: React.FC<NavbarProps> = ({
   const router = useRouter();
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
+  
+  // Get logout function from useAuth hook
+  const { logout } = useAuth();
+
+  // Handle logout functionality (same as Sidebar)
+  const handleLogout = async () => {
+    try {
+      console.log("🚪 Logging out user...");
+
+      // Call logout from Redux store (this will clear tokens and cookies)
+      await logout();
+
+      console.log("✅ Logout successful, redirecting to homepage...");
+
+      // Redirect to homepage for all user roles
+      router.push("/");
+    } catch (error) {
+      console.error("❌ Logout error:", error);
+      // Even if logout fails, redirect to homepage
+      router.push("/");
+    }
+  };
 
   // Helper function to get profile image URL
   const getProfileImage = (profileImage: any) => {
@@ -178,13 +201,14 @@ const Navbar: React.FC<NavbarProps> = ({
         <div className="flex items-center h-16">
           
           <div className="flex md:hidden ml-4">
-            <button onClick={()=>setShowSidebar(true)}
-              className="text-gray-900 hover:text-orange-500 focus:outline-none"
-              >
-                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16"/>
-    </svg>
-
+            <button 
+              onClick={() => setShowSidebar(true)}
+              className="text-gray-900 hover:text-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-opacity-50 rounded-md p-1"
+              aria-label="Open mobile menu"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16"/>
+              </svg>
             </button>
           </div>
 
@@ -195,14 +219,14 @@ const Navbar: React.FC<NavbarProps> = ({
           {/* Search Bar - Right after logo */}
           {showSearch && (
             <div className="flex-1 max-w-xl ml-24">
-              <div className="relative hidden md:flex">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <div className="relative hidden md:flex items-center">
+                <Search className="absolute left-3 top-0 bottom-0 m-auto text-gray-400 w-4 h-4" />
                 <input
                   type="text"
                   placeholder="Search Speaker"
                   className="w-full pl-10 pr-10 py-2.5 border border-blue-400 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-blue-600 text-sm bg-white"
                 />
-                <button className="absolute right-3 top-1/2 transform -translate-y-1/2 hover:opacity-70 transition-opacity">
+                <button className="absolute right-3 top-0 bottom-0 m-auto hover:opacity-70 transition-opacity">
                   <img 
                     src="/vector1.png" 
                     alt="Filter" 
@@ -325,33 +349,41 @@ const Navbar: React.FC<NavbarProps> = ({
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
                     <button
                       onClick={() => {
-                        if (user?.whoAreYou === 'Organizer' || currentUserData?.user?.whoAreYou === 'Organizer') {
-                          router.push('/newuser');
-                        } else {
-                          router.push('/speakerUser');
+                        // Get user role from user object or currentUserData
+                        const userRole = user?.role || currentUserData?.user?.role;
+                        
+                        console.log("🔍 Navbar Dashboard Debug:", {
+                          user,
+                          currentUserData,
+                          userRole,
+                          userRoleFromUser: user?.role,
+                          userRoleFromCurrentUser: currentUserData?.user?.role
+                        });
+                        
+                        // Use same logic as login page
+                        switch (userRole) {
+                          case 'speaker':
+                            router.push('/speakerUser');
+                            break;
+                          case 'organizer':
+                            router.push('/newuser');
+                            break;
+                          case 'participant':
+                            router.push('/participant');
+                            break;
+                          default:
+                            router.push('/newuser'); // fallback
                         }
-                        setShowProfileDropdown(false);
-                      }}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    >
-                      Profile
-                    </button>
-                    <button
-                      onClick={() => {
-                        router.push('/dashboard');
                         setShowProfileDropdown(false);
                       }}
                       className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     >
                       Dashboard
                     </button>
+                    
                     <button
                       onClick={() => {
-                        // Add logout functionality here
-                        localStorage.removeItem('userData');
-                        localStorage.removeItem('accessToken');
-                        localStorage.removeItem('refreshToken');
-                        window.location.href = '/home';
+                        handleLogout();
                         setShowProfileDropdown(false);
                       }}
                       className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"

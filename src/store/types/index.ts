@@ -110,7 +110,7 @@ export interface User {
 }
 
 export interface AuthState extends LoadingState {
-  id:string
+  id: string | null;
   user: User | null;
   isAuthenticated: boolean;
   token: string | null;

@@ -577,7 +577,7 @@ export default function EventManagementPage() {
         </Suspense>
 
         {/* Hero Section - Full Width on Mobile/Tablet, Contained on Desktop */}
-        <div className="lg:max-w-7xl lg:mx-auto lg:px-6 xl:px-8">
+        <div className="lg:mx-auto lg:px-6 xl:px-8">
           <div className="lg:grid lg:grid-cols-12 lg:gap-6">
             {/* Left Sidebar - Featured Speakers - Hidden on mobile/tablet */}
             <div className="hidden lg:block lg:col-span-3">

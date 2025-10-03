@@ -115,13 +115,14 @@ export default function SpeakerUserLayout({
   return (
     <div className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
       <Suspense fallback={<div className="h-32 bg-white border-b border-gray-200 animate-pulse"></div>}>
-        <Navbar 
+        {/* <Navbar 
           user={user || undefined}
           currentUserData={currentUserData}
           isAuthenticated={isAuthenticated}
           forceHomepageStyle={true}
           getProfileImageUrl={(url) => getProfileImageUrl(url)}
-        />
+        /> */}
+        <ProfileHeader />
       </Suspense>
       
       <div className="flex flex-col lg:flex-row items-stretch justify-between min-h-screen">

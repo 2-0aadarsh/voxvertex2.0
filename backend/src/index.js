@@ -36,6 +36,7 @@ import eventRegisterRoutes from './routes/eventRegisterRoutes.js'
 import paymentRoutes from './routes/paymentRoutes.js'
 import subsRoutes from './routes/subscriptionRoutes.js'
 
+import enhancedEventRoutes from './routes/enhancedEventRoutes.js'
 
 import cors from "cors";
 import session from "express-session";
@@ -150,6 +151,7 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/subscriptions', subsRoutes);
 
 
+app.use("/api/enhanced-events", enhancedEventRoutes);
 
 // Featured videos and upload routes
 app.use("/api/featured-videos", featuredVideoRoutes);

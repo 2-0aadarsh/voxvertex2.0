@@ -111,7 +111,7 @@ const AvailabilityModal = ({
     isLoading: isUserLoading,
     error: userError,
   } = useGetCurrentUserQuery();
-
+  console
   // Get user role from Redux store
   const userRole = useSelector(selectUserRole);
 

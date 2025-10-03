@@ -7,7 +7,6 @@ import {
   useGetEventsQuery,
   useGetParticipantsByEventIdQuery,
 } from "../../../../store/api/disputApi";
-import { p } from "framer-motion/client";
 
 interface PartiesInvolvedStepProps {
   formData: DisputeFormData;
@@ -48,47 +47,49 @@ export default function PartiesInvolvedStep({
     }
   });
 
+  // Fix lines 51-57 in PartiesInvolvedStep.tsx
   const selectedEvent = useMemo(() => {
     if (!eventsData || !formData.eventId) return null;
-    return (
-      eventsData.data.upcoming.find((e: any) => e._id === formData.eventId) ||
-      eventsData.data.past.find((e: any) => e._id === formData.eventId)
-    );
+    return eventsData.data.events.find((e: any) => e._id === formData.eventId);
   }, [eventsData, formData.eventId]);
 
-  // Restore selections from formData
-  const restoreSelections = (list: SelectableParty[]) =>
-    list.map((p) => ({
-      ...p,
-      selected: !!formData.partiesInvolved?.some(
-        (f) => (f.userId) === (p.userId)
-      ),
-    }));
 
   // Populate speakers from selected event
   useEffect(() => {
-    console.log("selectedEvent.speakers:", selectedEvent.speakers);
-
     if (!selectedEvent) return;
-    const formatted: SelectableParty[] = selectedEvent.speakers.map(
-      (s: any) => ({
-        name: s.name || "Unknown",
-        email: s.email || "no-email@example.com",
-        userId: (s.userId),
-        role: "Speaker",
-        selected:
-          formData.partiesInvolved?.some(
-            (f) => (f.userId) === (s.userId)
-          ) || false,
-      })
-    );
-    setSpeakers((prev) => {
-      if (JSON.stringify(prev) !== JSON.stringify(formatted)) {
-        return formatted;
-      }
-      return prev;
-    });
-  }, [selectedEvent.speakers, formData.partiesInvolved]);
+    
+    // Combine manual speakers and platform speakers
+    const allSpeakers = [
+      ...(selectedEvent.speakers?.manualSpeakers || []).map((s: any) => ({
+        ...s,
+        speakerType: 'manual',
+        userId: s._id, // Use the _id from manual speaker as userId
+        email: `${s.title} (Manual Speaker)` // Show title instead of email for manual speakers
+      })),
+      ...(selectedEvent.speakers?.platformSpeakers || []).map((s: any) => ({
+        ...s,
+        speakerType: 'platform',
+        userId: s.speakerId, // Use speakerId from platform speaker
+        name: s.speakerDetails?.fullName || `${s.speakerDetails?.firstName || ''} ${s.speakerDetails?.lastName || ''}`.trim(),
+        email: `${s.speakerDetails?.professionalTitle || 'Speaker'} (Platform Speaker)` // Show title instead of email for platform speakers
+      }))
+    ];
+
+    console.log("All speakers from event:", allSpeakers);
+
+    const formatted: SelectableParty[] = allSpeakers.map((s: any) => ({
+      name: s.name || "Unknown Speaker",
+      email: s.email || `${s.title || 'Speaker'} (Event Speaker)`,
+      userId: s.userId,
+      role: "Speaker",
+      selected:
+        formData.partiesInvolved?.some(
+          (f) => String(f.userId) === String(s.userId)
+        ) || false,
+    }));
+    
+    setSpeakers(formatted);
+  }, [selectedEvent?._id, selectedEvent?.speakers?.manualSpeakers?.length, selectedEvent?.speakers?.platformSpeakers?.length]);
 
   // Populate participants from API
   useEffect(() => {
@@ -102,20 +103,30 @@ export default function PartiesInvolvedStep({
         role: "Participant",
         selected:
           formData.partiesInvolved?.some(
-            (f) => f.userId === (p.userId ?? p._id)
+            (f) => String(f.userId) === String(p.userId ?? p._id)
           ) || false,
       })
     );
-    setParticipants(
-      formatted.map((p) => ({
-        ...p,
-        selected:
-          formData.partiesInvolved?.some(
-            (f) => f.userId && f.userId === p.userId
-          ) || false,
-      }))
-    );
-  }, [participantsData]);
+    setParticipants(formatted);
+  }, [participantsData?.participants?.length]);
+
+  // Separate useEffect to restore selections from formData without causing loops
+  useEffect(() => {
+    if (!formData.partiesInvolved?.length) return;
+    
+    const selectedUserIds = new Set(formData.partiesInvolved.map(p => String(p.userId)));
+    
+    setSpeakers(prev => prev.map(speaker => ({
+      ...speaker,
+      selected: selectedUserIds.has(String(speaker.userId))
+    })));
+    
+    setParticipants(prev => prev.map(participant => ({
+      ...participant,
+      selected: selectedUserIds.has(String(participant.userId))
+    })));
+  }, [formData.partiesInvolved?.length]);
+
   console.log("Submitting parties:", formData.partiesInvolved);
 
   // Merge selected parties
@@ -128,7 +139,7 @@ export default function PartiesInvolvedStep({
     if (type === "speakers") {
       setSpeakers((prev) =>
         prev.map((p) =>
-          (p.userId) === (party.userId)
+          String(p.userId) === String(party.userId)
             ? { ...p, selected: !p.selected }
             : p
         )
@@ -136,7 +147,7 @@ export default function PartiesInvolvedStep({
     } else {
       setParticipants((prev) =>
         prev.map((p) =>
-          (p.userId) === (party.userId)
+          String(p.userId) === String(party.userId)
             ? { ...p, selected: !p.selected }
             : p
         )
@@ -172,6 +183,19 @@ export default function PartiesInvolvedStep({
     const currentType: "speakers" | "participants" =
       activeTab === "Speakers" ? "speakers" : "participants";
 
+    // Show empty state if no parties found
+    if (list.length === 0) {
+      const emptyMessage = activeTab === "Speakers" 
+        ? "No speakers found for this event"
+        : "No participants found associated to this event";
+      
+      return (
+        <div className="text-center py-8">
+          <p className="text-gray-500">{emptyMessage}</p>
+        </div>
+      );
+    }
+
     return list.map((party) => (
       <div
         key={(party.userId)}
@@ -201,6 +225,11 @@ export default function PartiesInvolvedStep({
     ));
   };
 
+  // Debug logging
+  console.log("selectedEvent:", selectedEvent);
+  console.log("speakers state:", speakers);
+  console.log("participants state:", participants);
+
   return (
     <div className="space-y-6">
       <div>
@@ -213,6 +242,13 @@ export default function PartiesInvolvedStep({
         <p className="text-sm text-gray-500">
           Select individuals or entities that are part of this dispute
         </p>
+        {selectedEvent && (
+          <p className="text-xs text-gray-400 mt-2">
+            Event: {selectedEvent.eventName} | 
+            Manual Speakers: {selectedEvent.speakers?.manualSpeakers?.length || 0} | 
+            Platform Speakers: {selectedEvent.speakers?.platformSpeakers?.length || 0}
+          </p>
+        )}
       </div>
 
       <div className="flex space-x-0 bg-gray-100 p-1 rounded-full">

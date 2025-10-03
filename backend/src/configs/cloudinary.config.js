@@ -17,3 +17,16 @@ export const connectCloudinary = () => {
     process.exit(1); // Exit process with failure
   }
 };
+
+export const uploadToCloudinary = async (file, folder = 'events') => {
+  try {
+    const result = await cloudinary.uploader.upload(file, {
+      folder: folder,
+      resource_type: "auto",
+    });
+    return result.secure_url;
+  } catch (error) {
+    console.error('Error uploading to Cloudinary:', error);
+    throw error;
+  }
+};

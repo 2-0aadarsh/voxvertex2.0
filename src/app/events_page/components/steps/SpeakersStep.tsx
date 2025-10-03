@@ -1,18 +1,37 @@
-import { useState } from 'react'
-import { Users, Calendar, Link, Trash2 } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { Users, Link, Trash2, Loader2, AlertCircle } from 'lucide-react'
+import { useGetOrganizerBookingsQuery } from '@/store/slices/organizerBookingsSlice'
 
 interface Speaker {
   name: string
   title: string
   bio: string
   image?: string
+  speakerId?: string // Add speakerId for platform speakers
+  bookingId?: string // Add bookingId for platform speakers
+}
+
+interface ConfirmedSpeaker {
+  name: string
+  title: string
+  bio: string
+  image: string
+  expertise: string[]
+  speakerId: string // Add speakerId field
+  bookingDetails: {
+    eventName: string
+    date: string
+    amount: number
+    bookingId: string
+    _id: string // MongoDB ObjectId
+  }
 }
 
 interface SpeakersStepProps {
   formData: {
     speakers: Speaker[]
   }
-  onFormDataUpdate: (data: any) => void
+  onFormDataUpdate: (data: { speakers: Speaker[] }) => void
 }
 
 export default function SpeakersStep({ formData, onFormDataUpdate }: SpeakersStepProps) {
@@ -26,44 +45,33 @@ export default function SpeakersStep({ formData, onFormDataUpdate }: SpeakersSte
   }>>([])
   const [nextId, setNextId] = useState(1)
 
-  const availableSpeakers = [
-    {
-      name: 'Sarah Johnson',
-      title: 'CEO of TechCorp',
-      bio: 'Leading expert in AI and machine learning with 15 years experience in developing cutting-edge technology...',
-      image: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=80&h=80&fit=crop&crop=face'
-    },
-    {
-      name: 'Michael Chen',
-      title: 'Data Science Director', 
-      bio: 'Pioneering data scientist with expertise in machine learning algorithms and big data analytics...',
-      image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&h=80&fit=crop&crop=face'
-    },
-    {
-      name: 'Emily Rodriguez',
-      title: 'Product Innovation Lead',
-      bio: 'Award-winning product manager specializing in user experience and digital transformation...',
-      image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&h=80&fit=crop&crop=face'
-    },
-    {
-      name: 'David Kim',
-      title: 'Tech Entrepreneur',
-      bio: 'Serial entrepreneur and startup mentor with multiple successful exits in the tech industry...',
-      image: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=80&h=80&fit=crop&crop=face'
-    },
-    {
-      name: 'Lisa Zhang',
-      title: 'Marketing Strategist',
-      bio: 'Digital marketing expert helping companies scale through innovative growth strategies...',
-      image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80&h=80&fit=crop&crop=face'
-    },
-    {
-      name: 'Alex Thompson',
-      title: 'Blockchain Specialist',
-      bio: 'Cryptocurrency and blockchain technology expert with deep knowledge of DeFi and Web3...',
-      image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&h=80&fit=crop&crop=face'
-    }
-  ]
+  // Fetch confirmed speakers from existing organizer bookings
+  const { 
+    data: bookingsData, 
+    isLoading: isLoadingSpeakers,
+    error: speakersError 
+  } = useGetOrganizerBookingsQuery()
+
+  // Transform confirmed bookings to speaker format
+  const confirmedSpeakers = useMemo((): ConfirmedSpeaker[] => {
+    if (!bookingsData?.data?.confirmed) return []
+    
+    return bookingsData.data.confirmed.map(booking => ({
+      name: `${booking.speaker.firstName} ${booking.speaker.lastName}`,
+      title: booking.speaker.professionalTitle || 'Speaker',
+      bio: booking.speaker.bio || 'Professional speaker with expertise in various topics.',
+      image: booking.speaker.profileImageUrl || '',
+      expertise: booking.speaker.areaOfExpertise || [],
+      speakerId: booking.speaker._id, // Include the actual speaker user ID
+      bookingDetails: {
+        eventName: booking.eventDetails.name,
+        date: booking.date,
+        amount: booking.compensationAndArrangements.primaryCompensation.speakerFeeAmount,
+        bookingId: booking.bookingId,
+        _id: booking._id // Include the MongoDB ObjectId
+      }
+    }))
+  }, [bookingsData])
 
   const addManualSpeaker = () => {
     const newSpeaker = {
@@ -122,21 +130,27 @@ export default function SpeakersStep({ formData, onFormDataUpdate }: SpeakersSte
     }
   }
 
-  const addAvailableSpeaker = (speaker: any) => {
+  const addAvailableSpeaker = (speaker: ConfirmedSpeaker) => {
     const isAlreadyAdded = formData.speakers.some(s => s.name === speaker.name)
     
     if (!isAlreadyAdded) {
-      // Add directly to form data (Added Speakers section)
+      // Add as platform speaker to the new structure
+      const currentSpeakers = formData.speakers || []
+      const platformSpeakers = currentSpeakers.filter(s => s.speakerId) // Existing platform speakers
+      const manualSpeakers = currentSpeakers.filter(s => !s.speakerId) // Existing manual speakers
+      
+      // Add new platform speaker
+      const newPlatformSpeaker = {
+        name: speaker.name,
+        title: speaker.title,
+        bio: speaker.bio,
+        image: speaker.image,
+        speakerId: speaker.speakerId, // Real database speaker ID
+        bookingId: speaker.bookingDetails._id // Required booking ID (MongoDB ObjectId)
+      }
+      
       onFormDataUpdate({
-        speakers: [
-          ...formData.speakers,
-          { 
-            name: speaker.name, 
-            title: speaker.title, 
-            bio: speaker.bio,
-            image: speaker.image 
-          }
-        ]
+        speakers: [...manualSpeakers, ...platformSpeakers, newPlatformSpeaker]
       })
     }
   }
@@ -305,7 +319,7 @@ export default function SpeakersStep({ formData, onFormDataUpdate }: SpeakersSte
                 <div className="text-gray-500">
                   <Users className="w-12 h-12 mx-auto mb-2 text-gray-300" />
                   <p className="text-gray-400 font-medium">No speakers added yet</p>
-                  <p className="text-sm text-gray-400">Click "Add Speaker" to add event speakers</p>
+                  <p className="text-sm text-gray-400">Click &quot;Add Speaker&quot; to add event speakers</p>
                 </div>
               </div>
             )}
@@ -315,38 +329,117 @@ export default function SpeakersStep({ formData, onFormDataUpdate }: SpeakersSte
         {/* Available Speakers Tab Content */}
         {activeTab === 'available' && (
           <div className="mb-6">
-            <p className="text-sm text-gray-600 mb-4">Select from our verified speakers database</p>
+            <p className="text-sm text-gray-600 mb-4">
+              Select from your previously confirmed speakers
+            </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              {availableSpeakers.map((speaker, index) => (
-                <div key={index} className="border border-gray-200 rounded-lg p-4 bg-white hover:shadow-md transition-shadow">
-                  <div className="flex items-start space-x-3">
-                    <img
-                      src={speaker.image}
-                      alt={speaker.name}
-                      className="w-12 h-12 rounded-full object-cover"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-medium text-gray-900 text-sm">{speaker.name}</h4>
-                      <p className="text-xs text-orange-600 mb-2">{speaker.title}</p>
-                      <p className="text-xs text-gray-500 line-clamp-2">{speaker.bio}</p>
+            {/* Loading State */}
+            {isLoadingSpeakers && (
+              <div className="flex justify-center items-center py-12">
+                <div className="flex flex-col items-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-[#FF6B35] mb-2" />
+                  <p className="text-gray-600 text-sm">Loading confirmed speakers...</p>
+                </div>
+              </div>
+            )}
+
+            {/* Error State */}
+            {speakersError && (
+              <div className="flex justify-center items-center py-12">
+                <div className="text-center">
+                  <AlertCircle className="mx-auto h-8 w-8 text-red-500 mb-2" />
+                  <p className="text-red-600 text-sm">Error loading speakers</p>
+                  <p className="text-gray-500 text-xs mt-1">Please try again later</p>
+                </div>
+              </div>
+            )}
+
+            {/* Speakers Grid */}
+            {!isLoadingSpeakers && !speakersError && (
+              <>
+                {confirmedSpeakers.length === 0 ? (
+                  <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                    <div className="text-gray-500">
+                      <Users className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                      <p className="text-gray-400 font-medium">No confirmed speakers available</p>
+                      <p className="text-sm text-gray-400">You haven&apos;t confirmed any speaker bookings yet</p>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => addAvailableSpeaker(speaker)}
-                    disabled={formData.speakers.some(s => s.name === speaker.name)}
-                    className={`w-full mt-3 py-1 px-4 rounded-lg text-sm font-medium transition-colors ${
-                      formData.speakers.some(s => s.name === speaker.name)
-                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        : 'bg-[#FF6B35] text-white hover:bg-orange-600'
-                    }`}
-                  >
-                    {formData.speakers.some(s => s.name === speaker.name) ? 'Already Added' : 'Add Speaker'}
-                  </button>
-                </div>
-              ))}
-            </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    {confirmedSpeakers.map((speaker, index) => (
+                      <div key={index} className="border border-gray-200 rounded-lg p-4 bg-white hover:shadow-md transition-shadow">
+                        <div className="flex items-start space-x-3">
+                          <div className="w-12 h-12 rounded-full overflow-hidden bg-[#FF6B35] flex items-center justify-center">
+                            {speaker.image ? (
+                              <img
+                                src={speaker.image}
+                                alt={speaker.name}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                  if (e.currentTarget.nextElementSibling) {
+                                    (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex';
+                                  }
+                                }}
+                              />
+                            ) : null}
+                            <span className={`text-white font-bold text-lg ${speaker.image ? 'hidden' : 'flex'}`}>
+                              {speaker.name.charAt(0)}
+                            </span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-medium text-gray-900 text-sm">{speaker.name}</h4>
+                            <p className="text-xs text-orange-600 mb-2">{speaker.title}</p>
+                            <p className="text-xs text-gray-500 line-clamp-2 mb-2">{speaker.bio}</p>
+                            
+                            {/* Booking Context */}
+                            <div className="mt-2 p-2 bg-orange-50 rounded border border-orange-200">
+                              <p className="text-xs text-orange-700 font-medium">Previously booked for:</p>
+                              <p className="text-xs text-orange-600">{speaker.bookingDetails.eventName}</p>
+                              <p className="text-xs text-orange-500">
+                                ${speaker.bookingDetails.amount?.toLocaleString() || '0'} • {new Date(speaker.bookingDetails.date).toLocaleDateString()}
+                              </p>
+                            </div>
+
+                            {/* Expertise Tags */}
+                            {speaker.expertise.length > 0 && (
+                              <div className="mt-2 flex flex-wrap gap-1">
+                                {speaker.expertise.slice(0, 3).map((tag, tagIndex) => (
+                                  <span
+                                    key={tagIndex}
+                                    className="inline-block px-2 py-1 text-xs bg-[#FF6B35]/10 text-[#FF6B35] rounded-full"
+                                  >
+                                    {tag}
+                                  </span>
+                                ))}
+                                {speaker.expertise.length > 3 && (
+                                  <span className="inline-block px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">
+                                    +{speaker.expertise.length - 3} more
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => addAvailableSpeaker(speaker)}
+                          disabled={formData.speakers.some(s => s.name === speaker.name)}
+                          className={`w-full mt-3 py-1 px-4 rounded-lg text-sm font-medium transition-colors ${
+                            formData.speakers.some(s => s.name === speaker.name)
+                              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                              : 'bg-[#FF6B35] text-white hover:bg-orange-600'
+                          }`}
+                        >
+                          {formData.speakers.some(s => s.name === speaker.name) ? 'Already Added' : 'Add Speaker'}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
           </div>
         )}
 
