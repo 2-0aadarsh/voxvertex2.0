@@ -12,7 +12,7 @@ export const authenticateJWT = async (req, res, next) => {
     console.log('🔐 Request URL:', req.url);
     console.log('🔐 Request method:', req.method);
     console.log('🔐 Cookies:', req.cookies);
-    console.log('🔐 Authorization header:', req.header('Authorization'));
+    // console.log('🔐 Authorization header:', req.header('Authorization'));
     
     // Get token from cookies or Authorization header
     const accessToken = req.cookies.accessToken || 
@@ -49,6 +49,7 @@ export const authenticateJWT = async (req, res, next) => {
 
         req.user = user;
         req.tokenData = decoded;
+        req.accessToken = accessToken;
         console.log('🔐 AUTHENTICATION SUCCESS - proceeding to controller');
         return next();
       } catch (accessError) {
@@ -80,6 +81,7 @@ export const authenticateJWT = async (req, res, next) => {
         
         req.user = user;
         req.tokenData = { ...decoded, refreshed: true };
+        req.accessToken = tokens.accessToken; 
         return next();
       } catch (refreshError) {
         return res.status(401).json({

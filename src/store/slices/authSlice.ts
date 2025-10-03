@@ -13,6 +13,7 @@ import type {
 
 // Initial state
 const initialState: AuthState = {
+  id: null,
   user: null,
   isAuthenticated: false,
   token: null,
@@ -38,6 +39,7 @@ const authSlice = createSlice({
     // Set authentication success
     setAuthSuccess: (state, action: PayloadAction<{ user: User; token?: string }>) => {
       console.log('🔵 Setting auth success with user:', action.payload.user);
+      state.id = action.payload.user._id;
       state.user = action.payload.user;
       state.role = action.payload.user.role; // Extract and store role separately
       state.isAuthenticated = true;
@@ -53,6 +55,7 @@ const authSlice = createSlice({
       // The role is stored in Redux state for client-side access
       
       console.log('🟢 Auth state after update:', { 
+        id: state.id,
         user: state.user, 
         role: state.role,
         isAuthenticated: state.isAuthenticated,
@@ -86,6 +89,7 @@ const authSlice = createSlice({
     
     // Logout
     logout: (state) => {
+      state.id = null;
       state.user = null;
       state.role = null;
       state.isAuthenticated = false;
@@ -150,7 +154,7 @@ export const authApi = baseApi.injectEndpoints({
 
             dispatch(setAuthSuccess({ 
               user: data.user, // Direct user object in response
-              token: finalToken
+              token: finalToken || undefined
             }));
             console.log('✅ Auth state updated with user:', data.user);
             console.log('✅ User role:', data.user.role);
@@ -221,7 +225,7 @@ export const authApi = baseApi.injectEndpoints({
 
             dispatch(setAuthSuccess({ 
               user: data.user,
-              token: finalToken
+              token: finalToken || undefined
             }));
             console.log('✅ Auth state updated from token validation with role:', data.user.role);
             console.log('✅ Token stored in Redux:', finalToken ? 'Yes' : 'No');
@@ -270,7 +274,7 @@ export const authApi = baseApi.injectEndpoints({
 
             dispatch(setAuthSuccess({ 
               user: data.user,
-              token: tokenFromCookies
+              token: tokenFromCookies || undefined
             }));
             console.log('✅ Auth state updated from getCurrentUser with role:', data.user.role);
             console.log('✅ Token stored in Redux:', tokenFromCookies ? 'Yes' : 'No');
@@ -321,6 +325,7 @@ export const {
 
 // Selectors
 export const selectAuth = (state: { auth: AuthState }) => state.auth;
+export const selectUserId = (state: { auth: AuthState }) => state.auth.id;
 export const selectUser = (state: { auth: AuthState }) => state.auth.user;
 export const selectUserRole = (state: { auth: AuthState }) => state.auth.role;
 export const selectIsAuthenticated = (state: { auth: AuthState }) => state.auth.isAuthenticated;

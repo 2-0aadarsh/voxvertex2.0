@@ -1,93 +1,103 @@
+// components/PaymentMethods.tsx
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CreditCard, Plus, Trash2, Edit, Shield, AlertCircle, Building2, X } from 'lucide-react';
+import {
+  useGetPaymentMethodsQuery,
+  useAddPaymentMethodMutation,
+  useUpdatePaymentMethodMutation,
+  useDeletePaymentMethodMutation,
+} from '../../../store/api/paymentApi'; // adjust path if your file lives elsewhere
+import { useAuth } from "@/store/hooks";
 
 export default function PaymentMethods() {
-  const [creditCards, setCreditCards] = useState([
-    {
-      id: 1,
-      type: 'Visa',
-      number: '•••• 4242',
-      holder: 'John Doe',
-      expires: '12/2027',
-      added: '1/15/2024',
-      isDefault: true
-    }
-  ]);
+  // get userId (adjust if you have auth state)
+// const getCookie = (name: string) => {
+//   if (typeof document === "undefined") return "";
+//   const match = document.cookie.match(new RegExp("(^| )" + name + "=([^;]+)"));
+//   return match ? decodeURIComponent(match[2]) : "";
+// };
 
-  interface BankAccount {
-    id: number;
-    bank: string;
-    number: string;
-    type: string;
-    routing: string;
-    added: string;
-    isDefault: boolean;
-    isVerified: boolean;
-  }
+// const userId = getCookie("userId") || "";
+const { user, id, logout } = useAuth();
+console.log("user frpm payment is", user);
+console.log("id frpm payment is", id);
+const userId =id
+  // RTK Query hooks
+  const { data: paymentMethods = [], isLoading, isFetching } = useGetPaymentMethodsQuery(id, { skip: !id });
+  const [addPaymentMethod, { isLoading: isAdding }] = useAddPaymentMethodMutation();
+  const [updatePaymentMethod, { isLoading: isUpdating }] = useUpdatePaymentMethodMutation();
+  const [deletePaymentMethod, { isLoading: isDeleting }] = useDeletePaymentMethodMutation();
 
-  interface CreditCard {
-    id: number;
-    type: string;
-    number: string;
-    holder: string;
-    expires: string;
-    added: string;
-    isDefault: boolean;
-  }
-
-  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([
-    {
-      id: 1,
-      bank: 'Chase Bank',
-      number: '•••• 8901',
-      type: 'Checking Account',
-      routing: '021000021',
-      added: '2/1/2024',
-      isDefault: true,
-      isVerified: true
-    }
-  ]);
-
+  // local UI state (modals / form inputs)
   const [showEditModal, setShowEditModal] = useState(false);
-  const [editingAccount, setEditingAccount] = useState<BankAccount | null>(null);
+  const [editingAccount, setEditingAccount] = useState<any | null>(null);
   const [showEditCardModal, setShowEditCardModal] = useState(false);
-  const [editingCard, setEditingCard] = useState<CreditCard | null>(null);
+  const [editingCard, setEditingCard] = useState<any | null>(null);
   const [bankNameInput, setBankNameInput] = useState('');
   const [cardHolderInput, setCardHolderInput] = useState('');
-  
+
   const [showAddModal, setShowAddModal] = useState(false);
   const [addMethodType, setAddMethodType] = useState<'credit' | 'bank'>('credit');
-  
+
   const [newCardHolder, setNewCardHolder] = useState('');
   const [newCardNumber, setNewCardNumber] = useState('');
   const [newCardMonth, setNewCardMonth] = useState('');
   const [newCardYear, setNewCardYear] = useState('');
   const [newCardCVV, setNewCardCVV] = useState('');
-  
+
   const [newBankName, setNewBankName] = useState('');
   const [newAccountType, setNewAccountType] = useState('Checking Account');
   const [newRoutingNumber, setNewRoutingNumber] = useState('');
   const [newAccountNumber, setNewAccountNumber] = useState('');
 
-  const handleDeleteCard = (cardId: number) => {
-    setCreditCards(creditCards.filter(card => card.id !== cardId));
-  };
+  // Helpers: map backend paymentMethods to UI-friendly arrays
+  const creditCards = (paymentMethods || [])
+    .filter((pm: any) => pm.type === 'card' || pm.type === 'credit')
+    .map((pm: any) => {
+      const d = pm.details || {};
+      return {
+        id: pm._id,
+        type: d.brand || 'Card',
+        number:
+          d.maskedNumber ||
+          (d.number ? `•••• ${String(d.number).slice(-4)}` : d.last4 ? `•••• ${d.last4}` : d.display || '••••'),
+        holder: d.name || d.holder || d.cardHolder || '',
+        expires: d.expiry || d.expires || '',
+        added: d.addedAt ? new Date(d.addedAt).toLocaleDateString() : pm.createdAt ? new Date(pm.createdAt).toLocaleDateString() : '',
+        isDefault: !!pm.isDefault || !!d.isDefault,
+        raw: pm,
+      };
+    });
 
-  const handleDeleteBankAccount = (accountId: number) => {
-    setBankAccounts(bankAccounts.filter(account => account.id !== accountId));
-  };
+  const bankAccounts = (paymentMethods || [])
+    .filter((pm: any) => pm.type === 'bank')
+    .map((pm: any) => {
+      const d = pm.details || {};
+      return {
+        id: pm._id,
+        bank: d.bankName || d.bank || pm.details?.bank || 'Bank',
+        number: d.maskedNumber || (d.accountNo ? `•••• ${String(d.accountNo).slice(-4)}` : d.last4 ? `•••• ${d.last4}` : d.display || '••••'),
+        type: d.accountType || d.type || 'Checking Account',
+        routing: d.routing || '',
+        added: d.addedAt ? new Date(d.addedAt).toLocaleDateString() : pm.createdAt ? new Date(pm.createdAt).toLocaleDateString() : '',
+        isDefault: !!pm.isDefault || !!d.isDefault,
+        isVerified: !!d.verified || !!d.isVerified || !!pm.isVerified,
+        raw: pm,
+      };
+    });
 
-  const handleEditAccount = (account: BankAccount) => {
+  // Edit handlers
+  const handleEditAccount = (account: any) => {
     setEditingAccount(account);
-    setBankNameInput(account.bank);
+    setBankNameInput(account.bank || '');
     setShowEditModal(true);
   };
 
-  const handleEditCard = (card: CreditCard) => {
+  const handleEditCard = (card: any) => {
     setEditingCard(card);
-    setCardHolderInput(card.holder);
+    setCardHolderInput(card.holder || '');
     setShowEditCardModal(true);
   };
 
@@ -103,30 +113,72 @@ export default function PaymentMethods() {
     setCardHolderInput('');
   };
 
-  const handleUpdateAccount = () => {
-    if (editingAccount) {
-      setBankAccounts(prev => 
-        prev.map(account => 
-          account.id === editingAccount.id 
-            ? { ...account, bank: bankNameInput }
-            : account
-        )
-      );
+  const handleUpdateAccount = async () => {
+    if (!editingAccount) return;
+    try {
+      const updates = {
+        // keep details shape, update bank name
+        details: {
+          ...(editingAccount.raw.details || {}),
+          bankName: bankNameInput,
+        },
+      };
+      await updatePaymentMethod({ userId, paymentMethodId: editingAccount.id, updates }).unwrap();
+      handleCloseModal();
+      // RTK invalidation will refetch
+    } catch (err) {
+      console.error('Failed to update account', err);
     }
-    handleCloseModal();
   };
 
-  const handleUpdateCard = () => {
-    if (editingCard) {
-      setCreditCards(prev => 
-        prev.map(card => 
-          card.id === editingCard.id 
-            ? { ...card, holder: cardHolderInput }
-            : card
-        )
-      );
+  const handleUpdateCard = async () => {
+    if (!editingCard) return;
+    try {
+      const updates = {
+        details: {
+          ...(editingCard.raw.details || {}),
+          name: cardHolderInput,
+        },
+      };
+      await updatePaymentMethod({ userId, paymentMethodId: editingCard.id, updates }).unwrap();
+      handleCloseCardModal();
+    } catch (err) {
+      console.error('Failed to update card', err);
     }
-    handleCloseCardModal();
+  };
+
+  // Delete handlers
+ const handleDeleteCard = async (cardId: string) => {
+  console.log("id from handleDelete is", id);
+  try {
+    await deletePaymentMethod({ 
+      userId: id, 
+      paymentMethodId: cardId 
+    }).unwrap();
+  } catch (err) {
+    console.error('Failed to delete card', err);
+  }
+};
+
+  const handleDeleteBankAccount = async (accountId: string) => {
+    try {
+      await deletePaymentMethod({ userId, paymentMethodId: accountId }).unwrap();
+    } catch (err) {
+      console.error('Failed to delete bank account', err);
+    }
+  };
+
+  // Add handlers: call addPaymentMethod mutation
+  const resetAddFormInputs = () => {
+    setNewCardHolder('');
+    setNewCardNumber('');
+    setNewCardMonth('');
+    setNewCardYear('');
+    setNewCardCVV('');
+    setNewBankName('');
+    setNewAccountType('Checking Account');
+    setNewRoutingNumber('');
+    setNewAccountNumber('');
   };
 
   const handleOpenAddModal = () => {
@@ -140,46 +192,53 @@ export default function PaymentMethods() {
     resetAddFormInputs();
   };
 
-  const resetAddFormInputs = () => {
-    setNewCardHolder('');
-    setNewCardNumber('');
-    setNewCardMonth('');
-    setNewCardYear('');
-    setNewCardCVV('');
-    setNewBankName('');
-    setNewAccountType('Checking Account');
-    setNewRoutingNumber('');
-    setNewAccountNumber('');
+  const handleAddCreditCard = async () => {
+    if (!userId) return;
+    try {
+      const details = {
+        name: newCardHolder,
+        number: newCardNumber.replace(/\s/g, ''),
+        last4: newCardNumber.replace(/\s/g, '').slice(-4),
+        expiry: `${newCardMonth}/${newCardYear}`,
+        addedAt: new Date().toISOString(),
+      };
+      await addPaymentMethod({ userId, type: 'card', details }).unwrap();
+      handleCloseAddModal();
+    } catch (err) {
+      console.error('Failed to add credit card', err);
+    }
   };
 
-  const handleAddCreditCard = () => {
-    const newCard: CreditCard = {
-      id: Date.now(),
-      type: 'Visa',
-      number: `•••• ${newCardNumber.slice(-4)}`,
-      holder: newCardHolder,
-      expires: `${newCardMonth}/${newCardYear}`,
-      added: new Date().toLocaleDateString(),
-      isDefault: creditCards.length === 0
-    };
-    setCreditCards(prev => [...prev, newCard]);
-    handleCloseAddModal();
+  const handleAddBankAccount = async () => {
+    if (!userId) return;
+    try {
+      const details = {
+        bankName: newBankName,
+        accountType: newAccountType,
+        routing: newRoutingNumber,
+        accountNo: newAccountNumber,
+        last4: newAccountNumber.slice(-4),
+        addedAt: new Date().toISOString(),
+        verified: false,
+      };
+      await addPaymentMethod({ userId, type: 'bank', details }).unwrap();
+      handleCloseAddModal();
+    } catch (err) {
+      console.error('Failed to add bank account', err);
+    }
   };
 
-  const handleAddBankAccount = () => {
-    const newAccount: BankAccount = {
-      id: Date.now(),
-      bank: newBankName,
-      number: `•••• ${newAccountNumber.slice(-4)}`,
-      type: newAccountType,
-      routing: newRoutingNumber,
-      added: new Date().toLocaleDateString(),
-      isDefault: bankAccounts.length === 0,
-      isVerified: false
-    };
-    setBankAccounts(prev => [...prev, newAccount]);
-    handleCloseAddModal();
-  };
+  if (!id) {
+    return (
+      <div className="p-6">
+        <p className="text-sm text-gray-600">User not found. Please login or pass the userId to this component.</p>
+      </div>
+    );
+  }
+
+  if (isLoading || isFetching) {
+    return <p className="p-6 text-gray-600">Loading payment methods...</p>;
+  }
 
   return (
     <>
@@ -190,7 +249,7 @@ export default function PaymentMethods() {
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-semibold text-gray-900">Payment Methods</h1>
             <p className="text-xs sm:text-sm md:text-base text-gray-600 mt-1">Manage your credit cards and bank accounts</p>
           </div>
-          <button 
+          <button
             onClick={handleOpenAddModal}
             className="w-full sm:w-auto bg-[#FF6B35] hover:bg-[#FF6B35]/90 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 text-sm md:text-base font-medium"
           >
@@ -199,6 +258,7 @@ export default function PaymentMethods() {
           </button>
         </div>
 
+        {/* Credit Cards */}
         <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
           <div className="flex items-center gap-2 mb-4">
             <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 text-gray-700" />
@@ -230,13 +290,13 @@ export default function PaymentMethods() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 self-end sm:self-auto">
-                    <button 
+                    <button
                       onClick={() => handleEditCard(card)}
                       className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
                     >
                       <Edit className="w-4 h-4" />
                     </button>
-                    <button 
+                    <button
                       onClick={() => handleDeleteCard(card.id)}
                       className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50"
                     >
@@ -257,6 +317,7 @@ export default function PaymentMethods() {
           )}
         </div>
 
+        {/* Bank Accounts */}
         <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
           <div className="flex items-center gap-2 mb-4">
             <Building2 className="w-4 h-4 sm:w-5 sm:h-5 text-gray-700" />
@@ -294,13 +355,13 @@ export default function PaymentMethods() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 self-end sm:self-auto">
-                    <button 
+                    <button
                       onClick={() => handleEditAccount(account)}
                       className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
                     >
                       <Edit className="w-4 h-4" />
                     </button>
-                    <button 
+                    <button
                       onClick={() => handleDeleteBankAccount(account.id)}
                       className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50"
                     >
@@ -329,8 +390,8 @@ export default function PaymentMethods() {
                 Your Payment Information is Secure
               </h3>
               <p className="text-xs md:text-sm text-[#FF6B35]">
-                We use industry-standard encryption and security measures to protect your financial information. 
-                Your payment details are never stored on our servers and are processed securely through our 
+                We use industry-standard encryption and security measures to protect your financial information.
+                Your payment details are never stored on our servers and are processed securely through our
                 certified payment partners.
               </p>
             </div>
@@ -348,7 +409,7 @@ export default function PaymentMethods() {
                   <h2 className="text-lg sm:text-xl font-semibold text-[#FF6B35]">Edit Bank Account</h2>
                   <p className="text-xs sm:text-sm md:text-base text-gray-600 mt-1">Update the details of your bank account.</p>
                 </div>
-                <button 
+                <button
                   onClick={handleCloseModal}
                   className="text-gray-400 hover:text-gray-600 p-1 flex-shrink-0"
                 >
@@ -391,13 +452,13 @@ export default function PaymentMethods() {
               </div>
 
               <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-4">
-                <button 
+                <button
                   onClick={handleCloseModal}
                   className="px-4 sm:px-6 py-2 text-sm sm:text-base text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   onClick={handleUpdateAccount}
                   className="px-4 sm:px-6 py-2 text-sm sm:text-base text-white bg-[#FF6B35] rounded-lg hover:bg-[#FF6B35]/90"
                 >
@@ -419,7 +480,7 @@ export default function PaymentMethods() {
                   <h2 className="text-lg sm:text-xl font-semibold text-[#FF6B35]">Edit Credit Card</h2>
                   <p className="text-xs sm:text-sm md:text-base text-gray-600 mt-1">Update the details of your credit card.</p>
                 </div>
-                <button 
+                <button
                   onClick={handleCloseCardModal}
                   className="text-gray-400 hover:text-gray-600 p-1 flex-shrink-0"
                 >
@@ -462,13 +523,13 @@ export default function PaymentMethods() {
               </div>
 
               <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-4">
-                <button 
+                <button
                   onClick={handleCloseCardModal}
                   className="px-4 sm:px-6 py-2 text-sm sm:text-base text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   onClick={handleUpdateCard}
                   className="px-4 sm:px-6 py-2 text-sm sm:text-base text-white bg-[#FF6B35] rounded-lg hover:bg-[#FF6B35]/90"
                 >
@@ -490,7 +551,7 @@ export default function PaymentMethods() {
                   <h2 className="text-lg sm:text-xl font-semibold text-[#FF6B35]">Add Payment Method</h2>
                   <p className="text-xs sm:text-sm md:text-base text-gray-600 mt-1">Add a credit card or bank account for payments and withdrawals.</p>
                 </div>
-                <button 
+                <button
                   onClick={handleCloseAddModal}
                   className="text-gray-400 hover:text-gray-600 p-1 flex-shrink-0"
                 >
@@ -515,7 +576,7 @@ export default function PaymentMethods() {
                   className={`flex items-center justify-center gap-2 px-4 py-2.5 sm:py-3 rounded-lg border-2 transition-all text-sm sm:text-base ${
                     addMethodType === 'bank'
                       ? 'border-[#FF6B35] bg-[#FF6B35]/5'
-                      : 'border-gray-200 hover:border-gray-300'
+                      : 'border_gray-200 hover:border-gray-300'
                   }`}
                 >
                   <Building2 className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -631,17 +692,17 @@ export default function PaymentMethods() {
                   </div>
 
                   <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-4">
-                    <button 
+                    <button
                       onClick={handleCloseAddModal}
                       className="px-4 sm:px-6 py-2 text-sm sm:text-base text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
                     >
                       Cancel
                     </button>
-                    <button 
+                    <button
                       onClick={handleAddCreditCard}
                       className="px-4 sm:px-6 py-2 text-sm sm:text-base text-white bg-[#FF6B35] rounded-lg hover:bg-[#FF6B35]/90"
                     >
-                      Add Card
+                      {isAdding ? 'Adding...' : 'Add Card'}
                     </button>
                   </div>
                 </div>
@@ -727,17 +788,17 @@ export default function PaymentMethods() {
                   </div>
 
                   <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-4">
-                    <button 
+                    <button
                       onClick={handleCloseAddModal}
                       className="px-4 sm:px-6 py-2 text-sm sm:text-base text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
                     >
                       Cancel
                     </button>
-                    <button 
+                    <button
                       onClick={handleAddBankAccount}
                       className="px-4 sm:px-6 py-2 text-sm sm:text-base text-white bg-[#FF6B35] rounded-lg hover:bg-[#FF6B35]/90"
                     >
-                      Add Account
+                      {isAdding ? 'Adding...' : 'Add Account'}
                     </button>
                   </div>
                 </div>

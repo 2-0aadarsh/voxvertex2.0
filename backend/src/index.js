@@ -33,6 +33,9 @@ import tagSpeakerRoutes from "./routes/tagSpeakerRoutes.js";
 import savedSpeakerRoutes from "./routes/savedSpeakerRoutes.js";
 import speakerManagementRoutes from './routes/speakerManagementRoutes.js';
 import eventRegisterRoutes from './routes/eventRegisterRoutes.js'
+import paymentRoutes from './routes/paymentRoutes.js'
+import subsRoutes from './routes/subscriptionRoutes.js'
+
 
 import cors from "cors";
 import session from "express-session";
@@ -143,6 +146,9 @@ app.use("/api/saved-speakers", savedSpeakerRoutes);
 app.use('/api/speaker-management', speakerManagementRoutes);
 app.use('/api/negotiations', negotiationRoutes);
 app.use("/api/registrations", eventRegisterRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/subscriptions', subsRoutes);
+
 
 
 // Featured videos and upload routes

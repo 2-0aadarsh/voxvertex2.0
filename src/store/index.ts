@@ -18,7 +18,8 @@ import storage from 'redux-persist/lib/storage';
 
 // Import API slices
 import { baseApi } from './api/baseApi';
-import { disputeApi } from '../store/api/disputApi'; // disputeApi with all dispute & events endpoints
+import { disputeApi } from '../store/api/disputApi'; 
+import { paymentApi } from "./api/paymentApi";
 
 // Import other slices
 import authReducer from './slices/authSlice';
@@ -76,7 +77,8 @@ const authPersistConfig = {
 // Root reducer
 const rootReducer = combineReducers({
   [baseApi.reducerPath]: baseApi.reducer,
-  [disputeApi.reducerPath]: disputeApi.reducer, // Add only disputeApi reducer
+  [disputeApi.reducerPath]: disputeApi.reducer, 
+  [paymentApi.reducerPath]: paymentApi.reducer,
   auth: persistReducer(authPersistConfig, authReducer),
   profile: profileReducer,
   posts: postsReducer,
@@ -113,7 +115,7 @@ export const store = configureStore({
       serializableStateInvariantCheck: {
         warnAfter: 128,
       },
-    }).concat(baseApi.middleware).concat(disputeApi.middleware), // Add both APIs middleware
+    }).concat(paymentApi.middleware, baseApi.middleware, disputeApi.middleware),
   devTools: process.env.NODE_ENV !== 'production',
   preloadedState: undefined,
 });
