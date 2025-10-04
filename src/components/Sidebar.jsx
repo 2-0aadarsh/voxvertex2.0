@@ -146,8 +146,8 @@ const Sidebar = ({ userRole = "newuser" }) => {
 
   return (
     <div
-      className="fixed left-0 top-14 w-64 bg-white border-r border-gray-200 z-40"
-      style={{ height: "calc(100vh - 56px)" }}
+      className="fixed left-0 top-20 w-64 bg-white border-r border-gray-200 z-40"
+      style={{ height: "calc(100vh - 80px)" }}
     >
       <div className="p-6 h-full flex flex-col">
         {/* Main Menu */}

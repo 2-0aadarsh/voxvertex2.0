@@ -14,9 +14,15 @@ import type {
   EventValidation,
   EventStep,
   FileUploadResponse,
-  EventCreationResponse,
-  ApiResponse
+  EventCreationResponse
 } from '../../app/events_page/types/eventTypes';
+
+// Define ApiResponse type locally
+type ApiResponse<T = any> = {
+  success: boolean;
+  message: string;
+  data?: T;
+};
 
 // Initial form state
 const initialFormData: EventFormData = {
@@ -228,7 +234,7 @@ export const enhancedEventApi = baseApi.injectEndpoints({
       {
         page?: number;
         limit?: number;
-        status?: 'draft' | 'published' | 'cancelled';
+        status?: 'draft' | 'published';
         sortBy?: 'createdAt' | 'startDate' | 'eventName';
         sortOrder?: 'asc' | 'desc';
       }
@@ -337,6 +343,79 @@ export const enhancedEventApi = baseApi.injectEndpoints({
       providesTags: ['EnhancedEvent'],
       keepUnusedDataFor: 300, // Cache for 5 minutes
     }),
+
+    // ============================================================================
+    // ENHANCED EVENT REGISTRATION ENDPOINTS
+    // ============================================================================
+
+    // Register for enhanced event
+    registerForEnhancedEvent: builder.mutation<
+      { success: boolean; message: string; data: unknown },
+      { eventId: string; ticketTierId: string; registrant: unknown; additionalParticipants?: unknown[] }
+    >({
+      query: ({ eventId, ticketTierId, registrant, additionalParticipants = [] }) => ({
+        url: `/enhanced-events/${eventId}/register`,
+        method: 'POST',
+        body: {
+          ticketTierId,
+          registrant,
+          additionalParticipants
+        },
+      }),
+      invalidatesTags: ['EnhancedEvent', 'User'],
+    }),
+
+    // Create payment for enhanced event registration
+    createPaymentForEnhancedEvent: builder.mutation<
+      { success: boolean; message: string; data: unknown },
+      { registrationId: string; paymentMethodId: string }
+    >({
+      query: ({ registrationId, paymentMethodId }) => ({
+        url: `/enhanced-events/registrations/${registrationId}/create-payment`,
+        method: 'POST',
+        body: { paymentMethodId },
+      }),
+    }),
+
+    // Verify payment for enhanced event registration
+    verifyEnhancedEventPayment: builder.mutation<
+      { success: boolean; message: string; data: unknown },
+      { registrationId: string; razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }
+    >({
+      query: ({ registrationId, razorpay_order_id, razorpay_payment_id, razorpay_signature }) => ({
+        url: `/enhanced-events/registrations/${registrationId}/verify-payment`,
+        method: 'POST',
+        body: {
+          razorpay_order_id,
+          razorpay_payment_id,
+          razorpay_signature
+        },
+      }),
+      invalidatesTags: ['EnhancedEvent', 'User'],
+    }),
+
+    // Get enhanced event registration summary
+    getEnhancedEventRegistrationSummary: builder.query<
+      { success: boolean; data: { summary: unknown } },
+      string
+    >({
+      query: (registrationId) => ({
+        url: `/enhanced-events/registrations/${registrationId}/summary`,
+        method: 'GET',
+      }),
+    }),
+
+    // Get user's enhanced event registrations
+    getUserEnhancedEventRegistrations: builder.query<
+      { success: boolean; data: { registrations: unknown[]; totalRegistrations: number } },
+      void
+    >({
+      query: () => ({
+        url: '/enhanced-events/user/registrations',
+        method: 'GET',
+      }),
+      providesTags: ['EnhancedEvent'],
+    }),
   }),
 });
 
@@ -373,6 +452,12 @@ export const {
   useUploadBannerImageMutation,
   usePublishEventMutation,
   useGetEventStatsQuery,
+  // Enhanced Event Registration hooks
+  useRegisterForEnhancedEventMutation,
+  useCreatePaymentForEnhancedEventMutation,
+  useVerifyEnhancedEventPaymentMutation,
+  useGetEnhancedEventRegistrationSummaryQuery,
+  useGetUserEnhancedEventRegistrationsQuery,
 } = enhancedEventApi;
 
 // Selectors

@@ -120,6 +120,33 @@ export const savedSpeakersApi = baseApi.injectEndpoints({
       providesTags: (result, error, speakerId) => [{ type: 'SavedSpeaker', id: speakerId }],
     }),
 
+    // Check saved status for multiple speakers (batch)
+    checkMultipleSpeakersSavedStatus: builder.mutation<{
+      success: boolean;
+      data: {
+        results: Array<{
+          speakerId: string;
+          isSaved: boolean;
+          savedData: {
+            isSaved: boolean;
+            customTags: string[];
+            notes: string;
+            savedAt: string;
+          } | null;
+        }>;
+        total: number;
+        savedCount: number;
+      };
+    }, { speakerIds: string[] }>({
+      query: ({ speakerIds }) => ({
+        url: '/saved-speakers/check-batch',
+        method: 'POST',
+        credentials: 'include',
+        body: { speakerIds },
+      }),
+      invalidatesTags: ['SavedSpeaker'],
+    }),
+
     // Save speaker with tags
     saveSpeaker: builder.mutation<{ success: boolean; message: string; data: SavedSpeaker }, { speakerId: string; customTags?: string[]; notes?: string }>({
       query: ({ speakerId, customTags = [], notes = '' }) => ({
@@ -127,6 +154,16 @@ export const savedSpeakersApi = baseApi.injectEndpoints({
         method: 'POST',
         credentials: 'include',
         body: { speakerId, customTags, notes },
+      }),
+      invalidatesTags: ['SavedSpeaker'],
+    }),
+
+    // Unsave speaker (for bookmark toggle)
+    unsaveSpeaker: builder.mutation<{ success: boolean; message: string }, { speakerId: string }>({
+      query: ({ speakerId }) => ({
+        url: `/saved-speakers/unsave/${speakerId}`,
+        method: 'DELETE',
+        credentials: 'include',
       }),
       invalidatesTags: ['SavedSpeaker'],
     }),
@@ -161,7 +198,9 @@ export const {
   useGetSavedSpeakersForDatabaseQuery,
   useGetCustomTagsQuery,
   useCheckSpeakerSavedStatusQuery,
+  useCheckMultipleSpeakersSavedStatusMutation,
   useSaveSpeakerMutation,
+  useUnsaveSpeakerMutation,
   useUpdateSavedSpeakerTagsMutation,
   useRemoveSavedSpeakerMutation,
 } = savedSpeakersApi;
@@ -223,7 +262,7 @@ const savedSpeakersSlice = createSlice({
       state.savedSpeakers.push(newSavedSpeaker);
       
       // Add new custom tags to the list
-      newSavedSpeaker.customTags.forEach(tag => {
+      newSavedSpeaker.customTags.forEach((tag: string) => {
         if (!state.customTags.includes(tag)) {
           state.customTags.push(tag);
         }
@@ -240,7 +279,7 @@ const savedSpeakersSlice = createSlice({
         
         // Update custom tags list
         if (updates.customTags) {
-          updates.customTags.forEach(tag => {
+          updates.customTags.forEach((tag: string) => {
             if (!state.customTags.includes(tag)) {
               state.customTags.push(tag);
             }

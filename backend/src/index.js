@@ -37,6 +37,8 @@ import paymentRoutes from './routes/paymentRoutes.js'
 import subsRoutes from './routes/subscriptionRoutes.js'
 
 import enhancedEventRoutes from './routes/enhancedEventRoutes.js'
+import enhancedEventRegisterRoutes from './routes/enhancedEventRegisterRoutes.js'
+import documentRoutes from './routes/documentRoutes.js'
 
 import cors from "cors";
 import session from "express-session";
@@ -49,6 +51,7 @@ import bodyParser from 'body-parser';
 import fs from 'fs';
 import path from 'path';
 import socketService from './services/socketService.js';
+import startReservationCleanupJob from './jobs/reservationCleanupJob.js';
 
 import dotenv from "dotenv";
 import { connectCloudinary } from "./configs/cloudinary.config.js";
@@ -152,6 +155,10 @@ app.use('/api/subscriptions', subsRoutes);
 
 
 app.use("/api/enhanced-events", enhancedEventRoutes);
+app.use("/api/enhanced-events", enhancedEventRegisterRoutes);
+
+// Document management routes
+app.use("/api/documents", documentRoutes);
 
 // Featured videos and upload routes
 app.use("/api/featured-videos", featuredVideoRoutes);
@@ -188,5 +195,9 @@ server.listen(PORT, () => {
     console.log(`📡 Feed Endpoint: http://localhost:${PORT}/api/enhanced-posts/feed`);
     console.log(`🧪 Test Endpoint: http://localhost:${PORT}/api/enhanced-posts/test`);
     console.log(`🗄️  DB Test Endpoint: http://localhost:${PORT}/api/enhanced-posts/db-test`);
+    
+    // Start background jobs
+    startReservationCleanupJob();
+    
     console.log('===============================');
 });

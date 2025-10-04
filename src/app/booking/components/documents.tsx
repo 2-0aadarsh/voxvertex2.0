@@ -1,20 +1,15 @@
 //app/booking/components/documents.tsx
 'use client';
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Sidebar from './parts/Sidebar';
+import React from 'react';
 import Header from './parts/Header';
 import DocumentsMain from './parts/documentsMain';
 
-export default function DocumentsPage({ onTabChange, activeTab }: { onTabChange?: (tab: string) => void; activeTab?: string }) {
-  const router = useRouter();
+export default function DocumentsPage({ onTabChange }: { onTabChange?: (tab: string) => void }) {
 
   return (
     <div className="min-h-screen bg-white">
-      <Sidebar />
-      
-      <div className="ml-64">
+      <div className="ml-64 pt-20">
         <Header />
         
         {/* Orange Header Card */}

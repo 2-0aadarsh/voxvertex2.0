@@ -11,10 +11,10 @@ export default function ProgressIndicator({ currentStep, totalSteps }: ProgressI
 
   return (
     <div className="mb-4">
-      <div className="flex items-start">
+      <div className="flex items-center justify-between">
         {steps.map((step, index) => (
           <div key={step} className="flex items-center flex-1">
-            <div className="flex flex-col items-center">
+            <div className="flex flex-col items-center relative">
               <div className="relative">
                 <motion.div
                   className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-colors duration-300 ${
@@ -42,9 +42,9 @@ export default function ProgressIndicator({ currentStep, totalSteps }: ProgressI
             </div>
             
             {index < steps.length - 1 && (
-              <div className="flex-1 mx-2 mt-4">
+              <div className="flex-1 h-0.5 mx-2 relative">
                 <motion.div
-                  className={`h-0.5 transition-colors duration-300 ${
+                  className={`h-full transition-colors duration-300 ${
                     step < currentStep ? 'bg-orange-500' : 'bg-gray-300'
                   }`}
                   initial={{ scaleX: 0 }}

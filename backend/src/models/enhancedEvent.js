@@ -18,6 +18,11 @@ const ticketTierSchema = new mongoose.Schema({
     required: [true, "Ticket quantity is required"],
     min: [1, "Quantity must be at least 1"],
   },
+  reservedQuantity: {
+    type: Number,
+    default: 0,
+    min: [0, "Reserved quantity cannot be negative"],
+  },
   features: [{
     type: String,
     trim: true,

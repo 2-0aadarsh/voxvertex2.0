@@ -8,7 +8,7 @@ import { Calendar, DollarSign, Clock, Calendar as CalendarIcon, User } from 'luc
 interface Speaker {
   id: string;
   name: string;
-  expertise: string;
+  expertise?: string;
   date: string;
   price: number;
   image: string;
@@ -16,7 +16,7 @@ interface Speaker {
   tags: string[];
   timeAgo: string;
   bookingId?: string;
-  originalBooking?: any;
+  originalBooking?: unknown;
 }
 
 interface SpeakerCardProps {
@@ -53,7 +53,7 @@ export default function SpeakerCard({ speaker, showAttachButton = false, onViewD
         )}
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-gray-900 text-xs truncate">{speaker.name}</h3>
-          <p className="text-[10px] text-gray-600 mt-1 leading-tight">{speaker.expertise}</p>
+          <p className="text-[10px] text-gray-600 mt-1 leading-tight">{speaker.expertise || 'No expertise specified'}</p>
         </div>
       </div>
 

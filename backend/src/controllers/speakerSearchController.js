@@ -230,6 +230,10 @@ export const searchSpeakersWithFilters = async (req, res) => {
       maxFee,
       deliveryModes,
       
+      // Time slot filters
+      requestedStartTime,
+      requestedEndTime,
+      
       // Profile filters
       yearsOfExperience,
       location,
@@ -495,6 +499,16 @@ export const searchSpeakersWithFilters = async (req, res) => {
       };
     }
 
+    // Filter by time slots - check if speaker's available time overlaps with requested time
+    if (requestedStartTime && requestedEndTime && requestedStartTime.trim() && requestedEndTime.trim()) {
+      console.log('⏰ Time slot filtering requested:', { requestedStartTime, requestedEndTime });
+      
+      // For time slot filtering, we need to use aggregation pipeline approach
+      // since $expr cannot be used inside $elemMatch
+      // We'll filter time slots at the aggregation level instead
+      console.log('⏰ Time slot filter will be applied in aggregation pipeline');
+    }
+
     // Filter by fee range - handle this separately as it requires different logic
     let feeFilter = null;
     if (minFee || maxFee) {
@@ -555,6 +569,8 @@ export const searchSpeakersWithFilters = async (req, res) => {
       minFee,
       maxFee,
       deliveryModes,
+      requestedStartTime,
+      requestedEndTime,
       yearsOfExperience,
       location,
       expertise,
@@ -633,41 +649,142 @@ export const searchSpeakersWithFilters = async (req, res) => {
 
     console.log('🔍 Final availability conditions with fee filter:', JSON.stringify(finalAvailabilityConditions, null, 2));
 
-    // Get availability records matching the criteria
-    const availabilityRecords = await Availability.find(finalAvailabilityConditions)
-      .populate({
-        path: 'userId',
-        model: 'EnhancedUser',
-        select: 'firstName lastName email profileImageUrl bio professionalTitle location areaOfExpertise yearsOfExperience roleSpecificData isProfileComplete createdAt role',
-        match: { role: 'speaker' } // Only populate if user is a speaker
-      })
-      .select('userId eventTypes modes timeSlots date');
+    // Build aggregation pipeline for availability records
+    const pipeline = [
+      // Match basic conditions (date, eventTypes, deliveryModes, etc.)
+      { $match: finalAvailabilityConditions },
+      
+      // Lookup speakers
+      {
+        $lookup: {
+          from: 'enhancedusers',
+          localField: 'userId',
+          foreignField: '_id',
+          as: 'speaker',
+          pipeline: [
+            { $match: { role: 'speaker' } },
+            {
+              $project: {
+                firstName: 1,
+                lastName: 1,
+                email: 1,
+                profileImageUrl: 1,
+                bio: 1,
+                professionalTitle: 1,
+                location: 1,
+                areaOfExpertise: 1,
+                yearsOfExperience: 1,
+                roleSpecificData: 1,
+                isProfileComplete: 1,
+                createdAt: 1,
+                role: 1
+              }
+            }
+          ]
+        }
+      },
+      
+      // Filter out records without speakers
+      { $match: { 'speaker.0': { $exists: true } } },
+      
+      // Unwind speaker array
+      { $unwind: '$speaker' }
+    ];
+
+    // Add time slot filtering if requested
+    if (requestedStartTime && requestedEndTime && requestedStartTime.trim() && requestedEndTime.trim()) {
+      // Convert time strings to comparable format (HH:MM)
+      const parseTime = (timeStr) => {
+        const time = timeStr.trim();
+        const [hours, minutes] = time.split(':').map(num => parseInt(num, 10));
+        return hours * 60 + minutes; // Convert to minutes since midnight
+      };
+      
+      const requestedStart = parseTime(requestedStartTime);
+      const requestedEnd = parseTime(requestedEndTime);
+      
+      console.log('⏰ Parsed time range (minutes):', { requestedStart, requestedEnd });
+      
+      // Add time slot filtering stage
+      pipeline.push({
+        $addFields: {
+          matchingTimeSlots: {
+            $filter: {
+              input: '$timeSlots',
+              as: 'slot',
+              cond: {
+                $and: [
+                  { $ne: ['$$slot.startTime', null] },
+                  { $ne: ['$$slot.endTime', null] },
+                  {
+                    $let: {
+                      vars: {
+                        speakerStart: {
+                          $add: [
+                            { $multiply: [{ $toInt: { $arrayElemAt: [{ $split: ['$$slot.startTime', ':'] }, 0] } }, 60] },
+                            { $toInt: { $arrayElemAt: [{ $split: ['$$slot.startTime', ':'] }, 1] } }
+                          ]
+                        },
+                        speakerEnd: {
+                          $add: [
+                            { $multiply: [{ $toInt: { $arrayElemAt: [{ $split: ['$$slot.endTime', ':'] }, 0] } }, 60] },
+                            { $toInt: { $arrayElemAt: [{ $split: ['$$slot.endTime', ':'] }, 1] } }
+                          ]
+                        }
+                      },
+                      in: {
+                        $and: [
+                          { $lte: ['$$speakerStart', requestedEnd] }, // Speaker starts before or at requested end
+                          { $gte: ['$$speakerEnd', requestedStart] }  // Speaker ends after or at requested start
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      });
+      
+      // Only include records that have matching time slots
+      pipeline.push({
+        $match: {
+          'matchingTimeSlots.0': { $exists: true }
+        }
+      });
+      
+      console.log('⏰ Time slot filter added to aggregation pipeline');
+    }
+
+    // Get availability records using aggregation
+    const availabilityRecords = await Availability.aggregate(pipeline);
 
     console.log('🔍 Availability records found:', availabilityRecords.length);
     console.log('🔍 Sample availability record:', availabilityRecords[0]);
 
-    // Filter out records with null userId and extract unique speaker IDs
+    // Extract unique speaker IDs from aggregation results
     const validAvailabilityRecords = availabilityRecords.filter(record => {
-      if (!record.userId) {
-        console.log('⚠️ Found availability record with null userId:', record._id);
+      if (!record.speaker) {
+        console.log('⚠️ Found availability record with null speaker:', record._id);
         return false;
       }
-      if (!record.userId._id) {
-        console.log('⚠️ Found availability record with userId but no _id:', record._id, record.userId);
+      if (!record.speaker._id) {
+        console.log('⚠️ Found availability record with speaker but no _id:', record._id, record.speaker);
         return false;
       }
       return true;
     });
 
     console.log('✅ Valid availability records:', validAvailabilityRecords.length);
-    const availableSpeakerIds = [...new Set(validAvailabilityRecords.map(record => record.userId._id.toString()))];
+    const availableSpeakerIds = [...new Set(validAvailabilityRecords.map(record => record.speaker._id.toString()))];
     console.log('🎯 Available speaker IDs:', availableSpeakerIds);
 
-    // Alternative approach: If no valid records from population, try direct userId matching
+    // Alternative approach: If no valid records from aggregation, try direct userId matching
     if (validAvailabilityRecords.length === 0 && availabilityRecords.length > 0) {
       console.log('🔄 Trying alternative approach - direct userId matching');
       
-      // Get all userIds from availability records (even if population failed)
+      // Get all userIds from availability records (even if aggregation failed)
       const allAvailabilityUserIds = [...new Set(availabilityRecords.map(record => record.userId?.toString()).filter(Boolean))];
       console.log('🔄 All availability userIds:', allAvailabilityUserIds);
       
@@ -749,6 +866,8 @@ export const searchSpeakersWithFilters = async (req, res) => {
             minFee: minFee ? parseInt(minFee) : null,
             maxFee: maxFee ? parseInt(maxFee) : null,
             deliveryModes: Array.isArray(deliveryModes) ? deliveryModes : (deliveryModes ? [deliveryModes] : []),
+            requestedStartTime,
+            requestedEndTime,
             yearsOfExperience: yearsOfExperience ? parseInt(yearsOfExperience) : null,
             location,
             expertise: Array.isArray(expertise) ? expertise : (expertise ? [expertise] : []),
@@ -789,6 +908,8 @@ export const searchSpeakersWithFilters = async (req, res) => {
             minFee: minFee ? parseInt(minFee) : null,
             maxFee: maxFee ? parseInt(maxFee) : null,
             deliveryModes: Array.isArray(deliveryModes) ? deliveryModes : (deliveryModes ? [deliveryModes] : []),
+            requestedStartTime,
+            requestedEndTime,
             yearsOfExperience: yearsOfExperience ? parseInt(yearsOfExperience) : null,
             location,
             expertise: Array.isArray(expertise) ? expertise : (expertise ? [expertise] : []),

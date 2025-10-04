@@ -111,7 +111,8 @@ const AvailabilityModal = ({
     isLoading: isUserLoading,
     error: userError,
   } = useGetCurrentUserQuery();
-  console
+  
+
   // Get user role from Redux store
   const userRole = useSelector(selectUserRole);
 
@@ -181,6 +182,8 @@ const AvailabilityModal = ({
   };
 
   const handleSubmit = async () => {
+    console.log("currentUserData", currentUserData);
+    console.log("userRole", userRole);
     try {
       // Check if user is authenticated and has speaker role
       if (!currentUserData || userRole !== "speaker") {

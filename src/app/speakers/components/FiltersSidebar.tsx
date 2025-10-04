@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { 
-  Search, 
   Calendar, 
   ChevronDown,
   ChevronUp
@@ -313,6 +312,8 @@ const FiltersSidebar: React.FC = () => {
     setDeliveryMode('');
     setMinFee(0);
     setMaxFee(10000);
+    setstartTimeValue('09:00');
+    setendTimeValue('09:00');
     dispatch(clearFilters());
   };
 
@@ -330,6 +331,8 @@ const FiltersSidebar: React.FC = () => {
       topics: selectedCategory ? [selectedCategory.name] : [],
       eventTypes: eventType ? [eventType] : [], // Use eventType state
       deliveryModes: deliveryMode ? [deliveryMode] : [], // Use deliveryMode state
+      requestedStartTime: starttimeValue,
+      requestedEndTime: endtimeValue,
       priceRange: {
         min: minFee,
         max: maxFee
@@ -343,6 +346,7 @@ const FiltersSidebar: React.FC = () => {
     console.log('🎯 Selected expertise category:', selectedExpertiseCategory);
     console.log('🎯 Event type:', eventType);
     console.log('🎯 Delivery mode:', deliveryMode);
+    console.log('🎯 Time range:', { starttimeValue, endtimeValue });
     dispatch(setFilters(newFilters));
   };
 
@@ -423,35 +427,35 @@ const FiltersSidebar: React.FC = () => {
         </div>
 
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-3">
-            Available Time
-          </label>
-          <div className="flex space-x-2">
-            <div className="flex-1">
-              <label className="block text-xs text-gray-500 mb-1">Start Time</label>
-              <input 
-                type="time" 
-                value={starttimeValue}
-                onChange={(e) => setMinFee(Math.max(0, parseInt(e.target.value) || 0))}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-[#FF6B35] focus:border-[#FF6B35]"
-                placeholder="HH:MM"
-                
-              />
-            </div>
-            <div className="flex-1">
-              <label className="block text-xs text-gray-500 mb-1">End Time</label>
-              <input 
-                type="time" 
-                value={endtimeValue}
-                onChange={(e) => setMinFee(Math.max(0, parseInt(e.target.value) || 0))}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-[#FF6B35] focus:border-[#FF6B35]"
-                placeholder="HH:MM"
-                
-              />
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              Available Time
+            </label>
+            <div className="flex space-x-2">
+              <div className="flex-1">
+                <label className="block text-xs text-gray-500 mb-1">Start Time</label>
+                <input 
+                  type="time" 
+                  value={starttimeValue}
+                  onChange={(e) => setstartTimeValue(e.target.value)}
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-[#FF6B35] focus:border-[#FF6B35]"
+                  placeholder="HH:MM"
+                  
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-xs text-gray-500 mb-1">End Time</label>
+                <input 
+                  type="time" 
+                  value={endtimeValue}
+                  onChange={(e) => setendTimeValue(e.target.value)}
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-[#FF6B35] focus:border-[#FF6B35]"
+                  placeholder="HH:MM"
+                  
+                />
+              </div>
             </div>
           </div>
-        </div>
 
         {/* Fee Range */}
         <div>

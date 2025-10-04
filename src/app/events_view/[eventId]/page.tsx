@@ -223,7 +223,7 @@ export default function EventDetailsPage() {
         getProfileImageUrl={getProfileImageUrl}
       />
       {/* Main Content */}
-      <div className="ml-64 pt-16 bg-orange-50 min-h-screen">
+      <div className="ml-64 pt-20 bg-orange-50 min-h-screen">
         {/* Top Profile Bar */}
         
 

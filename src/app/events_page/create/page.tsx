@@ -308,7 +308,7 @@ export default function CreateEvent() {
       <Sidebar />
 
       {/* Main Content */}
-      <div className="ml-64">
+      <div className="ml-64 pt-20">
         {/* Main Form Content */}
         <div className="p-6 bg-[#FF6B35]/10">
           {/* Form Card */}

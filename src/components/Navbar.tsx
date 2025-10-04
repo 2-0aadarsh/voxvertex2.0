@@ -20,8 +20,8 @@ import { useAuth } from "@/store/hooks";
 interface NavbarProps {
   showSearch?: boolean;
   className?: string;
-  user?: { firstName?: string; lastName?: string; whoAreYou?: string; profileImage?: any; profileImageUrl?: string; email?: string };
-  currentUserData?: { user?: { firstName?: string; lastName?: string; whoAreYou?: string; profileImage?: any; profileImageUrl?: string; email?: string } };
+  user?: { firstName?: string; lastName?: string; whoAreYou?: string; profileImage?: unknown; profileImageUrl?: string; email?: string; role?: string };
+  currentUserData?: { user?: { firstName?: string; lastName?: string; whoAreYou?: string; profileImage?: unknown; profileImageUrl?: string; email?: string; role?: string } };
   isAuthenticated?: boolean;
   activeTab?: string;
   onTabClick?: (tab: string) => void;
@@ -43,6 +43,7 @@ const Navbar: React.FC<NavbarProps> = ({
   const router = useRouter();
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   
   // Get logout function from useAuth hook
   const { logout } = useAuth();
@@ -66,8 +67,23 @@ const Navbar: React.FC<NavbarProps> = ({
     }
   };
 
+  // Handle search functionality
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      console.log("🔍 Searching for:", searchQuery.trim());
+      // Redirect to speakers page with search query
+      router.push(`/speakers?search=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
+
+  // Handle search input change
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+  };
+
   // Helper function to get profile image URL
-  const getProfileImage = (profileImage: any) => {
+  const getProfileImage = (profileImage: unknown) => {
     console.log('🔍 Navbar Profile Image Debug:', {
       profileImage,
       type: typeof profileImage,
@@ -93,16 +109,18 @@ const Navbar: React.FC<NavbarProps> = ({
     }
     
     // Handle object with data and contentType (Buffer)
-    if (typeof profileImage === 'object' && profileImage.data && profileImage.contentType) {
-      const dataUrl = `data:${profileImage.contentType};base64,${profileImage.data.toString('base64')}`;
+    if (typeof profileImage === 'object' && profileImage !== null && 'data' in profileImage && 'contentType' in profileImage) {
+      const profileImageObj = profileImage as { data: { toString: (encoding: string) => string }; contentType: string };
+      const dataUrl = `data:${profileImageObj.contentType};base64,${profileImageObj.data.toString('base64')}`;
       console.log('✅ Created data URL from Buffer');
       return dataUrl;
     }
     
     // Handle object with url property
-    if (typeof profileImage === 'object' && profileImage.url) {
-      if (profileImage.url.startsWith('http')) return profileImage.url;
-      return `https://res.cloudinary.com/demo/image/fetch/${profileImage.url}`;
+    if (typeof profileImage === 'object' && profileImage !== null && 'url' in profileImage) {
+      const profileImageObj = profileImage as { url: string };
+      if (profileImageObj.url.startsWith('http')) return profileImageObj.url;
+      return `https://res.cloudinary.com/demo/image/fetch/${profileImageObj.url}`;
     }
     
     console.log('❌ No valid profile image format found');
@@ -196,9 +214,9 @@ const Navbar: React.FC<NavbarProps> = ({
 
   // Public homepage navigation
   return (
-    <header className={`bg-white shadow-md border-b ${className}`}>
-      <div className="w-full px-6">
-        <div className="flex items-center h-16">
+    <header className={`bg-white h-20 flex items-center justify-center shadow-md border-b border-b-[#FF6B35] ${className}`}>
+      <div className="w-full px-6 ">
+        <div className="flex items-center h-20">
           
           <div className="flex md:hidden ml-4">
             <button 
@@ -219,21 +237,26 @@ const Navbar: React.FC<NavbarProps> = ({
           {/* Search Bar - Right after logo */}
           {showSearch && (
             <div className="flex-1 max-w-xl ml-24">
-              <div className="relative hidden md:flex items-center">
+              <form onSubmit={handleSearchSubmit} className="relative hidden md:flex items-center">
                 <Search className="absolute left-3 top-0 bottom-0 m-auto text-gray-400 w-4 h-4" />
                 <input
                   type="text"
                   placeholder="Search Speaker"
+                  value={searchQuery}
+                  onChange={handleSearchChange}
                   className="w-full pl-10 pr-10 py-2.5 border border-blue-400 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-blue-600 text-sm bg-white"
                 />
-                <button className="absolute right-3 top-0 bottom-0 m-auto hover:opacity-70 transition-opacity">
+                <button 
+                  type="submit"
+                  className="absolute right-3 top-0 bottom-0 m-auto hover:opacity-70 transition-opacity"
+                >
                   <img 
                     src="/vector1.png" 
-                    alt="Filter" 
+                    alt="Search" 
                     className="w-4 h-4"
                   />
                 </button>
-              </div>
+              </form>
             </div>
           )}
 
@@ -295,7 +318,7 @@ const Navbar: React.FC<NavbarProps> = ({
               Speaker
             </button>
             <button 
-              onClick={() => router.push('/events_page')}
+              onClick={() => router.push('/events_dashboard')}
               className="hidden md:flex text-gray-900 hover:text-[#FF6B35] font-medium text-sm transition-colors duration-200 hover:scale-105"
             >
               Events

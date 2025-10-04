@@ -140,16 +140,7 @@ const FeedbackReviews: React.FC<FeedbackReviewsProps> = ({
             </div>
           </div>
 
-          {/* Add Feedback Button */}
-          {showAddButton && (
-            <button
-              onClick={() => setIsAddModalOpen(true)}
-              className="flex items-center space-x-2 px-4 py-2 border border-orange-500 text-orange-500 rounded-lg hover:bg-orange-50 transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="font-medium">Add Feedback</span>
-            </button>
-          )}
+          
         </div>
       </div>
 
@@ -229,12 +220,7 @@ const FeedbackReviews: React.FC<FeedbackReviewsProps> = ({
         )}
       </div>
 
-      {/* Add Feedback Modal */}
-      <AddFeedbackModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onSubmit={handleAddReview}
-      />
+      
     </div>
   );
 };

@@ -23,7 +23,7 @@ export default function BookingPage() {
   const { data: currentUserData } = useGetCurrentUserQuery();
 
   // Helper function to get profile image URL (same as Privacy Policy)
-  const getProfileImageUrl = (profileImage: any) => {
+  const getProfileImageUrl = (profileImage: unknown) => {
     if (!profileImage) return null;
     
     // Handle string URLs
@@ -33,15 +33,17 @@ export default function BookingPage() {
     }
     
     // Handle object with data and contentType (Buffer)
-    if (typeof profileImage === 'object' && profileImage.data && profileImage.contentType) {
-      const dataUrl = `data:${profileImage.contentType};base64,${profileImage.data.toString('base64')}`;
+    if (typeof profileImage === 'object' && profileImage !== null && 'data' in profileImage && 'contentType' in profileImage) {
+      const profileImageObj = profileImage as { data: { toString: (encoding: string) => string }; contentType: string };
+      const dataUrl = `data:${profileImageObj.contentType};base64,${profileImageObj.data.toString('base64')}`;
       return dataUrl;
     }
     
     // Handle object with url property
-    if (typeof profileImage === 'object' && profileImage.url) {
-      if (profileImage.url.startsWith('http')) return profileImage.url;
-      return `https://res.cloudinary.com/demo/image/fetch/${profileImage.url}`;
+    if (typeof profileImage === 'object' && profileImage !== null && 'url' in profileImage) {
+      const profileImageObj = profileImage as { url: string };
+      if (profileImageObj.url.startsWith('http')) return profileImageObj.url;
+      return `https://res.cloudinary.com/demo/image/fetch/${profileImageObj.url}`;
     }
     
     return null;
@@ -66,11 +68,8 @@ export default function BookingPage() {
                 getProfileImageUrl={getProfileImageUrl}
               />
             </Suspense>
-            
-            <div className="pt-16"> {/* Add padding-top to account for fixed navbar */}
-              <Sidebar />
-            </div>
-            <div className="ml-64">
+            <Sidebar />
+            <div className="ml-64 pt-20">
               <div className="p-6">
                 <div className="bg-[#FF6B35]/50 px-6 py-4 rounded-md mb-6">
                   <h1 className="text-2xl font-bold text-black mb-2">Speaker Management</h1>
@@ -114,6 +113,7 @@ export default function BookingPage() {
                 getProfileImageUrl={getProfileImageUrl}
               />
             </Suspense>
+            <Sidebar />
             <SpeakerManagementPage onTabChange={handleTabClick} activeTab={activeTab} />
           </div>
         );
@@ -130,7 +130,8 @@ export default function BookingPage() {
                 getProfileImageUrl={getProfileImageUrl}
               />
             </Suspense>
-            <DocumentsPage onTabChange={handleTabClick} activeTab={activeTab} />
+            <Sidebar />
+            <DocumentsPage onTabChange={handleTabClick} />
           </div>
         );
       default:
@@ -146,6 +147,7 @@ export default function BookingPage() {
                 getProfileImageUrl={getProfileImageUrl}
               />
             </Suspense>
+            <Sidebar />
             <SpeakerManagementPage onTabChange={handleTabClick} activeTab={activeTab} />
           </div>
         );

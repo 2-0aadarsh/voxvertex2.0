@@ -29,6 +29,8 @@ const initialState: SpeakersState = {
     availabilityDate: '',
     eventTypes: [],
     deliveryModes: [],
+    requestedStartTime: '',
+    requestedEndTime: '',
     priceRange: { min: 0, max: 10000 },
   },
   isLoading: false,
@@ -100,6 +102,8 @@ const speakersSlice = createSlice({
         availabilityDate: '',
         eventTypes: [],
         deliveryModes: [],
+        requestedStartTime: '',
+        requestedEndTime: '',
         priceRange: { min: 0, max: 10000 },
       };
     },
@@ -236,6 +240,10 @@ export const speakersApi = baseApi.injectEndpoints({
         minFee?: number;
         maxFee?: number;
         deliveryModes?: string[];
+        
+        // Time slot filters
+        requestedStartTime?: string;
+        requestedEndTime?: string;
         
         // Profile filters
         yearsOfExperience?: number;

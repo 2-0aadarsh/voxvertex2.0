@@ -48,7 +48,9 @@ interface SpeakerCardProps {
   speaker: DisplaySpeaker;
   isCompact?: boolean;
   onSaveSpeaker?: (speakerId: string, customTags: string[], notes?: string) => Promise<void>;
+  onUnsaveSpeaker?: (speakerId: string) => Promise<void>;
   showSaveButton?: boolean;
+  isSaved?: boolean;
 }
 
 // Define the FormData interface to match Step4's requirements
@@ -110,13 +112,13 @@ const TagCard: React.FC<{
 
   return (
     <div 
-      className="absolute z-40 w-80 bg-white rounded-lg shadow-lg p-4 border"
+      className="absolute z-40 w-80 bg-white rounded-lg shadow-lg p-4 "
       style={{ 
         top: position.top,
         right: position.right,
       }}
     >
-      {/* New Tag Input */}
+      {/* New Tag Input */} 
       <div className="mb-2">
         <input
           type="text"
@@ -146,7 +148,7 @@ const TagCard: React.FC<{
       </div>
 
       {/* Notes Field */}
-      <div className="mb-4">
+      {/* <div className="mb-4">
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
@@ -154,7 +156,7 @@ const TagCard: React.FC<{
           rows={2}
           className="w-full px-3 py-2 border text-sm border-[#FF6B35]/40 rounded-lg text-gray-700 placeholder-gray-500 focus:outline-none focus:border-[#FF6B35] bg-[#FF6B35]/5 resize-none"
         />
-      </div>
+      </div> */}
 
       {/* Action Buttons */}
       <div className="flex gap-2">
@@ -184,9 +186,11 @@ const TagCard: React.FC<{
 
 const SpeakerCard: React.FC<SpeakerCardProps> = ({ 
   speaker, 
-  isCompact = false, 
-  onSaveSpeaker, 
-  showSaveButton = true 
+  isCompact = false,
+  onSaveSpeaker,
+  onUnsaveSpeaker,
+  showSaveButton = true,
+  isSaved = false
 }) => {
   const [isTagCardVisible, setIsTagCardVisible] = useState(false);
   const [isBookingModalVisible, setIsBookingModalVisible] = useState(false);
@@ -227,8 +231,14 @@ const SpeakerCard: React.FC<SpeakerCardProps> = ({
     return null;
   }
 
-  const handleBookmarkClick = () => {
-    setIsTagCardVisible(!isTagCardVisible);
+  const handleBookmarkClick = async () => {
+    if (isSaved && onUnsaveSpeaker) {
+      // If speaker is saved, unsave it
+      await onUnsaveSpeaker(speaker._id);
+    } else if (!isSaved && onSaveSpeaker) {
+      // If speaker is not saved, show tag modal to save it
+      setIsTagCardVisible(!isTagCardVisible);
+    }
   };
 
   const handleBookSpeakerClick = () => {
@@ -315,7 +325,7 @@ const SpeakerCard: React.FC<SpeakerCardProps> = ({
               className="absolute top-4 right-4 cursor-pointer"
               onClick={handleBookmarkClick}
             >
-              <Bookmark className="w-5 h-5 text-[#FF6B35] fill-current hover:scale-110 transition-transform" />
+              <Bookmark className={`w-5 h-5 ${isSaved ? 'text-[#FF6B35] fill-current' : 'text-gray-400'} hover:scale-110 transition-transform`} />
             </div>
           )}
 
@@ -453,7 +463,7 @@ const SpeakerCard: React.FC<SpeakerCardProps> = ({
             className="absolute top-3 right-3 cursor-pointer"
             onClick={handleBookmarkClick}
           >
-            <Bookmark className="w-5 h-5 text-[#FF6B35] fill-current hover:scale-110 transition-transform" />
+            <Bookmark className={`w-5 h-5 ${isSaved ? 'text-[#FF6B35] fill-current' : 'text-gray-400'} hover:scale-110 transition-transform`} />
           </div>
         )}
 

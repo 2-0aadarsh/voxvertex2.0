@@ -566,6 +566,8 @@ export interface SpeakerFilters {
   availabilityDate: string;
   eventTypes: string[];
   deliveryModes: string[];
+  requestedStartTime: string;
+  requestedEndTime: string;
   priceRange: {
     min: number;
     max: number;

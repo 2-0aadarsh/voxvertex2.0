@@ -38,34 +38,67 @@ export const saveSpeaker = async (req, res) => {
       .filter(tag => tag.length > 0 && tag.length <= 50)
       .filter((tag, index, arr) => arr.indexOf(tag) === index); // Remove duplicates
 
-    // Check if speaker exists
+    // Check if speaker exists and has the correct role
     const speaker = await EnhancedUser.findById(speakerId);
     if (!speaker) {
       return res.status(404).json({
         success: false,
-        message: "Speaker not found"
+        message: "User not found"
       });
     }
 
-    // Check if already saved (handle gracefully)
-    const existingSavedSpeaker = await SavedSpeaker.isSpeakerSaved(organizerId, speakerId);
+    // Validate that the user is actually a speaker
+    if (speaker.role !== 'speaker') {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot save user with role '${speaker.role}'. Only users with 'speaker' role can be saved.`
+      });
+    }
+
+    // Check if speaker was previously saved (including soft-deleted ones)
+    const existingSavedSpeaker = await SavedSpeaker.findOne({
+      organizer: organizerId,
+      speaker: speakerId
+    });
+
     if (existingSavedSpeaker) {
-      // Update existing saved speaker
-      await existingSavedSpeaker.updateTags(validTags);
-      existingSavedSpeaker.notes = notes.trim();
-      await existingSavedSpeaker.save();
+      if (existingSavedSpeaker.isActive) {
+        // Already active - update tags and notes
+        await existingSavedSpeaker.updateTags(validTags);
+        existingSavedSpeaker.notes = notes.trim();
+        await existingSavedSpeaker.save();
 
-      // Populate speaker data
-      await existingSavedSpeaker.populate({
-        path: 'speaker',
-        select: 'firstName lastName fullName email profileImageUrl bio professionalTitle location areaOfExpertise yearsOfExperience roleSpecificData isProfileComplete createdAt'
-      });
+        // Populate speaker data
+        await existingSavedSpeaker.populate({
+          path: 'speaker',
+          select: 'firstName lastName fullName email profileImageUrl bio professionalTitle location areaOfExpertise yearsOfExperience roleSpecificData isProfileComplete createdAt'
+        });
 
-      return res.status(200).json({
-        success: true,
-        message: "Speaker saved successfully (updated existing)",
-        data: existingSavedSpeaker
-      });
+        return res.status(200).json({
+          success: true,
+          message: "Speaker saved successfully (updated existing)",
+          data: existingSavedSpeaker
+        });
+      } else {
+        // Was soft-deleted - reactivate it
+        existingSavedSpeaker.isActive = true;
+        existingSavedSpeaker.customTags = validTags;
+        existingSavedSpeaker.notes = notes.trim();
+        existingSavedSpeaker.savedAt = new Date(); // Update saved time
+        await existingSavedSpeaker.save();
+
+        // Populate speaker data
+        await existingSavedSpeaker.populate({
+          path: 'speaker',
+          select: 'firstName lastName fullName email profileImageUrl bio professionalTitle location areaOfExpertise yearsOfExperience roleSpecificData isProfileComplete createdAt'
+        });
+
+        return res.status(200).json({
+          success: true,
+          message: "Speaker saved successfully (reactivated)",
+          data: existingSavedSpeaker
+        });
+      }
     }
 
     // Create new saved speaker
@@ -238,17 +271,25 @@ export const updateSavedSpeakerTags = async (req, res) => {
   }
 };
 
-// Remove saved speaker (soft delete)
+// Remove saved speaker by speakerId (for bookmark toggle)
 export const removeSavedSpeaker = async (req, res) => {
   try {
-    const { savedSpeakerId } = req.params;
+    const { speakerId } = req.params;
     const organizerId = req.user._id;
 
-    console.log('🗑️ Removing saved speaker:', { savedSpeakerId, organizerId });
+    console.log('🗑️ Removing saved speaker:', { speakerId, organizerId });
 
-    // Find saved speaker
+    // Validate input
+    if (!speakerId) {
+      return res.status(400).json({
+        success: false,
+        message: "Speaker ID is required"
+      });
+    }
+
+    // Find saved speaker by organizer and speaker ID
     const savedSpeaker = await SavedSpeaker.findOne({
-      _id: savedSpeakerId,
+      speaker: speakerId,
       organizer: organizerId,
       isActive: true
     });
@@ -256,7 +297,7 @@ export const removeSavedSpeaker = async (req, res) => {
     if (!savedSpeaker) {
       return res.status(404).json({
         success: false,
-        message: "Saved speaker not found"
+        message: "Speaker not found in your saved list"
       });
     }
 
@@ -321,6 +362,22 @@ export const checkSpeakerSavedStatus = async (req, res) => {
 
     console.log('🔍 Checking if speaker is saved:', { speakerId, organizerId });
 
+    // First check if the user exists and is a speaker
+    const speaker = await EnhancedUser.findById(speakerId);
+    if (!speaker) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    if (speaker.role !== 'speaker') {
+      return res.status(400).json({
+        success: false,
+        message: `User with role '${speaker.role}' cannot be saved. Only users with 'speaker' role can be saved.`
+      });
+    }
+
     const savedSpeaker = await SavedSpeaker.isSpeakerSaved(organizerId, speakerId);
 
     res.status(200).json({
@@ -337,6 +394,68 @@ export const checkSpeakerSavedStatus = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Server error while checking speaker saved status",
+      error: error.message
+    });
+  }
+};
+
+// Check saved status for multiple speakers (batch)
+export const checkMultipleSpeakersSavedStatus = async (req, res) => {
+  try {
+    const { speakerIds } = req.body;
+    const organizerId = req.user._id;
+
+    console.log('🔍 Checking saved status for multiple speakers:', { speakerIds, organizerId });
+
+    if (!speakerIds || !Array.isArray(speakerIds)) {
+      return res.status(400).json({
+        success: false,
+        message: "speakerIds must be an array"
+      });
+    }
+
+    // Get all saved speakers for this organizer with the provided speaker IDs
+    const savedSpeakers = await SavedSpeaker.find({
+      organizer: organizerId,
+      speaker: { $in: speakerIds },
+      isActive: true
+    }).select('speaker customTags notes savedAt');
+
+    // Create a map for quick lookup
+    const savedStatusMap = {};
+    savedSpeakers.forEach(savedSpeaker => {
+      savedStatusMap[savedSpeaker.speaker.toString()] = {
+        isSaved: true,
+        customTags: savedSpeaker.customTags,
+        notes: savedSpeaker.notes,
+        savedAt: savedSpeaker.savedAt
+      };
+    });
+
+    // Build response with all requested speakers
+    const results = speakerIds.map(speakerId => ({
+      speakerId: speakerId,
+      isSaved: savedStatusMap[speakerId]?.isSaved || false,
+      savedData: savedStatusMap[speakerId] || null
+    }));
+
+    console.log(`✅ Batch status check completed for ${speakerIds.length} speakers`);
+
+    res.status(200).json({
+      success: true,
+      message: "Batch saved status retrieved successfully",
+      data: {
+        results: results,
+        total: speakerIds.length,
+        savedCount: Object.keys(savedStatusMap).length
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error checking multiple speakers saved status:', error);
+    res.status(500).json({
+      success: false,
+      message: "Server error while checking multiple speakers saved status",
       error: error.message
     });
   }

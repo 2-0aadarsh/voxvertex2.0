@@ -4,17 +4,12 @@
 import React, { useState, useMemo } from 'react';
 import { useAppSelector, useAppDispatch } from '@/store/hooks';
 import {
-  useGetSpeakersQuery,
-  useSearchSpeakersQuery,
-  useSearchSpeakersWithFiltersQuery,
   selectSpeakersFilters,
   setFilters,
-  clearFilters,
 } from '@/store/slices/speakersSlice';
 import {
   useGetSavedSpeakersForDatabaseQuery,
   useGetCustomTagsQuery,
-  useSaveSpeakerMutation,
 } from '@/store/slices/savedSpeakersSlice';
 import SpeakerCard from '@/app/speakers/components/SpeakerCard';
 import { Plus, Search, Loader2, AlertCircle } from 'lucide-react';
@@ -27,7 +22,7 @@ export default function SpeakerDatabasePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [tagFilter, setTagFilter] = useState('All Tags');
-  const [showSavedSpeakers, setShowSavedSpeakers] = useState(false);
+  // Remove showSavedSpeakers state - always show saved speakers only
 
   // Redux state
   const filters = useAppSelector(selectSpeakersFilters);
@@ -48,99 +43,42 @@ export default function SpeakerDatabasePage() {
     }
   }, [debouncedSearchQuery, filters.searchQuery, dispatch]);
 
-  // Determine which query to use
+  // Determine which query to use - always use saved speakers
   const hasActiveSearch = useMemo(() => {
     return !!(debouncedSearchQuery && debouncedSearchQuery.trim().length > 0);
   }, [debouncedSearchQuery]);
 
-  const hasActiveFilters = useMemo(() => {
-    const hasFilters = !!(
-      filters.location ||
-      filters.expertise?.length ||
-      filters.topics?.length ||
-      filters.yearsOfExperience ||
-      filters.availabilityDate ||
-      filters.eventTypes?.length ||
-      filters.deliveryModes?.length ||
-      (filters.priceRange.min > 0 || filters.priceRange.max < 10000)
-    );
-    
-    return hasFilters;
-  }, [filters]);
+  // Remove hasActiveFilters logic since we only show saved speakers
 
-  // API queries
-  const {
-    data: basicSpeakersData,
-    isLoading: isLoadingBasic,
-    error: basicError,
-  } = useGetSpeakersQuery(
-    { page: 1, limit: 12 },
-    { skip: hasActiveSearch || showSavedSpeakers } // Only fetch if no search and not showing saved speakers
-  );
+  // API queries - only use saved speakers query
+  // Remove all other queries since we only show saved speakers
 
-  const {
-    data: searchSpeakersData,
-    isLoading: isLoadingSearch,
-    error: searchError,
-  } = useSearchSpeakersQuery(
-    {
-      q: debouncedSearchQuery,
-      page: 1,
-      limit: 12,
-    },
-    { skip: !hasActiveSearch || showSavedSpeakers } // Only fetch if search is active and not showing saved speakers
-  );
-
-  const {
-    data: filteredSpeakersData,
-    isLoading: isLoadingFiltered,
-    error: filteredError,
-  } = useSearchSpeakersWithFiltersQuery(
-    {
-      q: debouncedSearchQuery,
-      page: 1,
-      limit: 12,
-      location: filters.location,
-      expertise: filters.expertise,
-      topics: filters.topics,
-      yearsOfExperience: filters.yearsOfExperience,
-      availabilityDate: filters.availabilityDate,
-      eventTypes: filters.eventTypes,
-      deliveryModes: filters.deliveryModes,
-      minFee: filters.priceRange.min,
-      maxFee: filters.priceRange.max,
-    },
-    { skip: !hasActiveFilters || showSavedSpeakers } // Only fetch if filters are active and not showing saved speakers
-  );
-
-  // Saved speakers queries
+  // Saved speakers queries - always fetch saved speakers
   const savedSpeakersParams = { page: 1, limit: 12, tags: tagFilter !== 'All Tags' ? [tagFilter] : undefined };
-  console.log('🔍 Saved speakers query params:', { savedSpeakersParams, showSavedSpeakers, skip: !showSavedSpeakers });
+  console.log('🔍 Saved speakers query params:', savedSpeakersParams);
   
-        const {
-          data: savedSpeakersData,
-          isLoading: isLoadingSaved,
-          error: savedError,
-        } = useGetSavedSpeakersForDatabaseQuery(
-          savedSpeakersParams,
-          { skip: !showSavedSpeakers }
-        );
+  const {
+    data: savedSpeakersData,
+    isLoading: isLoadingSaved,
+    error: savedError,
+  } = useGetSavedSpeakersForDatabaseQuery(
+    savedSpeakersParams,
+    { skip: false } // Always fetch saved speakers
+  );
 
   const {
     data: customTagsData,
   } = useGetCustomTagsQuery();
 
-  // Mutation for saving speakers
-  const [saveSpeaker] = useSaveSpeakerMutation();
+  // Remove save speaker mutation since we only show saved speakers
 
-  // Determine which data to use
-  const currentData = showSavedSpeakers ? savedSpeakersData : (hasActiveFilters ? filteredSpeakersData : (hasActiveSearch ? searchSpeakersData : basicSpeakersData));
-  const currentLoading = showSavedSpeakers ? isLoadingSaved : (hasActiveFilters ? isLoadingFiltered : (hasActiveSearch ? isLoadingSearch : isLoadingBasic));
-  const currentError = showSavedSpeakers ? savedError : (hasActiveFilters ? filteredError : (hasActiveSearch ? searchError : basicError));
+  // Determine which data to use - always use saved speakers data
+  const currentData = savedSpeakersData;
+  const currentLoading = isLoadingSaved;
+  const currentError = savedError;
 
   // Debug logging
   console.log('🔍 Current state:', { 
-    showSavedSpeakers, 
     currentData: currentData?.data, 
     currentLoading, 
     currentError,
@@ -149,21 +87,18 @@ export default function SpeakerDatabasePage() {
     savedError
   });
 
-  // Process speakers data with enhanced details
+  // Process speakers data with enhanced details - always process saved speakers
   const processedSpeakers = useMemo(() => {
     let speakers: unknown[] = [];
     
-    if (showSavedSpeakers && currentData?.data && 'speakers' in currentData.data) {
-      // For saved speakers, the backend returns them in the 'speakers' field
+    if (currentData?.data && 'speakers' in currentData.data) {
+      // Always process saved speakers data
       speakers = (currentData.data as { speakers: unknown[] }).speakers || [];
       console.log('🔍 Saved speakers data:', { speakers, currentData });
-    } else if (currentData?.data && 'speakers' in currentData.data) {
-      // For regular speakers
-      speakers = (currentData.data as { speakers: unknown[] }).speakers || [];
     }
     
     if (!speakers || speakers.length === 0) {
-      console.log('🔍 No speakers found:', { showSavedSpeakers, currentData });
+      console.log('🔍 No saved speakers found:', currentData);
       return [];
     }
 
@@ -199,10 +134,9 @@ export default function SpeakerDatabasePage() {
         notes?: string;
       };
 
-      // For saved speakers, the data is already formatted by the backend
-      // For regular speakers, use the speaker data directly
-      const speakerData = showSavedSpeakers ? speakerObj : speakerObj;
-      const customTags = showSavedSpeakers ? (speakerObj.customTags || []) : [];
+      // Always process saved speakers data
+      const speakerData = speakerObj;
+      const customTags = speakerObj.customTags || [];
 
       // Extract all available data from the speaker object
       const {
@@ -229,19 +163,18 @@ export default function SpeakerDatabasePage() {
       const activities = roleSpecificData?.activities || [];
       const socialLinks = roleSpecificData?.socialLinks;
 
-      // For saved speakers, merge custom tags with areaOfExpertise
-      // For regular speakers, use areaOfExpertise as is
-      const mergedTags = showSavedSpeakers 
-        ? [...(areaOfExpertise || []), ...(customTags || [])]
-        : (areaOfExpertise || []);
+      // Always merge custom tags with areaOfExpertise for saved speakers
+      // Remove duplicates to prevent showing the same tag twice
+      const allTags = [...(areaOfExpertise || []), ...(customTags || [])];
+      const mergedTags = [...new Set(allTags)]; // Remove duplicates using Set
       
       // Debug logging
       console.log('🔍 Tag merging for speaker:', {
         speakerId: _id,
-        showSavedSpeakers,
         areaOfExpertise,
         customTags,
-        mergedTags
+        mergedTags,
+        duplicateRemoved: allTags.length !== mergedTags.length
       });
 
       // Create specializations from merged tags and activities
@@ -297,7 +230,7 @@ export default function SpeakerDatabasePage() {
           } | undefined,
 
           // Saved speaker specific data
-          isSavedSpeaker: showSavedSpeakers,
+          isSavedSpeaker: true, // Always true since we only show saved speakers
           customTags: customTags,
           savedSpeakerId: speakerObj._id, // The saved speaker record ID
           notes: speakerObj.notes || '',
@@ -306,7 +239,7 @@ export default function SpeakerDatabasePage() {
           rawData: speakerObj as Record<string, unknown>
         };
     });
-  }, [currentData, showSavedSpeakers]);
+  }, [currentData]);
 
   // Sort speakers
   const sortedSpeakers = useMemo(() => {
@@ -333,28 +266,9 @@ export default function SpeakerDatabasePage() {
     console.log('Navigate to add speaker page');
   };
 
-  const handleToggleSavedSpeakers = () => {
-    const newShowSavedSpeakers = !showSavedSpeakers;
-    console.log('🔄 Toggling saved speakers view:', { from: showSavedSpeakers, to: newShowSavedSpeakers });
-    setShowSavedSpeakers(newShowSavedSpeakers);
-    setSearchQuery(''); // Clear search when switching
-    dispatch(clearFilters()); // Clear filters when switching
-    
-    // Force refresh the saved speakers data when switching to saved view
-    if (newShowSavedSpeakers) {
-      console.log('🔄 Forcing refresh of saved speakers data');
-      // The query will automatically trigger when showSavedSpeakers becomes true
-    }
-  };
+  // Remove toggle functionality - always show saved speakers only
 
-  const handleSaveSpeaker = async (speakerId: string, customTags: string[], notes: string = '') => {
-    try {
-      await saveSpeaker({ speakerId, customTags, notes }).unwrap();
-      console.log('Speaker saved successfully');
-    } catch (error) {
-      console.error('Error saving speaker:', error);
-    }
-  };
+  // Remove handleSaveSpeaker since we only show saved speakers
 
   // Debug: Test saved speakers API directly
   const testSavedSpeakersAPI = async () => {
@@ -422,39 +336,19 @@ export default function SpeakerDatabasePage() {
       {/* Header with Add Speaker Button */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">Speaker Database</h2>
+          <h2 className="text-xl font-bold text-gray-900">Saved Speakers Database</h2>
           <p className="text-gray-600 text-sm">
-            {showSavedSpeakers 
-              ? 'Browse your saved speakers with custom tags' 
-              : 'Manage your speaker network and build your expertise base'
-            }
+            Manage your saved speakers with custom tags and notes
           </p>
         </div>
         <div className="flex items-center space-x-3">
-          {/* Toggle Saved Speakers */}
-          <button 
-            onClick={handleToggleSavedSpeakers}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              showSavedSpeakers 
-                ? 'bg-[#FF6B35] text-white' 
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
-          >
-            {showSavedSpeakers ? 'All Speakers' : 'Saved Speakers'}
-          </button>
-          
-          {/* Debug: Show current state */}
-          <div className="text-xs text-gray-500">
-            {showSavedSpeakers ? '🔍 Saved View' : '📋 All View'}
-        </div>
-          
           {/* Debug: Test API button */}
-          <button 
+          {/* <button 
             onClick={testSavedSpeakersAPI}
             className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
           >
             Test API
-          </button>
+          </button> */}
           
         <button 
           onClick={handleAddSpeaker}
@@ -475,59 +369,56 @@ export default function SpeakerDatabasePage() {
           <input
             type="text"
             placeholder="Search speaker by name, expertise, or tags..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 border border-[#FF6B35] bg-[#FF6B35]/15 rounded-lg focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35] text-sm"
           />
         </div>
 
           {/* Tag Filter */}
-        <select
-          value={tagFilter}
-          onChange={(e) => setTagFilter(e.target.value)}
-          className="px-7 py-2.5 border border-gray-400 rounded-lg focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35] text-sm"
-        >
-          <option>All Tags</option>
-            {showSavedSpeakers && customTagsData?.data?.customTags ? (
+          <select
+            value={tagFilter}
+            onChange={(e) => setTagFilter(e.target.value)}
+            className="px-7 py-2.5 border border-gray-400 rounded-lg focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35] text-sm"
+          >
+            <option>All Tags</option>
+            {customTagsData?.data?.customTags ? (
               customTagsData.data.customTags.map((tag: string) => (
                 <option key={tag} value={tag}>{tag}</option>
               ))
             ) : (
               <>
-          <option>Conference & Summits</option>
-          <option>Workshops</option>
+                <option>Conference & Summits</option>
+                <option>Workshops</option>
                 <option>Keynote Speeches</option>
                 <option>Seminars</option>
               </>
             )}
           </select>
 
-          {/* Clear Filters/Search */}
-          {(hasActiveFilters || hasActiveSearch) && (
+          {/* Clear Search */}
+          {hasActiveSearch && (
             <button
               onClick={() => {
                 setSearchQuery('');
-                dispatch(clearFilters());
               }}
               className="text-gray-600 hover:text-gray-800 text-sm"
             >
-              Clear all
+              Clear search
             </button>
           )}
 
           {/* Results Count */}
           <div className="px-2 py-2 rounded-xl text-center font-medium">
-            {processedSpeakers.length} {showSavedSpeakers ? 'saved speakers' : 'speakers'} found
+            {processedSpeakers.length} saved speakers found
           </div>
           
           {/* Debug Info */}
-          {showSavedSpeakers && (
-            <div className="px-2 py-2 rounded-xl text-center text-xs text-gray-500">
-                   {isLoadingSaved ? '⏳ Loading saved speakers...' : 
-                    savedError ? '❌ Error loading saved speakers' :
-                    `✅ Loaded ${(savedSpeakersData?.data as { speakers?: unknown[] })?.speakers?.length || 0} saved speakers`}
-            </div>
-          )}
+          {/* <div className="px-2 py-2 rounded-xl text-center text-xs text-gray-500">
+            {isLoadingSaved ? '⏳ Loading saved speakers...' : 
+             savedError ? '❌ Error loading saved speakers' :
+             `✅ Loaded ${(savedSpeakersData?.data as { speakers?: unknown[] })?.speakers?.length || 0} saved speakers`}
+          </div> */}
         </div>
 
         {/* Sort Dropdown */}
@@ -561,27 +452,22 @@ export default function SpeakerDatabasePage() {
             </svg>
           </div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">
-            {showSavedSpeakers ? 'No saved speakers found' : 'No speakers found'}
+            No saved speakers found
           </h3>
           <p className="text-gray-600 mb-4">
-            {showSavedSpeakers
-              ? 'You haven\'t saved any speakers yet. Save speakers from the main speaker list to see them here.'
-              : hasActiveFilters
-                ? 'No speakers found matching your filters. Try adjusting your criteria.'
-                : hasActiveSearch
-                  ? `No speakers found for "${debouncedSearchQuery}". Try different keywords.`
-                  : 'No speakers are currently available.'
+            {hasActiveSearch
+              ? `No saved speakers found for "${debouncedSearchQuery}". Try different keywords.`
+              : 'You haven\'t saved any speakers yet. Save speakers from the main speaker list to see them here.'
             }
           </p>
-          {(hasActiveFilters || hasActiveSearch) && (
+          {hasActiveSearch && (
             <button
               onClick={() => {
                 setSearchQuery('');
-                dispatch(clearFilters());
               }}
               className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors"
             >
-              Clear All
+              Clear Search
             </button>
           )}
         </div>
@@ -590,11 +476,11 @@ export default function SpeakerDatabasePage() {
           {sortedSpeakers.map((speaker) => (
             <SpeakerCard
               key={speaker._id}
-            speaker={speaker}
+              speaker={speaker}
               isCompact={false}
-              onSaveSpeaker={!showSavedSpeakers ? handleSaveSpeaker : undefined}
-              showSaveButton={!showSavedSpeakers}
-          />
+              // Remove save functionality since we only show saved speakers
+              showSaveButton={false}
+            />
         ))}
       </div>
       )}

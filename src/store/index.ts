@@ -136,8 +136,8 @@ export const store = configureStore({
       serializableStateInvariantCheck: {
         warnAfter: 128,
       },
-    }).concat(paymentApi.middleware, baseApi.middleware, disputeApi.middleware),
-    }).concat(baseApi.middleware).concat(disputeApi.middleware).concat(ignoreFileObjectsMiddleware), // Add both APIs middleware
+    }).concat(paymentApi.middleware, baseApi.middleware, disputeApi.middleware).concat(ignoreFileObjectsMiddleware),
+    // }).concat(baseApi.middleware).concat(disputeApi.middleware).concat(ignoreFileObjectsMiddleware), // Add both APIs middleware
   devTools: process.env.NODE_ENV !== 'production',
   preloadedState: undefined,
 });

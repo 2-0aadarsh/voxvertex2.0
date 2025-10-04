@@ -6,7 +6,8 @@ import {
   updateSavedSpeakerTags,
   removeSavedSpeaker,
   getOrganizerCustomTags,
-  checkSpeakerSavedStatus
+  checkSpeakerSavedStatus,
+  checkMultipleSpeakersSavedStatus
 } from "../controllers/savedSpeakerController.js";
 
 const router = express.Router();
@@ -29,13 +30,17 @@ router.get("/", getSavedSpeakers);
 // GET /api/saved-speakers/check/:speakerId
 router.get("/check/:speakerId", checkSpeakerSavedStatus);
 
+// Check saved status for multiple speakers (batch)
+// POST /api/saved-speakers/check-batch
+router.post("/check-batch", checkMultipleSpeakersSavedStatus);
+
 // Update tags and notes for a saved speaker
 // PUT /api/saved-speakers/:savedSpeakerId
 router.put("/:savedSpeakerId", updateSavedSpeakerTags);
 
-// Remove a saved speaker (soft delete)
-// DELETE /api/saved-speakers/:savedSpeakerId
-router.delete("/:savedSpeakerId", removeSavedSpeaker);
+// Remove a saved speaker by speakerId (soft delete) - for bookmark toggle
+// DELETE /api/saved-speakers/unsave/:speakerId
+router.delete("/unsave/:speakerId", removeSavedSpeaker);
 
 // Get all custom tags for organizer
 // GET /api/saved-speakers/tags

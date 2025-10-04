@@ -2,9 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
-import Sidebar from './parts/Sidebar';
 import SpeakerCard from './parts/SpeakerCard';
-import { Plus, Search, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Plus, Search, Loader2, AlertCircle, RefreshCw, User } from 'lucide-react';
 import { 
   useGetOrganizerBookingsQuery,
   selectOrganizerBookings,
@@ -14,6 +13,21 @@ import {
   type Booking
 } from '@/store/slices/organizerBookingsSlice';
 import { useAuth } from '@/store/hooks';
+
+// Type for converted speaker data
+interface ConvertedSpeaker {
+  id: string;
+  name: string;
+  expertise?: string;
+  date: string;
+  price: number;
+  image: string;
+  status: 'In Progress' | 'Confirmed' | 'Declined';
+  tags: string[];
+  timeAgo: string;
+  bookingId?: string;
+  originalBooking?: unknown;
+}
 
 export default function SpeakerManagementPage({ onTabChange }: { onTabChange?: (tab: string) => void; activeTab?: string }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -60,10 +74,10 @@ export default function SpeakerManagementPage({ onTabChange }: { onTabChange?: (
   };
 
   // Convert Booking to Speaker format for compatibility
-  const convertBookingToSpeaker = React.useCallback((booking: Booking) => ({
+  const convertBookingToSpeaker = React.useCallback((booking: Booking): ConvertedSpeaker => ({
     id: booking._id,
     name: `${booking.speaker.firstName} ${booking.speaker.lastName}`,
-    expertise: booking.speaker.expertise,
+    expertise: booking.speaker.expertise || undefined,
     date: new Date(booking.date).toLocaleDateString('en-US', { 
       year: 'numeric', 
       month: 'long', 
@@ -75,7 +89,7 @@ export default function SpeakerManagementPage({ onTabChange }: { onTabChange?: (
     tags: [booking.eventDetails.type],
     timeAgo: booking.timeAgo,
     bookingId: booking.bookingId,
-    originalBooking: booking as any
+    originalBooking: booking as unknown
   }), []);
 
   const getDisplayStatus = (status: string): 'In Progress' | 'Confirmed' | 'Declined' => {
@@ -142,7 +156,7 @@ export default function SpeakerManagementPage({ onTabChange }: { onTabChange?: (
 
   const filteredSpeakers = speakers.filter(speaker => {
     const matchesSearch = speaker.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         speaker.expertise.toLowerCase().includes(searchTerm.toLowerCase());
+                         (speaker.expertise || '').toLowerCase().includes(searchTerm.toLowerCase());
     return matchesSearch;
   });
 
@@ -156,8 +170,7 @@ export default function SpeakerManagementPage({ onTabChange }: { onTabChange?: (
   if (apiLoading || isLoading) {
     return (
       <div className="min-h-screen bg-white">
-        <Sidebar />
-        <div className="ml-64 p-6">
+        <div className="ml-64 pt-20 p-6">
           <div className="bg-[#FF6B35]/50 px-6 py-4 rounded-md mb-6">
             <h1 className="text-2xl font-bold text-black mb-2">Speaker Management</h1>
             <p className="text-white">Manage your speakers, bookings, and payments in one place</p>
@@ -179,8 +192,7 @@ export default function SpeakerManagementPage({ onTabChange }: { onTabChange?: (
     const errorMessage = (apiError as { data?: { message?: string } })?.data?.message || error || 'Failed to load speaker bookings';
     return (
       <div className="min-h-screen bg-white">
-        <Sidebar />
-        <div className="ml-64 p-6">
+        <div className="ml-64 pt-20 p-6">
           <div className="bg-[#FF6B35]/50 px-6 py-4 rounded-md mb-6">
             <h1 className="text-2xl font-bold text-black mb-2">Speaker Management</h1>
             <p className="text-white">Manage your speakers, bookings, and payments in one place</p>
@@ -206,9 +218,7 @@ export default function SpeakerManagementPage({ onTabChange }: { onTabChange?: (
 
   return (
     <div className="min-h-screen bg-white">
-      <Sidebar />
-      
-      <div className="ml-64">
+      <div className="ml-64 pt-20">
         
         {/* Orange Header Card */}
         <div className="p-6">
@@ -294,25 +304,39 @@ export default function SpeakerManagementPage({ onTabChange }: { onTabChange?: (
                 return (
                   <div key={status} className="flex flex-col h-full">
                     {/* Column Header */}
-                    <div className={`${statusConfig.bgColor} ${statusConfig.borderColor} border-1 rounded-t-md p-4`}>
+                    <div className={`${statusConfig.bgColor} ${statusConfig.borderColor} border-1  rounded-t-md p-4`}>
                       <div className="flex items-center justify-between">
-                        <h3 className={`font-semibold ${statusConfig.textColor}`}>{status}</h3>
+                        <h3 className={`font-semibold ${statusConfig.textColor}`}>{status} </h3>
                         <span className={`${statusConfig.badgeColor} text-white text-xs px-2 py-1 rounded-full font-medium`}>
                           {speakers.length}
                         </span>
                       </div>
                     </div>
                     
-                    {/* Speaker Cards - Stretch to bottom */}
-                    <div className={`${statusConfig.bgColor} ${statusConfig.borderColor} border-1 border-t-0 rounded-b-xl p-4 space-y-4 flex-1`}>
-                      {speakers.map((speaker) => (
-                        <SpeakerCard 
-                          key={speaker.id} 
-                          speaker={speaker}
-                          showAttachButton={status === 'Confirmed'}
-                          onViewDetails={handleViewDetails}
-                        />
-                      ))}
+                    {/* Speaker Cards - Stretch to bottom with minimum height */}
+                    <div className={`${statusConfig.bgColor} ${statusConfig.borderColor} border-1 border-t-0 rounded-b-xl p-4 space-y-4 flex-1 min-h-[200px]`}>
+                      {speakers.length > 0 ? (
+                        speakers.map((speaker) => (
+                          <SpeakerCard 
+                            key={speaker.id} 
+                            speaker={speaker}
+                            showAttachButton={status === 'Confirmed'}
+                            onViewDetails={handleViewDetails}
+                          />
+                        ))
+                      ) : (
+                        <div className="flex flex-col items-center justify-center h-full min-h-[150px] text-center">
+                          <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-3">
+                            <User size={24} className="text-gray-400" />
+                          </div>
+                          <h4 className="text-sm font-medium text-gray-500 mb-1">No {status.toLowerCase()} speakers</h4>
+                          <p className="text-xs text-gray-400 leading-relaxed">
+                            {status === 'In Progress' && "No speakers are currently being processed"}
+                            {status === 'Confirmed' && "No speakers have been confirmed yet"}
+                            {status === 'Declined' && "No speakers have been declined"}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );

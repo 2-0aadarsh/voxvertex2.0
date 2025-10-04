@@ -4,7 +4,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAppSelector, useAppDispatch } from '@/store/hooks';
 import {
   useGetSpeakersQuery,
@@ -14,6 +14,7 @@ import {
   setFilters,
   clearFilters,
 } from '@/store/slices/speakersSlice';
+import { useSaveSpeakerMutation, useUnsaveSpeakerMutation, useCheckMultipleSpeakersSavedStatusMutation } from '@/store/slices/savedSpeakersSlice';
 import SpeakerCard from './SpeakerCard';
 import FiltersSidebar from './FiltersSidebar';
 import { Speaker } from '@/store/types';
@@ -39,26 +40,42 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
   const [showFilters, setShowFilters] = useState(false);
   const [sortBy, setSortBy] = useState('relevance');
   const [searchQuery, setSearchQuery] = useState(initialFilters.searchQuery || '');
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(initialFilters.searchQuery || '');
 
   // Redux state
   const filters = useAppSelector(selectSpeakersFilters);
 
-  // Debounce search query
+  // Save speaker mutation
+  const [saveSpeaker] = useSaveSpeakerMutation();
+  
+  // Unsave speaker mutation
+  const [unsaveSpeaker] = useUnsaveSpeakerMutation();
+  
+  // Batch check saved status mutation
+  const [checkMultipleSpeakersSavedStatus] = useCheckMultipleSpeakersSavedStatusMutation();
+  
+  // State to track saved status for each speaker
+  const [savedStatusMap, setSavedStatusMap] = useState<Record<string, boolean>>({});
+
+  // Debounce search query (but not for initial search from URL)
   useEffect(() => {
-    const timer = setTimeout(() => {
+    if (initialFilters.searchQuery && searchQuery === initialFilters.searchQuery) {
+      // If this is the initial search from URL, use it immediately
       setDebouncedSearchQuery(searchQuery);
-    }, 300);
+    } else {
+      // For user typing, use debouncing
+      const timer = setTimeout(() => {
+        setDebouncedSearchQuery(searchQuery);
+      }, 300);
 
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
-
-  // Update filters when search query changes
-  useEffect(() => {
-    if (debouncedSearchQuery !== filters.searchQuery) {
-      dispatch(setFilters({ searchQuery: debouncedSearchQuery }));
+      return () => clearTimeout(timer);
     }
-  }, [debouncedSearchQuery, filters.searchQuery, dispatch]);
+  }, [searchQuery, initialFilters.searchQuery]);
+
+  // Update Redux filters when debounced search query changes
+  useEffect(() => {
+    dispatch(setFilters({ searchQuery: debouncedSearchQuery }));
+  }, [debouncedSearchQuery, dispatch]);
 
   // Determine which query to use
   const hasActiveSearch = useMemo(() => {
@@ -74,6 +91,8 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
       filters.availabilityDate ||
       filters.eventTypes?.length ||
       filters.deliveryModes?.length ||
+      filters.requestedStartTime ||
+      filters.requestedEndTime ||
       (filters.priceRange.min > 0 || filters.priceRange.max < 10000)
     );
     
@@ -87,11 +106,66 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
       availabilityDate: filters.availabilityDate,
       eventTypes: filters.eventTypes?.length,
       deliveryModes: filters.deliveryModes?.length,
+      requestedStartTime: filters.requestedStartTime,
+      requestedEndTime: filters.requestedEndTime,
       priceRange: filters.priceRange
     });
     
     return hasFilters;
   }, [filters]);
+
+  // Check saved status for multiple speakers
+  const checkSavedStatus = useCallback(async (speakerIds: string[]) => {
+    if (speakerIds.length === 0) return;
+    
+    try {
+      console.log('🔍 Checking saved status for speakers:', speakerIds);
+      const result = await checkMultipleSpeakersSavedStatus({ speakerIds }).unwrap();
+      
+      // Update saved status map
+      const newSavedStatusMap: Record<string, boolean> = {};
+      result.data.results.forEach(item => {
+        newSavedStatusMap[item.speakerId] = item.isSaved;
+      });
+      
+      setSavedStatusMap(prev => ({ ...prev, ...newSavedStatusMap }));
+      console.log('✅ Saved status updated:', newSavedStatusMap);
+    } catch (error) {
+      console.error('❌ Error checking saved status:', error);
+    }
+  }, [checkMultipleSpeakersSavedStatus]);
+
+  // Handle save speaker
+  const handleSaveSpeaker = async (speakerId: string, customTags: string[], notes: string = '') => {
+    try {
+      console.log('🔖 Saving speaker:', { speakerId, customTags, notes });
+      await saveSpeaker({ speakerId, customTags, notes }).unwrap();
+      
+      // Update local saved status
+      setSavedStatusMap(prev => ({ ...prev, [speakerId]: true }));
+      
+      console.log('✅ Speaker saved successfully');
+    } catch (error) {
+      console.error('❌ Error saving speaker:', error);
+      // You could add toast notification here
+    }
+  };
+
+  // Handle unsave speaker
+  const handleUnsaveSpeaker = async (speakerId: string) => {
+    try {
+      console.log('🗑️ Unsaving speaker:', { speakerId });
+      await unsaveSpeaker({ speakerId }).unwrap();
+      
+      // Update local saved status
+      setSavedStatusMap(prev => ({ ...prev, [speakerId]: false }));
+      
+      console.log('✅ Speaker unsaved successfully');
+    } catch (error) {
+      console.error('❌ Error unsaving speaker:', error);
+      // You could add toast notification here
+    }
+  };
 
   // API queries
   const {
@@ -132,6 +206,8 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
       availabilityDate: filters.availabilityDate,
       eventTypes: filters.eventTypes,
       deliveryModes: filters.deliveryModes, // Add deliveryModes parameter
+      requestedStartTime: filters.requestedStartTime,
+      requestedEndTime: filters.requestedEndTime,
       minFee: filters.priceRange.min,
       maxFee: filters.priceRange.max,
     },
@@ -228,12 +304,14 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
         // Additional details for enhanced display
         firstName: firstName,
         lastName: lastName,
+        fullName: fullName, // Add missing fullName
         email: email,
         mobileNo: mobileNo,
         industry: industry,
         activities: activities,
         socialLinks: socialLinks,
         createdAt: createdAt,
+        updatedAt: createdAt, // Add missing updatedAt (use createdAt as fallback)
         availability: availability,
 
         // Raw speaker data for detailed view
@@ -241,6 +319,14 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
       };
     });
   }, [currentData]);
+
+  // Check saved status when speakers data changes
+  useEffect(() => {
+    if (processedSpeakers.length > 0) {
+      const speakerIds = processedSpeakers.map(speaker => speaker._id);
+      checkSavedStatus(speakerIds);
+    }
+  }, [processedSpeakers, checkSavedStatus]);
 
   // Sort speakers
   const sortedSpeakers = useMemo(() => {
@@ -459,6 +545,10 @@ const SpeakersContainer: React.FC<SpeakersContainerProps> = ({
                   key={speaker._id}
                   speaker={speaker}
                   isCompact={showFilters}
+                  onSaveSpeaker={handleSaveSpeaker}
+                  onUnsaveSpeaker={handleUnsaveSpeaker}
+                  showSaveButton={true}
+                  isSaved={savedStatusMap[speaker._id] || false}
                 />
               ))}
             </div>
