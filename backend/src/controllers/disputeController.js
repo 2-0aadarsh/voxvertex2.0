@@ -4,6 +4,7 @@ import Dispute from '../models/dispute.js';
 import UserService from '../services/user.service.js';
 import EventRegistration from '../models/eventRegister.js';
 import Event from '../models/event.js';
+import EnhancedEvent from '../models/enhancedEvent.js';
 // import User from '../models/user.js'; // used in assignMediator etc.
 
 /**
@@ -20,6 +21,8 @@ import Event from '../models/event.js';
 /* ----------------- Create a dispute ----------------- */
 // src/controllers/disputeController.js
 export const createDispute = async (req, res) => {
+  console.log("createDispute controller");
+  console.log("req.body in createDispute controller", req.body);
   try {
     if (!req.user) {
       console.log('Authentication required in createDispute controller', req.user);
@@ -60,23 +63,91 @@ export const createDispute = async (req, res) => {
       const respondentObjId = normalizeId(rId);
       let respondent = null;
       const rStr = respondentObjId?.toString() || rId.toString();
+      
+      console.log(`🔍 Looking up respondent ID: ${rStr} for event: ${eventId}`);
 
-      // 1) Check event speakers
+      // 1) Check event speakers (handle both old and new schema formats)
       if (eventId) {
-        const eventDoc = await Event.findById(eventId).select('speakers').lean();
-        if (eventDoc?.speakers?.length) {
-          const sp = eventDoc.speakers.find(
-            (s) => s._id?.toString() === rStr || s.userId?.toString() === rStr
-          );
+        // Try EnhancedEvent first (new format), fallback to Event (old format)
+        let eventDoc = await EnhancedEvent.findById(eventId).select('speakers').lean();
+        console.log(`📋 EnhancedEvent lookup result:`, eventDoc ? 'Found' : 'Not found');
+        if (!eventDoc) {
+          eventDoc = await Event.findById(eventId).select('speakers').lean();
+          console.log(`📋 Event lookup result:`, eventDoc ? 'Found' : 'Not found');
+        }
+        if (eventDoc?.speakers) {
+          let sp = null;
+          let speakerType = null;
+          
+          // Handle new schema format: speakers.manualSpeakers[] and speakers.platformSpeakers[]
+          if (eventDoc.speakers.manualSpeakers || eventDoc.speakers.platformSpeakers) {
+            // Check manual speakers first
+            if (eventDoc.speakers.manualSpeakers) {
+              console.log(`📋 Checking ${eventDoc.speakers.manualSpeakers.length} manual speakers`);
+              sp = eventDoc.speakers.manualSpeakers.find((s) => {
+                const match = s._id?.toString() === rStr;
+                console.log(`   - Manual speaker ${s._id?.toString()} matches ${rStr}: ${match}`);
+                return match;
+              });
+              if (sp) {
+                speakerType = 'manual';
+                console.log(`✅ Found manual speaker: ${sp.name}`);
+              }
+            }
+            
+            // If not found in manual speakers, check platform speakers
+            if (!sp && eventDoc.speakers.platformSpeakers) {
+              sp = eventDoc.speakers.platformSpeakers.find((s) => 
+                s._id?.toString() === rStr || 
+                s.userId?.toString() === rStr ||
+                s.speakerId?.toString() === rStr
+              );
+              if (sp) speakerType = 'platform';
+            }
+          }
+          // Handle old schema format: speakers[] (array)
+          else if (Array.isArray(eventDoc.speakers)) {
+            sp = eventDoc.speakers.find(
+              (s) => s._id?.toString() === rStr || s.userId?.toString() === rStr
+            );
+            if (sp) speakerType = 'legacy';
+          }
+          
           if (sp) {
-            const name = sp.name || `${sp.firstName || ''} ${sp.lastName || ''}`.trim();
-            respondent = {
-              _id: sp.userId ? normalizeId(sp.userId) : normalizeId(sp._id),
-              firstName: name.split(' ')[0] || name,
-              lastName: name.split(' ').slice(1).join(' ') || '',
-              email: sp.email || null,
-              role: 'Speaker',
-            };
+            // For manual speakers, use the speaker data directly (no userId lookup needed)
+            if (speakerType === 'manual') {
+              const name = sp.name || `${sp.firstName || ''} ${sp.lastName || ''}`.trim();
+              respondent = {
+                _id: normalizeId(sp._id), // Use the manual speaker's _id directly
+                firstName: name.split(' ')[0] || name,
+                lastName: name.split(' ').slice(1).join(' ') || '',
+                email: sp.email || `${sp.title || 'Speaker'} (Manual Speaker)`,
+                role: 'Manual Speaker',
+              };
+              console.log(`✅ Created manual speaker respondent:`, respondent);
+            }
+            // For platform speakers, they should have userId that exists in EnhancedUser
+            else if (speakerType === 'platform') {
+              const name = sp.name || `${sp.firstName || ''} ${sp.lastName || ''}`.trim();
+              respondent = {
+                _id: sp.userId ? normalizeId(sp.userId) : normalizeId(sp._id),
+                firstName: name.split(' ')[0] || name,
+                lastName: name.split(' ').slice(1).join(' ') || '',
+                email: sp.email || null,
+                role: 'Platform Speaker',
+              };
+            }
+            // For legacy format
+            else {
+              const name = sp.name || `${sp.firstName || ''} ${sp.lastName || ''}`.trim();
+              respondent = {
+                _id: sp.userId ? normalizeId(sp.userId) : normalizeId(sp._id),
+                firstName: name.split(' ')[0] || name,
+                lastName: name.split(' ').slice(1).join(' ') || '',
+                email: sp.email || null,
+                role: 'Speaker',
+              };
+            }
           }
         }
       }
@@ -110,7 +181,7 @@ export const createDispute = async (req, res) => {
         }
       }
 
-      // 3) Global user fallback
+      // 3) Global user fallback (only for platform speakers and regular users)
       if (!respondent) {
         try {
           const result = await UserService.getUserById(respondentObjId || rId);
@@ -130,9 +201,15 @@ export const createDispute = async (req, res) => {
         }
       }
 
-      if (respondent) respondents.push(respondent);
+      if (respondent) {
+        respondents.push(respondent);
+        console.log(`✅ Added respondent: ${respondent.role} - ${respondent.firstName} ${respondent.lastName}`);
+      } else {
+        console.log(`❌ No respondent found for ID: ${rStr}`);
+      }
     }
 
+    console.log(`📊 Total respondents found: ${respondents.length}`);
     if (!respondents.length) {
       return res.status(404).json({ success: false, message: 'No valid respondents found' });
     }
@@ -261,19 +338,64 @@ export const getUserDisputes = async (req, res) => {
         }
       }
 
-      // 2) try event speaker if eventId provided
+      // 2) try event speaker if eventId provided (handle both old and new schema formats)
       if (eventId) {
-        const ev = await Event.findById(eventId).select('speakers').lean();
-        if (ev?.speakers?.length) {
-          const s = ev.speakers.find(sp => sp._id?.toString() === idStr);
+        // Try EnhancedEvent first (new format), fallback to Event (old format)
+        let ev = await EnhancedEvent.findById(eventId).select('speakers').lean();
+        if (!ev) {
+          ev = await Event.findById(eventId).select('speakers').lean();
+        }
+        if (ev?.speakers) {
+          let s = null;
+          let speakerType = null;
+          
+          // Handle new schema format: speakers.manualSpeakers[] and speakers.platformSpeakers[]
+          if (ev.speakers.manualSpeakers || ev.speakers.platformSpeakers) {
+            // Check manual speakers first
+            if (ev.speakers.manualSpeakers) {
+              s = ev.speakers.manualSpeakers.find((sp) => 
+                sp._id?.toString() === idStr
+              );
+              if (s) speakerType = 'manual';
+            }
+            
+            // If not found in manual speakers, check platform speakers
+            if (!s && ev.speakers.platformSpeakers) {
+              s = ev.speakers.platformSpeakers.find((sp) => 
+                sp._id?.toString() === idStr ||
+                sp.userId?.toString() === idStr ||
+                sp.speakerId?.toString() === idStr
+              );
+              if (s) speakerType = 'platform';
+            }
+          }
+          // Handle old schema format: speakers[] (array)
+          else if (Array.isArray(ev.speakers)) {
+            s = ev.speakers.find(sp => sp._id?.toString() === idStr);
+            if (s) speakerType = 'legacy';
+          }
+          
           if (s) {
             const name = s.name || `${s.firstName || ''} ${s.lastName || ''}`.trim();
-            return {
-              _id: s._id,
-              firstName: (s.firstName || name.split(' ')[0]) || 'N/A',
-              lastName: (s.lastName || name.split(' ').slice(1).join(' ')) || '',
-              email: s.email || ''
-            };
+            
+            // For manual speakers, use the speaker data directly
+            if (speakerType === 'manual') {
+              return {
+                _id: s._id,
+                firstName: (s.firstName || name.split(' ')[0]) || 'N/A',
+                lastName: (s.lastName || name.split(' ').slice(1).join(' ')) || '',
+                email: s.email || `${s.title || 'Speaker'} (Manual Speaker)`
+              };
+            }
+            // For platform speakers and legacy format
+            else {
+              return {
+                _id: s.userId || s._id,
+                firstName: (s.firstName || name.split(' ')[0]) || 'N/A',
+                lastName: (s.lastName || name.split(' ').slice(1).join(' ')) || '',
+                email: s.email || ''
+              };
+            }
           }
         }
       }

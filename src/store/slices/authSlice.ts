@@ -117,6 +117,57 @@ const authSlice = createSlice({
 // Auth API endpoints
 export const authApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
+    // Register/Signup
+    register: builder.mutation<
+      { success: boolean; message: string; user: User; redirectUrl: string; tokens: { accessToken: string } },
+      { firstName: string; lastName: string; email: string; password: string; phone?: string; role?: string; industry?: string; activities?: string[] }
+    >({
+      query: (userData) => ({
+        url: '/auth/register',
+        method: 'POST',
+        body: userData,
+      }),
+      // Handle the response and update the auth state (same as login)
+      async onQueryStarted(_, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          console.log('🔐 Register response:', data);
+          console.log('👤 User from register:', data.user);
+          console.log('👑 User role from register:', data.user?.role);
+          console.log('🔑 Response structure:', Object.keys(data));
+          
+          // Update auth state with user and token
+          if (data.success && data.user) {
+            // Get token from cookies if not in response
+            const getTokenFromCookies = () => {
+              if (typeof document === 'undefined') return null;
+              const cookies = document.cookie.split(';');
+              const accessTokenCookie = cookies.find(cookie => 
+                cookie.trim().startsWith('accessToken=')
+              );
+              return accessTokenCookie ? accessTokenCookie.split('=')[1] : null;
+            };
+
+            const tokenFromResponse = data.tokens?.accessToken;
+            const tokenFromCookies = getTokenFromCookies();
+            const finalToken = tokenFromResponse || tokenFromCookies;
+
+            dispatch(setAuthSuccess({ 
+              user: data.user, // Direct user object in response
+              token: finalToken || undefined
+            }));
+            console.log('✅ Auth state updated with user from register:', data.user);
+            console.log('✅ User role:', data.user.role);
+            console.log('✅ Token stored in Redux:', finalToken ? 'Yes' : 'No');
+          }
+        } catch (error) {
+          console.error('❌ Register error in onQueryStarted:', error);
+          dispatch(setAuthError(error instanceof Error ? error.message : 'Registration failed'));
+        }
+      },
+      invalidatesTags: ['User'],
+    }),
+
     // Login
     login: builder.mutation<
       { success: boolean; message: string; user: User; redirectUrl: string; tokens: { accessToken: string } },
@@ -315,6 +366,7 @@ export const {
 
 // Export API hooks
 export const {
+  useRegisterMutation,
   useLoginMutation,
   useLogoutMutation,
   useValidateTokenQuery,

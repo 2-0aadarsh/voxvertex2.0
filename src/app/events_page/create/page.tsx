@@ -143,7 +143,7 @@ export default function CreateEvent() {
           if (imageUrl) {
             console.log('✅ Banner image uploaded successfully:', imageUrl)
             finalBannerImageUrl = imageUrl
-          } else {
+      } else {
             throw new Error('Upload returned no URL')
           }
         } catch (uploadError) {

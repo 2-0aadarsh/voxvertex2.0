@@ -87,9 +87,9 @@ const Navbar: React.FC<NavbarProps> = ({
     console.log('🔍 Navbar Profile Image Debug:', {
       profileImage,
       type: typeof profileImage,
-      hasData: profileImage?.data ? 'yes' : 'no',
-      hasContentType: profileImage?.contentType ? 'yes' : 'no',
-      hasUrl: profileImage?.url ? 'yes' : 'no',
+      hasData: (profileImage as unknown)?.data ? 'yes' : 'no',
+      hasContentType: (profileImage as unknown)?.contentType ? 'yes' : 'no',
+      hasUrl: (profileImage as unknown)?.url ? 'yes' : 'no',
       hasGetProfileImageUrl: !!getProfileImageUrl
     });
     
@@ -97,7 +97,7 @@ const Navbar: React.FC<NavbarProps> = ({
     
     // If getProfileImageUrl function is provided, use it
     if (getProfileImageUrl) {
-      const result = getProfileImageUrl(profileImage);
+      const result = getProfileImageUrl(profileImage as string | null | undefined);
       console.log('✅ Using getProfileImageUrl function, result:', result);
       return result;
     }
@@ -218,7 +218,7 @@ const Navbar: React.FC<NavbarProps> = ({
       <div className="w-full px-6 ">
         <div className="flex items-center h-20">
           
-          <div className="flex md:hidden ml-4">
+          <div className="flex lg:hidden ml-4">
             <button 
               onClick={() => setShowSidebar(true)}
               className="text-gray-900 hover:text-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-opacity-50 rounded-md p-1"
@@ -268,7 +268,7 @@ const Navbar: React.FC<NavbarProps> = ({
 
 <div
   className={`fixed top-0 left-0 h-full w-64 bg-white shadow-lg z-50 transform transition-transform duration-300
-    ${showSidebar ? "translate-x-0" : "-translate-x-full"} md:hidden`}
+    ${showSidebar ? "translate-x-0" : "-translate-x-full"} lg:hidden`}
 >
   {/* Logo */}
   <div className="p-6 border-b border-gray-200">

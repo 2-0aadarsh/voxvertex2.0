@@ -21,3 +21,5 @@ node fix-duplicate-key-error.js
 echo ""
 echo "Press Enter to exit..."
 read
+
+

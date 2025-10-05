@@ -2,7 +2,7 @@ import UserService from '../services/user.service.js';
 import ProfileService from '../services/profile.service.js';
 import EnhancedProfile from '../models/enhancedProfile.js';
 import { generateTokenPair, verifyRefreshToken } from '../utils/tokens/jwt.utils.js';
-import { setAuthCookies, setAllAuthCookies, clearAuthCookies } from '../utils/cookies/cookie.utils.js';
+import { setAllAuthCookies, clearAuthCookies } from '../utils/cookies/cookie.utils.js';
 import { v2 as cloudinary } from 'cloudinary';
 import { Readable } from 'stream';
 import bcrypt from "bcryptjs";
@@ -64,10 +64,50 @@ export const registerUser = async (req, res) => {
     
     const { user, profile } = await UserService.createUser(userData);
     
+    // Generate JWT tokens (same as login)
+    const tokens = generateTokenPair(user);
+    
+    // Set secure cookies including user role (same as login)
+    setAllAuthCookies(res, tokens, user);
+    
+    // Get user profile for role-based routing
+    const { profile: userProfile } = await UserService.getUserById(user._id);
+    
+    // Get yearsOfExperience from EnhancedProfile if it exists
+    const yearsOfExperience = userProfile?.yearsOfExperience !== undefined ? userProfile.yearsOfExperience : user.yearsOfExperience;
+    
+    // Determine redirect URL based on user role (same logic as login)
+    let redirectUrl = '/dashboard';
+    switch (user.role) {
+      case 'speaker':
+        redirectUrl = '/speakerUser';
+        break;
+      case 'organizer':
+        redirectUrl = '/newuser';
+        break;
+      case 'participant':
+        redirectUrl = '/participant';
+        break;
+      default:
+        redirectUrl = '/dashboard';
+    }
+    
     return res.status(201).json({
       success: true,
       message: 'Account created successfully',
-      user,
+      user: {
+        ...user,
+        yearsOfExperience, // Include the yearsOfExperience from profile
+        profile: userProfile ? {
+          id: userProfile._id,
+          isComplete: user.isProfileComplete
+        } : null
+      },
+      redirectUrl,
+      tokens: {
+        accessToken: tokens.accessToken,
+        // Don't send refresh token to client (it's in httpOnly cookie)
+      },
       profile: {
         id: profile._id,
         sections: {

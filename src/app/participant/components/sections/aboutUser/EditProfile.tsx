@@ -621,11 +621,11 @@ export default function EditProfile({ isOpen, onClose }: EditProfileProps) {
                           : 'border-gray-300'
                       }`}
                     />
-                    {/* {title.length > TITLE_MAX_LENGTH * 0.9 && (
+                    {title.length > TITLE_MAX_LENGTH * 0.9 && (
                       <p className="text-[10px] text-orange-500 mt-1">
                         {TITLE_MAX_LENGTH - title.length} characters remaining
                       </p>
-                    )} */}
+                    )}
                   </div>
                   <div className="relative flex-1">
                     <label className="absolute -top-2 left-3 bg-white px-1 text-[11px] font-medium text-orange-500">
@@ -645,7 +645,7 @@ export default function EditProfile({ isOpen, onClose }: EditProfileProps) {
                           : 'border-gray-300'
                       }`}
                     />
-                    {/* {currentExpertise.trim() && (
+                    {currentExpertise.trim() && (
                       <p className="text-[10px] text-green-600 mt-1">
                         Press Enter or click + to add this expertise
                       </p>
@@ -659,7 +659,7 @@ export default function EditProfile({ isOpen, onClose }: EditProfileProps) {
                       <p className="text-[10px] text-orange-500 mt-1">
                         Add at least one area of expertise
                       </p>
-                    )} */}
+                    )}
                   </div>
                   <button
                     type="button"

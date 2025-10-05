@@ -3,7 +3,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { useEffect } from "react";
-import { usePathname } from "next/navigation";
 import ProfileHeader from "../newuser/components/header/ProfileHeader"
 // import Sidebar from "./components/sidebar/Sidebar";
 import Sidebar from "@/components/Sidebar";
@@ -33,14 +32,10 @@ export default function ParticipantLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const pathname = usePathname();
   // Ensure page always starts from the top
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, [pathname]);
-  const isNotificationsPage = pathname === '/participant/notifications';
-  const isEventsPage = pathname === '/participant/events' || pathname.startsWith('/participant/events/');
-  const isProfilePage = pathname === '/participant' || pathname === '/participant/';
+  }, []);
 
   return (
     <div className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
@@ -48,16 +43,6 @@ export default function ParticipantLayout({
       <div className="flex flex-col lg:flex-row items-stretch justify-between min-h-screen">
         <Sidebar />
         <div className="w-full bg-[#fffbf5] ml-64">
-          {isNotificationsPage ? (
-            // Notifications Page - Full width
-            <div className="min-h-screen">
-              {children}
-            </div>
-          ) : isEventsPage ?  (
-            <div className="min-h-screen">
-              {children}
-            </div>
-          ) : isProfilePage ? (
           <main className="flex flex-col items-center justify-between gap-5 py-5 px-4 lg:px-0">
             <AboutUser />
             <Post />
@@ -65,12 +50,7 @@ export default function ParticipantLayout({
             <Education />
             <AwardsAndCertifications />
             <FeaturedVideos />
-          </main>) : (
-            <div className="min-h-screen">
-              {/* {children} */}
-            </div>
-          )
-          }
+          </main>
         </div>
       </div>
     </div>

@@ -10,6 +10,7 @@ import Transactions from './components/Transactions';
 import Subscription from './components/Subscription';
 import PaymentMethods from './components/PaymentMethods';
 import { PaymentData } from './types';
+import Sidebar from '@/components/Sidebar';
 
 // Dynamic import for Navbar
 const Navbar = dynamic(() => import('@/components/Navbar'), {
@@ -39,7 +40,7 @@ export default function PaymentsDashboard() {
   const { data: currentUserData } = useGetCurrentUserQuery();
 
   // Helper function to get profile image URL
-  const getProfileImageUrl = (profileImage: any) => {
+  const getProfileImageUrl = (profileImage: unknown) => {
     if (!profileImage) return null;
     
     // Handle string URLs
@@ -96,9 +97,13 @@ export default function PaymentsDashboard() {
           forceHomepageStyle={true}
           getProfileImageUrl={getProfileImageUrl}
         />
+        {/* Hide sidebar on mobile, show on large screens */}
+        <div className="hidden lg:block">
+          <Sidebar />
+        </div>
       </Suspense>
 
-      <div className="p-3 sm:p-6">
+      <div className="lg:ml-64 p-3 sm:p-6">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-8 gap-3 sm:gap-0">

@@ -1,5 +1,5 @@
 import { Calendar, X, Trash2 } from 'lucide-react'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 
 interface TicketingStepProps {
   formData: {
@@ -104,7 +104,7 @@ export default function TicketingStep({ formData, onFormDataUpdate }: TicketingS
       }
     }
     onFormDataUpdate({
-      ticketTypes: [...currentTickets, newTicket]
+      ticketTypes: [newTicket, ...currentTickets]
     })
   }
 
@@ -130,7 +130,15 @@ export default function TicketingStep({ formData, onFormDataUpdate }: TicketingS
       if (field.includes('discount.')) {
         const discountField = field.split('.')[1]
         const updatedDiscount = {
-          ...ticket.discount,
+          enabled: ticket.discount?.enabled || false,
+          name: ticket.discount?.name || '',
+          type: (ticket.discount?.type || 'percentage') as 'percentage' | 'fixed',
+          value: ticket.discount?.value || '0',
+          maxUses: ticket.discount?.maxUses || '50',
+          startDate: ticket.discount?.startDate || '',
+          endDate: ticket.discount?.endDate || '',
+          code: ticket.discount?.code || '',
+          description: ticket.discount?.description || '',
           [discountField]: value
         }
         return {
@@ -241,7 +249,7 @@ export default function TicketingStep({ formData, onFormDataUpdate }: TicketingS
             {formData.ticketTypes?.map((ticket, index) => (
               <div key={index} className="border border-[#FF6B35] rounded-lg p-6 bg-orange-50">
                 <div className="flex justify-between items-start mb-6">
-                  <h3 className="text-lg font-medium text-[#FF6B35] bg-orange-50">Ticket Tier {index + 1}</h3>
+                  <h3 className="text-lg font-medium text-[#FF6B35] bg-orange-50">Ticket Tier {formData.ticketTypes?.length - index}</h3>
                   <button
                     type="button"
                     onClick={() => removeTicketTier(index)}
@@ -299,135 +307,79 @@ export default function TicketingStep({ formData, onFormDataUpdate }: TicketingS
                     </label>
                   </div>
                 </div>
-                {isCompressed ? (
-                  <div className="mb-6">
-                    <div className="flex justify-between items-center mb-4">
-                      <label className="block text-sm font-medium text-[#FF6B35]">
-                        What's Included
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => toggleFeatureInput(index)}
-                        className="px-3 py-1 border border-[#FF6B35] text-[#FF6B35] text-sm rounded hover:bg-orange-50"
-                      >
-                        + Add Feature
-                      </button>
-                    </div>
-                    {showFeatureInput[index] && (
-                      <div className="mb-4 relative">
-                        <input
-                          type="text"
-                          value={newFeatureText}
-                          onChange={(e) => setNewFeatureText(e.target.value)}
-                          onKeyPress={(e) => {
-                            if (e.key === 'Enter') {
-                              addFeature(index)
-                            }
-                          }}
-                          className="w-full px-3 py-2 border border-[#FF6B35] rounded-lg bg-white focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35] text-gray-900 placeholder-gray-400"
-                          placeholder="Eg. VIP Seating, Meet & greet with speakers"
-                          autoFocus
-                        />
-                        <div className="flex gap-2 mt-2">
-                          <button
-                            type="button"
-                            onClick={() => addFeature(index)}
-                            className="px-3 py-1 bg-[#FF6B35] text-white text-sm rounded hover:bg-[#e55a2b]"
-                          >
-                            Add
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => toggleFeatureInput(index)}
-                            className="px-3 py-1 border border-gray-300 text-gray-600 text-sm rounded hover:bg-gray-50"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                    {!showFeatureInput[index] && (
-                      <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg bg-white">
-                        <p className="text-gray-400 mb-1">No features added yet</p>
-                        <p className="text-gray-400 text-sm">Click &quot;Add Feature&quot; to specify what&apos;s included with this ticket</p>
-                      </div>
-                    )}
+                <div className="mb-6">
+                  <div className="flex justify-between items-center mb-4">
+                    <label className="block text-sm font-medium text-[#FF6B35]">
+                      What&apos;s Included
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => toggleFeatureInput(index)}
+                      className="px-3 py-1 border border-[#FF6B35] text-[#FF6B35] text-sm rounded hover:bg-orange-50"
+                    >
+                      + Add Feature
+                    </button>
                   </div>
-                ) : (
-                  <div className="mb-6">
-                    <div className="flex justify-between items-center mb-4">
-                      <label className="block text-sm font-medium text-[#FF6B35]">
-                        What's Included
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => toggleFeatureInput(index)}
-                        className="px-3 py-1 border border-[#FF6B35] text-[#FF6B35] text-sm rounded hover:bg-orange-50"
-                      >
-                        + Add Feature
-                      </button>
-                    </div>
 
-                    {showFeatureInput[index] && (
-                      <div className="mb-4 relative">
-                        <input
-                          type="text"
-                          value={newFeatureText}
-                          onChange={(e) => setNewFeatureText(e.target.value)}
-                          onKeyPress={(e) => {
-                            if (e.key === 'Enter') {
-                              addFeature(index)
-                            }
-                          }}
-                          className="w-full px-3 py-2 border border-[#FF6B35] rounded-lg bg-white focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35] text-gray-900 placeholder-gray-400"
-                          placeholder="Eg. VIP Seating, Meet & greet with speakers"
-                          autoFocus
-                        />
-                        <div className="flex gap-2 mt-2">
+                  {showFeatureInput[index] && (
+                    <div className="mb-4 relative">
+                      <input
+                        type="text"
+                        value={newFeatureText}
+                        onChange={(e) => setNewFeatureText(e.target.value)}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            addFeature(index)
+                          }
+                        }}
+                        className="w-full px-3 py-2 border border-[#FF6B35] rounded-lg bg-white focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35] text-gray-900 placeholder-gray-400"
+                        placeholder="Eg. VIP Seating, Meet & greet with speakers"
+                        autoFocus
+                      />
+                      <div className="flex gap-2 mt-2">
+                        <button
+                          type="button"
+                          onClick={() => addFeature(index)}
+                          className="px-3 py-1 bg-[#FF6B35] text-white text-sm rounded hover:bg-[#e55a2b]"
+                        >
+                          Add
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => toggleFeatureInput(index)}
+                          className="px-3 py-1 border border-gray-300 text-gray-600 text-sm rounded hover:bg-gray-50"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-3 mb-4">
+                    {ticket.features?.map((feature, featureIndex) => (
+                      <div key={featureIndex} className="flex items-center space-x-3">
+                        <div className="w-5 h-5 bg-orange-50 rounded-full text-green-500 flex items-center justify-center text-xs flex-shrink-0">✓</div>
+                        <div className="flex items-center justify-between bg-white p-2 rounded-lg border border-[#FF6B35] flex-1">
+                          <span className="text-sm text-gray-700">{feature}</span>
                           <button
                             type="button"
-                            onClick={() => addFeature(index)}
-                            className="px-3 py-1 bg-[#FF6B35] text-white text-sm rounded hover:bg-[#e55a2b]"
+                            onClick={() => removeFeature(index, featureIndex)}
+                            className="text-red-500 hover:text-red-700 ml-2"
                           >
-                            Add
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => toggleFeatureInput(index)}
-                            className="px-3 py-1 border border-gray-300 text-gray-600 text-sm rounded hover:bg-gray-50"
-                          >
-                            Cancel
+                            <X className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
-                    )}
-
-                    <div className="space-y-3 mb-4">
-                      {ticket.features?.map((feature, featureIndex) => (
-                        <div key={featureIndex} className="flex items-center space-x-3">
-                          <div className="w-5 h-5 bg-orange-50 rounded-full text-green-500 flex items-center justify-center text-xs flex-shrink-0">✓</div>
-                          <div className="flex items-center justify-between bg-white p-2 rounded-lg border border-[#FF6B35] flex-1">
-                            <span className="text-sm text-gray-700">{feature}</span>
-                            <button
-                              type="button"
-                              onClick={() => removeFeature(index, featureIndex)}
-                              className="text-red-500 hover:text-red-700 ml-2"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {(!ticket.features || ticket.features.length === 0) && !showFeatureInput[index] && (
-                      <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg bg-white">
-                        <p className="text-gray-400 mb-1">No features added yet</p>
-                        <p className="text-gray-400 text-sm">Click &quot;Add Feature&quot; to add ticket features</p>
-                      </div>
-                    )}
+                    ))}
                   </div>
-                )}
+
+                  {(!ticket.features || ticket.features.length === 0) && !showFeatureInput[index] && (
+                    <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg bg-white">
+                      <p className="text-gray-400 mb-1">No features added yet</p>
+                      <p className="text-gray-400 text-sm">Click &quot;Add Feature&quot; to add ticket features</p>
+                    </div>
+                  )}
+                </div>
 
                 <div className="border-t border-orange-200 pt-6">
                   <div className="flex justify-between items-center mb-6">
@@ -445,33 +397,7 @@ export default function TicketingStep({ formData, onFormDataUpdate }: TicketingS
                     </div>
                   </div>
 
-                  {isCompressed && ticket.discount?.enabled && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="relative">
-                        <select
-                          value={ticket.discount?.type || 'percentage'}
-                          onChange={(e) => updateTicketTier(index, 'discount.type', e.target.value)}
-                          className="w-full px-3 py-2 border border-[#FF6B35] rounded-md bg-white focus:ring-2 focus:ring-[#FF6B35] text-gray-900"
-                        >
-                          <option value="percentage">percentage (%)</option>
-                          <option value="fixed">fixed</option>
-                        </select>
-                        <label className="absolute -top-2 left-3 bg-orange-50 px-1 text-xs font-medium text-[#FF6B35]">
-                          Discount (%)
-                        </label>
-                      </div>
-                      <div className="relative">
-                        <div className="bg-white p-3 rounded-md border border-[#FF6B35] flex justify-between items-center">
-                          <span className="text-sm text-gray-600">Price Preview</span>
-                          <span className="text-lg font-semibold text-gray-900">
-                            $ {ticket.price || '100.00'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {!isCompressed && ticket.discount?.enabled && (
+                  {ticket.discount?.enabled && (
                     <div className="space-y-6 mt-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="relative">

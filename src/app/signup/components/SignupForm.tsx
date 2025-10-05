@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import ProgressIndicator from './ProgressIndicator';
 import StepOne from './steps/StepOne';
 import StepOtp from './steps/StepOtp';
@@ -10,7 +11,8 @@ import StepTwo from './steps/StepTwo';
 import StepThree from './steps/StepThree';
 import SuccessStep from './steps/SuccessStep';
 import { useSignup } from '../context/SignupContext';
-import { registerUser, sendOtp } from '../services/authService';
+import { useRegisterMutation } from '@/store/slices/authSlice';
+import { sendOtp } from '../services/authService';
 import { formatName } from './utils/formHelpers';
 
 export default function SignupForm() {
@@ -25,6 +27,8 @@ export default function SignupForm() {
     setError 
   } = useSignup();
   const [isSuccess, setIsSuccess] = useState(false);
+  const router = useRouter();
+  const [register, { isLoading: isRegistering }] = useRegisterMutation();
 
   const totalSteps = 4; // Including OTP verification step
 
@@ -60,7 +64,7 @@ export default function SignupForm() {
     setError(null);
     
     try {
-      const response = await registerUser({
+      const response = await register({
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
@@ -69,17 +73,18 @@ export default function SignupForm() {
         role: formData.whoAreYou,
         industry: formData.companyTitle,
         activities: formData.activity
-      });
+      }).unwrap();
 
       if (response.success) {
         setIsSuccess(true);
         
-        // Redirect to login page after successful signup
+        // Redirect to role-based dashboard after successful signup
         setTimeout(() => {
-          window.location.href = '/signup/login';
+          router.push(response.redirectUrl);
         }, 2000);
       }
     } catch (error) {
+      console.error('Registration error:', error);
       setError(error instanceof Error ? error.message : 'Failed to create account');
     } finally {
       setIsLoading(false);
@@ -178,10 +183,10 @@ export default function SignupForm() {
         {currentStep !== 2 && (
           <button
             onClick={handleNext}
-            disabled={!isStepValid() || isLoading}
+            disabled={!isStepValid() || isLoading || isRegistering}
             className="flex items-center gap-2 px-5 py-2 text-sm bg-orange-500 hover:bg-orange-600 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {isLoading ? (
+            {(isLoading || isRegistering) ? (
               'Processing...'
             ) : currentStep === totalSteps ? (
               <>

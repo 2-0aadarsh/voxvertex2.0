@@ -8,8 +8,7 @@ import {
   Calendar, 
   ChevronDown,
   X,
-  AlertTriangle,
-  Edit
+  AlertTriangle
 } from 'lucide-react'
 import Link from 'next/link'
 import { useAuth } from '@/store/hooks'
@@ -34,6 +33,9 @@ export default function EventManagement() {
   const { user, isAuthenticated } = useAuth()
   const { data: currentUserData } = useGetCurrentUserQuery()
   
+  // Get current user role for conditional rendering
+  const currentUserRole = user?.role || currentUserData?.user?.role
+  
   // API hooks
   const { 
     data: eventsData, 
@@ -43,7 +45,7 @@ export default function EventManagement() {
   } = useGetUserEventsQuery({
     page: currentPage,
     limit: 10,
-    status: statusFilter === 'All Statuses' ? undefined : statusFilter.toLowerCase() as 'draft' | 'published' | 'cancelled'
+    status: statusFilter === 'All Statuses' ? undefined : statusFilter.toLowerCase() as 'draft' | 'published'
   })
   
   const [deleteEvent, { isLoading: isDeleting }] = useDeleteEventMutation()
@@ -123,9 +125,9 @@ export default function EventManagement() {
     if (deleteConfirmation === 'DELETE' && eventToDelete) {
       try {
         await deleteEvent(eventToDelete._id).unwrap()
-        setShowDeleteModal(false)
-        setEventToDelete(null)
-        setDeleteConfirmation('')
+      setShowDeleteModal(false)
+      setEventToDelete(null)
+      setDeleteConfirmation('')
         // Refetch events to update the list
         refetchEvents()
       } catch (error) {
@@ -157,36 +159,40 @@ export default function EventManagement() {
       <Sidebar />
 
       {/* Main Content */}
-      <div className="ml-64 pt-20 bg-orange-50 min-h-screen">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex justify-between items-center mb-8">
+      <div className="ml-64 pt-20 bg-gray-50 min-h-screen">
+        <main className="flex-1 p-8">
+          <div className="bg-gradient-to-r from-[#FF9974] via-[#FFB194] to-[#FFCBB8] rounded-lg flex justify-between items-center p-6 mb-8">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Event Management</h1>
-              <p className="text-gray-600 mt-1">View, create, and manage all your events.</p>
+              <h1 className="text-3xl font-bold text-black">Event Management</h1>
+              <p className="text-white mt-1">View, create, and manage all your events.</p>
             </div>
-            <Link 
-              href="/events_page/create"
-              className="bg-[#FF6B35] hover:bg-orange-600 text-white px-10 py-2 rounded-lg font-medium flex items-center space-x-2"
-            >
-              <Calendar className="w-5 h-5" />
-              <span>Create Event</span>
-            </Link>
+            {currentUserRole === "organizer" && (
+              <Link 
+                href="/events_page/create"
+                className="bg-[#FF6B35] hover:bg-orange-600 text-white px-10 py-2 rounded-lg font-medium flex items-center space-x-2"
+              >
+                <Calendar className="w-5 h-5" />
+                <span>Create Event</span>
+              </Link>
+            )}
           </div>
 
           {/* Main Content Card */}
-          <main className="bg-white rounded-lg shadow-sm p-8">
+          <div className="bg-white rounded-lg shadow-sm p-8">
 
             {/* Search and Filter */}
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
-              <div className="relative w-64">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#FF6B35] w-5 h-5" />
-                <input
-                  type="text"
-                  placeholder="Search Events..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-[#FF6B35]/10 border border-[#FF6B35] rounded-lg focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35]"
-                />
+              <div className="flex items-center w-64">
+                <div className="relative flex items-center w-full">
+                  <Search className="absolute left-3 text-[#FF6B35] w-5 h-5" />
+                  <input
+                    type="text"
+                    placeholder="Search Events..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 bg-[#FF6B35]/10 border border-[#FF6B35] rounded-lg focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35]"
+                  />
+                </div>
               </div>
               <div className="relative w-40">
                 <select
@@ -280,17 +286,19 @@ export default function EventManagement() {
                     : 'Get started by creating your first event.'
                   }
                 </p>
-                <Link 
-                  href="/events_page/create"
-                  className="bg-[#FF6B35] hover:bg-orange-600 text-white px-6 py-3 rounded-lg font-medium inline-flex items-center space-x-2"
-                >
-                  <Calendar className="w-5 h-5" />
-                  <span>Create Your First Event</span>
-                </Link>
+                {currentUserRole === "organizer" && (
+                  <Link 
+                    href="/events_page/create"
+                    className="bg-[#FF6B35] hover:bg-orange-600 text-white px-6 py-3 rounded-lg font-medium inline-flex items-center space-x-2"
+                  >
+                    <Calendar className="w-5 h-5" />
+                    <span>Create Your First Event</span>
+                  </Link>
+                )}
               </div>
             )}
+          </div>
           </main>
-        </div>
       </div>
 
       {/* Delete Confirmation Modal */}
@@ -316,7 +324,7 @@ export default function EventManagement() {
             {/* Modal Content */}
             <div className="mb-6">
               <p className="text-gray-600 mb-4">
-                Are you sure you want to delete &ldquo;{eventToDelete.eventName}&rdquo;? This action cannot be undone and will permanently remove the event and all associated data.
+                Are you sure you want to delete &ldquo;{eventToDelete?.eventName}&rdquo;? This action cannot be undone and will permanently remove the event and all associated data.
               </p>
 
               {/* Warning Box */}

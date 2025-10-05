@@ -2,7 +2,6 @@
 'use client';
 
 import React from 'react';
-import Header from './parts/Header';
 import DocumentsMain from './parts/documentsMain';
 
 export default function DocumentsPage({ onTabChange }: { onTabChange?: (tab: string) => void }) {
@@ -10,7 +9,6 @@ export default function DocumentsPage({ onTabChange }: { onTabChange?: (tab: str
   return (
     <div className="min-h-screen bg-white">
       <div className="ml-64 pt-20">
-        <Header />
         
         {/* Orange Header Card */}
         <div className="p-6">

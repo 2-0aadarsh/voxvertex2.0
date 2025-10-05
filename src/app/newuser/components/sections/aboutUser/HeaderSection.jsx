@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Suspense } from "react";
 import { RiEditBoxFill } from "react-icons/ri";
 import { MdOutlineCameraAlt } from "react-icons/md";
 import { motion } from "framer-motion";
@@ -9,14 +9,37 @@ import { useAuth } from "../../../../../store/hooks";
 import { useAppDispatch } from "../../../../../store/hooks";
 import { updateUser } from "../../../../../store/slices/authSlice";
 import { toast } from "react-hot-toast";
+import dynamic from "next/dynamic";
+
+// Dynamic import for ProfilePictureModal
+const ProfilePictureModal = dynamic(
+  () => import("@/components/ProfilePictureModal"),
+  {
+    loading: () => null, // Modal doesn't need loading state when closed
+    ssr: false,
+  }
+);
 
 const HeaderSection = ({ name, role, description, domains, profilePic }) => {
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [isProfilePictureModalOpen, setIsProfilePictureModalOpen] =
+    useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const fileInputRef = useRef(null);
+  const [fallbackImage, setFallbackImage] = useState("");
   const auth = useAuth();
   const dispatch = useAppDispatch();
+
+  // Get profile image from localStorage on component mount
+  useEffect(() => {
+    // Use this in client components only
+    if (typeof window !== "undefined") {
+      const savedImage = localStorage.getItem("userProfileImage");
+      if (savedImage) {
+        setFallbackImage(savedImage);
+      }
+    }
+  }, []);
 
   const visibleDomains = domains.slice(0, 3);
   const remainingCount = domains.length - visibleDomains.length;
@@ -30,25 +53,15 @@ const HeaderSection = ({ name, role, description, domains, profilePic }) => {
   };
 
   const handleImageClick = () => {
-    fileInputRef.current.click();
+    setIsProfilePictureModalOpen(true);
   };
 
-  const handleImageChange = async (e) => {
-    const file = e.target.files[0];
+  const handleCloseProfilePictureModal = () => {
+    setIsProfilePictureModalOpen(false);
+  };
+
+  const handleImageUpload = async (file) => {
     if (!file) return;
-
-    // Validate file type
-    const validTypes = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
-    if (!validTypes.includes(file.type)) {
-      toast.error("Please select a valid image file (JPEG, PNG, or WebP)");
-      return;
-    }
-
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Image size should be less than 5MB");
-      return;
-    }
 
     try {
       setIsUploading(true);
@@ -113,6 +126,14 @@ const HeaderSection = ({ name, role, description, domains, profilePic }) => {
         // Update Redux store with new user data
         dispatch(updateUser(updatedUser));
         toast.success("Profile picture updated successfully!");
+
+        // Store profile image URL in localStorage as backup
+        if (updatedUser.profileImageUrl) {
+          localStorage.setItem("userProfileImage", updatedUser.profileImageUrl);
+        }
+
+        // Close the modal after successful upload
+        setIsProfilePictureModalOpen(false);
       }
     } catch (error) {
       console.error("Error uploading image:", error);
@@ -120,6 +141,65 @@ const HeaderSection = ({ name, role, description, domains, profilePic }) => {
     } finally {
       setIsUploading(false);
       setUploadProgress(0);
+    }
+  };
+
+  const handleImageRemove = async () => {
+    try {
+      setIsUploading(true);
+
+      // Call API to remove profile image
+      const apiUrl = `${
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api"
+      }/auth/profile/image`;
+      const response = await fetch(apiUrl, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to remove image");
+      }
+
+      const data = await response.json();
+
+      if (data.success && data.user) {
+        // Update Redux store with user data without profile image
+        const updatedUser = {
+          ...data.user,
+          profileImageUrl: null,
+          // If the user has _doc property, update that too for consistency
+          ...(data.user._doc
+            ? {
+                _doc: {
+                  ...data.user._doc,
+                  profileImageUrl: null,
+                },
+              }
+            : {}),
+        };
+
+        console.log(
+          "🗑️ Updated user after removing profile image:",
+          updatedUser
+        );
+
+        // Update Redux store with new user data
+        dispatch(updateUser(updatedUser));
+        toast.success("Profile picture removed successfully!");
+
+        // Remove from localStorage as well
+        localStorage.removeItem("userProfileImage");
+
+        // Close the modal after successful removal
+        setIsProfilePictureModalOpen(false);
+      }
+    } catch (error) {
+      console.error("Error removing image:", error);
+      toast.error(error.message || "Failed to remove image");
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -139,42 +219,20 @@ const HeaderSection = ({ name, role, description, domains, profilePic }) => {
           transition={{ duration: 0.6, ease: "easeOut" }}
           className="w-[128px] h-[138px] bg-white rounded-lg p-[5px] relative"
         >
-          {/* Check if user has a profile image */}
-          {auth.user?.profileImageUrl ? (
-            <img
-              src={auth.user.profileImageUrl}
-              className="w-full h-full object-cover object-center rounded-lg"
-              alt="Profile"
-              onError={(e) => {
-                console.error("Profile image failed to load");
-                // Hide the image and show avatar instead
-                e.currentTarget.style.display = "none";
-                e.currentTarget.nextElementSibling.style.display = "flex";
-              }}
-            />
-          ) : null}
-
-          {/* Avatar with initials - shown when no profile image */}
-          <div
-            className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold text-4xl rounded-lg"
-            style={{
-              display: auth.user?.profileImageUrl ? "none" : "flex",
+          <img
+            src={auth.user?.profileImageUrl || fallbackImage || profilePic}
+            className="w-full h-full object-cover object-center rounded-lg"
+            alt="Profile"
+            onError={(e) => {
+              console.error("Profile image failed to load");
+              // Try fallback image from localStorage if available
+              if (fallbackImage && e.target.src !== fallbackImage) {
+                e.target.src = fallbackImage;
+              } else if (e.target.src !== profilePic) {
+                // Otherwise use default profile pic
+                e.target.src = profilePic;
+              }
             }}
-          >
-            {name
-              .split(" ")
-              .map((n) => n[0])
-              .join("")
-              .toUpperCase()
-              .slice(0, 2)}
-          </div>
-          {/* Hidden file input */}
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleImageChange}
-            accept="image/jpeg,image/png,image/jpg,image/webp"
-            className="hidden"
           />
 
           {/* Camera icon button */}
@@ -332,6 +390,18 @@ const HeaderSection = ({ name, role, description, domains, profilePic }) => {
         isOpen={isEditProfileOpen}
         onClose={handleCloseEditProfile}
       />
+
+      {/* Profile Picture Modal */}
+      <Suspense fallback={null}>
+        <ProfilePictureModal
+          isOpen={isProfilePictureModalOpen}
+          onClose={handleCloseProfilePictureModal}
+          profilePic={auth.user?.profileImageUrl || fallbackImage}
+          onImageUpload={handleImageUpload}
+          onImageRemove={handleImageRemove}
+          isUploading={isUploading}
+        />
+      </Suspense>
     </>
   );
 };

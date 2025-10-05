@@ -69,9 +69,14 @@ console.log('ReviewStep formData1 respondent:', formData.respondentId);
   category: formData.disputeReason?.trim() || '',
   priority: 'medium',
   respondentIds: respondentIds, // string now
+  eventId: formData.eventId, // ✅ ADDED: Event ID for speaker lookup
+  disputeAmount: formData.amount || 0, // ✅ ADDED: Dispute amount
+  disputeCurrency: 'INR' // ✅ ADDED: Currency
 };
 console.log('Selected parties before submit:', formData.partiesInvolved);
 console.log('Respondent IDs:', respondentIds);
+console.log('Event ID:', formData.eventId);
+console.log('Full payload being sent:', payload);
 
 
 

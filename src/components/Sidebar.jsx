@@ -39,16 +39,16 @@ const Sidebar = ({ userRole = "newuser" }) => {
   };
 
   // Debug: Log user data to understand the structure
-  console.log(`🔍 ${userRole} Sidebar Debug - User data:`, {
-    user: user,
-    currentUserData: currentUserData,
-    userFirstName: user?.firstName,
-    userLastName: user?.lastName,
-    userProfileImageUrl: user?.profileImageUrl,
-    currentUserFirstName: currentUserData?.user?.firstName,
-    currentUserLastName: currentUserData?.user?.lastName,
-    currentUserProfileImageUrl: currentUserData?.user?.profileImageUrl,
-  });
+  // console.log(`🔍 ${userRole} Sidebar Debug - User data:`, {
+  //   user: user,
+  //   currentUserData: currentUserData,
+  //   userFirstName: user?.firstName,
+  //   userLastName: user?.lastName,
+  //   userProfileImageUrl: user?.profileImageUrl,
+  //   currentUserFirstName: currentUserData?.user?.firstName,
+  //   currentUserLastName: currentUserData?.user?.lastName,
+  //   currentUserProfileImageUrl: currentUserData?.user?.profileImageUrl,
+  // });
 
   // Get user details from Redux store or current user data
   const userDetails = {
@@ -59,6 +59,50 @@ const Sidebar = ({ userRole = "newuser" }) => {
         ? `${currentUserData.user.firstName} ${currentUserData.user.lastName}`
         : "User",
     email: user?.email || currentUserData?.user?.email || "user@example.com",
+  };
+
+  // Helper function to get user role
+  const getUserRole = () => {
+    // Try multiple possible paths to find the role
+    const role =
+      user?.role ||
+      currentUserData?.user?.role ||
+      currentUserData?.role ||
+      userRole;
+
+    console.log("user role log from sidebar:", {
+      userRole: user?.role,
+      currentUserDataUserRole: currentUserData?.user?.role,
+      currentUserDataRole: currentUserData?.role,
+      userRoleProp: userRole,
+      finalRole: role,
+    });
+
+    return role;
+  };
+
+  // Helper function to get events redirect based on user role
+  const getEventsRedirect = () => {
+    const role = getUserRole();
+    let redirectPath;
+
+    switch (role) {
+      case "organizer":
+        redirectPath = "/events_page";
+        break;
+      case "participant":
+        redirectPath = "/participant/events";
+        break;
+      default:
+        redirectPath = "/events_page"; // Default fallback
+    }
+
+    console.log(" second log from sidebar page", {
+      detectedRole: role,
+      redirectPath: redirectPath,
+    });
+
+    return redirectPath;
   };
 
   // Helper function to get profile redirect based on user role
@@ -79,11 +123,11 @@ const Sidebar = ({ userRole = "newuser" }) => {
   // Get current pathname to determine active item
   const currentPath = pathname || "/";
 
-  // Role-based navigation items - all redirect to /bookings for Bookings
-  const navigationItems = [
+  // Role-based navigation items
+  const baseNavigationItems = [
     {
       icon: <CiUser />,
-      label: "Profile",
+      label: "Dashboard",
       href: getProfileRedirect(),
       active:
         currentPath === getProfileRedirect() ||
@@ -91,12 +135,6 @@ const Sidebar = ({ userRole = "newuser" }) => {
         currentPath === "/speakerUser" ||
         currentPath === "/participant",
     },
-    // {          /////*********** /////////
-    //   icon: <MdOutlineDashboard />,
-    //   label: "Analytics",
-    //   href: "/analytics",
-    //   active: currentPath === "/analytics",
-    // },
     {
       icon: <LuMessageCircleMore />,
       label: "Messages",
@@ -104,16 +142,13 @@ const Sidebar = ({ userRole = "newuser" }) => {
       active: currentPath === "/messages",
     },
     {
-      icon: <IoCalendarOutline />,
-      label: "Bookings",
-      href: "/booking", // All roles redirect to /bookings
-      active: currentPath === "/booking" || currentPath.startsWith("/booking"),
-    },
-    {
       icon: <CalendarDays />,
       label: "Events",
-      href: "/events_page",
-      active: currentPath === "/events" || currentPath.startsWith("/events"),
+      href: getEventsRedirect(),
+      active:
+        currentPath === "/events_page" ||
+        currentPath === "/participant/events" ||
+        currentPath.startsWith("/events"),
     },
     {
       icon: <VscCreditCard />,
@@ -128,6 +163,22 @@ const Sidebar = ({ userRole = "newuser" }) => {
       active: currentPath === "/dispute" || currentPath.startsWith("/dispute"),
     },
   ];
+
+  // Add Bookings only for organizers and speakers (not participants)
+  const navigationItems =
+    getUserRole() === "participant"
+      ? baseNavigationItems
+      : [
+          ...baseNavigationItems.slice(0, 2), // Dashboard and Messages
+          {
+            icon: <IoCalendarOutline />,
+            label: "Bookings",
+            href: "/booking",
+            active:
+              currentPath === "/booking" || currentPath.startsWith("/booking"),
+          },
+          ...baseNavigationItems.slice(2), // Events, Payments, Dispute
+        ];
 
   const bottomItems = [
     {
