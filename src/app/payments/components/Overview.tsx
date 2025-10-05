@@ -1,9 +1,11 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from "@/store/hooks";
 import {    useGetPaymentMethodsQuery, PaymentMethod,
+  useAddFundsMutation,
+  useCreateRazorpayOrderMutation,
   useGetBalanceQuery
  } from "../../../store/api/paymentApi";
 import { Plus, TrendingUp, Clock, CheckCircle,
@@ -40,19 +42,29 @@ export default function Overview({ data = sampleData }: OverviewProps) {
   const [isPaymentMethodSelected, setIsPaymentMethodSelected] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<string | null>(null);
 
-    const { user } = useAuth();
+  const { user } = useAuth();
   const userId = user?._id;
 
- const { data: paymentMethods, isLoading: isLoadingPM, isError: isErrorPM } =
+  const { data: paymentMethods, isLoading: isLoadingPM, isError: isErrorPM } =
   useGetPaymentMethodsQuery(userId!, {
     skip: !userId,
   });
 
-const { data: balance, isLoading: isLoadingBalance, isError: isErrorBalance } =
+  const { data: balance, isLoading: isLoadingBalance, isError: isErrorBalance } =
   useGetBalanceQuery(userId, {
     skip: !userId, // skip if no user
   });
+  const [addFunds] = useAddFundsMutation();
+  const [createRazorpayOrder] = useCreateRazorpayOrderMutation();
 
+useEffect(() => {
+  if (!(window as any).Razorpay) {
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    document.body.appendChild(script);
+  }
+}, []);
 
   const openAddFundsModal = () => {
     setIsAddFundsModalOpen(true);
@@ -68,7 +80,8 @@ const { data: balance, isLoading: isLoadingBalance, isError: isErrorBalance } =
     }
     setAmount('');
     setIsAmountFocused(false);
-    setIsPaymentMethodSelected(false);
+    // setIsPaymentMethodSelected(false);
+     setSelectedPayment(null);
   };
 
   const openWithdrawModal = () => {
@@ -85,10 +98,66 @@ const { data: balance, isLoading: isLoadingBalance, isError: isErrorBalance } =
     }
   };
 
-  const handleAddFunds = () => {
-    console.log('Adding funds:', amount);
+const handleAddFunds = async () => {
+    const currentUserId = user?._id;
+  if (!currentUserId) return alert("User not found");
+  if (!amount || Number(amount) <= 0) return alert('Enter a valid amount');
+    if (!selectedPayment) return alert('Select a payment method');
+
+  try {
+    const numericAmount = parseFloat(amount);
+    if (isNaN(numericAmount) || numericAmount <= 0) {
+      alert("Please enter a valid amount.");
+      return;
+    }
+
+    // 1️⃣ Create Razorpay order
+       const order = await createRazorpayOrder({ 
+      amount: parseFloat(amount), // Razorpay expects paise
+      currency: "INR" ,
+      userId: userId!
+    }).unwrap();
+
+    // 2️⃣ Razorpay options
+    const options = {
+      key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+      amount: order.amount,
+      currency: order.currency,
+      name: "VoxVertex",
+      description: "Add Funds to Wallet",
+      order_id: order.id,
+      handler: async function (response: any) {
+        // 3️⃣ Update wallet
+        await addFunds({
+          userId: userId!,
+          amount: parseFloat(amount),
+          paymentMethodId: selectedPayment!, // selected method
+          razorpayPaymentId: response.razorpay_payment_id,
+          razorpayOrderId: response.razorpay_order_id,
+          razorpaySignature: response.razorpay_signature,
+        });
+
+        alert("Funds added successfully!");
+      },
+      prefill: {
+        name: user?.firstName,
+        email: user?.email,
+      },
+      theme: {
+        color: "#FF6B35",
+      },
+    };
+
+    const rzp = new (window as any).Razorpay(options);
+    rzp.open();
+  } catch (error: any) {
+    console.error(error);
+    alert(error?.data?.message || "Payment failed. Please try again.");
+  } finally {
     closeAddFundsModal();
-  };
+  }
+};
+
 
   const handleWithdraw = () => {
     console.log('Withdrawing funds');

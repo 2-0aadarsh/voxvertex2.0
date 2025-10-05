@@ -81,17 +81,25 @@ export const paymentApi = createApi({
     }),
 
     // Add Funds
-    addFunds: builder.mutation<
-      any,
-      { userId: string; amount: number; paymentMethodId: string }
-    >({
-      query: (body) => ({
-        url: `/payments/add-funds`,
-        method: "POST",
-        body,
-      }),
-      invalidatesTags: ["Wallet", "Transactions"],
-    }),
+addFunds: builder.mutation<
+  any,
+  {
+    userId: string;
+    amount: number;
+    paymentMethodId: string;
+    razorpayPaymentId?: string;
+    razorpayOrderId?: string;
+    razorpaySignature?: string;
+  }
+>({
+  query: (body) => ({
+    url: `/payments/add-funds`,
+    method: "POST",
+    body,
+  }),
+  invalidatesTags: ["Wallet", "Transactions"],
+}),
+
 
     // Payment Methods
     getPaymentMethods: builder.query<PaymentMethod[], string>({
@@ -128,7 +136,7 @@ export const paymentApi = createApi({
     // In paymentApi.ts, inside endpoints(builder) => ({ ... })
 createRazorpayOrder: builder.mutation<
   { id: string; currency: string; amount: number }, // response from backend
-  { amount: number; currency?: string } // request payload
+  { amount: number; currency?: string; userId: string } // request payload
 >({
   query: (body) => ({
     url: `/payments/razorpay/create-order`, // your backend route

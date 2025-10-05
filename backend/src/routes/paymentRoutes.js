@@ -7,9 +7,9 @@ import {
   getWalletBalance,
   getTransactions,
   clearTransaction,
-//   razorpayWebhook,
+  razorpayWebhook,
   createRazorpayOrder,
-  deletePaymentMethod
+  deletePaymentMethod, ensureRazorpayCustomer
 } from '../controllers/paymentController.js';
 
 const router = express.Router();
@@ -25,15 +25,14 @@ router.get('/transactions/:userId', getTransactions);
 
 // Testing / webhook endpoint (simulate payment gateway clearing)
 router.post('/clear-transaction', clearTransaction);
-// router.post(
-//   "/razorpay/webhook",
-//   express.raw({ type: "application/json" }),
-//   razorpayWebhook
-// );
+
+router.post("/razorpay/webhook", razorpayWebhook);
+
 // ✅ New route for Razorpay order
 router.post("/razorpay/create-order", createRazorpayOrder);
 // delete payment method
 router.delete('/payment-methods/:userId/:paymentMethodId', deletePaymentMethod);
+router.post('/razorpay/customer', ensureRazorpayCustomer);
 
 
 export default router;
