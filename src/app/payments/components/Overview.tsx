@@ -1,9 +1,11 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from "@/store/hooks";
 import {    useGetPaymentMethodsQuery, PaymentMethod,
+  useAddFundsMutation,
+  useCreateRazorpayOrderMutation,
   useGetBalanceQuery
  } from "../../../store/api/paymentApi";
 import { Plus, TrendingUp, Clock, CheckCircle,
@@ -40,19 +42,29 @@ export default function Overview({ data = sampleData }: OverviewProps) {
   const [isPaymentMethodSelected, setIsPaymentMethodSelected] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<string | null>(null);
 
-    const { user } = useAuth();
+  const { user } = useAuth();
   const userId = user?._id;
 
- const { data: paymentMethods, isLoading: isLoadingPM, isError: isErrorPM } =
+  const { data: paymentMethods, isLoading: isLoadingPM, isError: isErrorPM } =
   useGetPaymentMethodsQuery(userId!, {
     skip: !userId,
   });
 
-const { data: balance, isLoading: isLoadingBalance, isError: isErrorBalance } =
+  const { data: balance, isLoading: isLoadingBalance, isError: isErrorBalance } =
   useGetBalanceQuery(userId, {
     skip: !userId, // skip if no user
   });
+  const [addFunds] = useAddFundsMutation();
+  const [createRazorpayOrder] = useCreateRazorpayOrderMutation();
 
+useEffect(() => {
+  if (!(window as any).Razorpay) {
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    document.body.appendChild(script);
+  }
+}, []);
 
   const openAddFundsModal = () => {
     setIsAddFundsModalOpen(true);
@@ -68,7 +80,8 @@ const { data: balance, isLoading: isLoadingBalance, isError: isErrorBalance } =
     }
     setAmount('');
     setIsAmountFocused(false);
-    setIsPaymentMethodSelected(false);
+    // setIsPaymentMethodSelected(false);
+     setSelectedPayment(null);
   };
 
   const openWithdrawModal = () => {
@@ -85,12 +98,7 @@ const { data: balance, isLoading: isLoadingBalance, isError: isErrorBalance } =
     }
   };
 
-  // const handleAddFunds = () => {
-  //   console.log('Adding funds:', amount);
-  //   closeAddFundsModal();
-  // };
-
-  const handleAddFunds = async () => {
+const handleAddFunds = async () => {
     const currentUserId = user?._id;
   if (!currentUserId) return alert("User not found");
   if (!amount || Number(amount) <= 0) return alert('Enter a valid amount');
@@ -149,6 +157,7 @@ const { data: balance, isLoading: isLoadingBalance, isError: isErrorBalance } =
     closeAddFundsModal();
   }
 };
+
 
   const handleWithdraw = () => {
     console.log('Withdrawing funds');

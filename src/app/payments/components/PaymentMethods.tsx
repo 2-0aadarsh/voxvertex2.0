@@ -25,16 +25,16 @@ console.log("user frpm payment is", user);
 console.log("id frpm payment is", id);
 const userId =id
   // RTK Query hooks
-  const { data: paymentMethods = [], isLoading, isFetching } = useGetPaymentMethodsQuery(id, { skip: !id });
+  const { data: paymentMethods = [], isLoading, isFetching } = useGetPaymentMethodsQuery(userId!, { skip: !userId });
   const [addPaymentMethod, { isLoading: isAdding }] = useAddPaymentMethodMutation();
   const [updatePaymentMethod, { isLoading: isUpdating }] = useUpdatePaymentMethodMutation();
   const [deletePaymentMethod, { isLoading: isDeleting }] = useDeletePaymentMethodMutation();
 
   // local UI state (modals / form inputs)
   const [showEditModal, setShowEditModal] = useState(false);
-  const [editingAccount, setEditingAccount] = useState<any | null>(null);
+  // const [editingAccount, setEditingAccount] = useState<any | null>(null);
   const [showEditCardModal, setShowEditCardModal] = useState(false);
-  const [editingCard, setEditingCard] = useState<any | null>(null);
+  // const [editingCard, setEditingCard] = useState<any | null>(null);
   const [bankNameInput, setBankNameInput] = useState('');
   const [cardHolderInput, setCardHolderInput] = useState('');
 
@@ -51,6 +51,8 @@ const userId =id
   const [newAccountType, setNewAccountType] = useState('Checking Account');
   const [newRoutingNumber, setNewRoutingNumber] = useState('');
   const [newAccountNumber, setNewAccountNumber] = useState('');
+
+
 
   // Helpers: map backend paymentMethods to UI-friendly arrays
   const creditCards = (paymentMethods || [])
@@ -89,70 +91,70 @@ const userId =id
     });
 
   // Edit handlers
-  const handleEditAccount = (account: any) => {
-    setEditingAccount(account);
-    setBankNameInput(account.bank || '');
-    setShowEditModal(true);
-  };
+  // const handleEditAccount = (account: any) => {
+  //   setEditingAccount(account);
+  //   setBankNameInput(account.bank || '');
+  //   setShowEditModal(true);
+  // };
 
-  const handleEditCard = (card: any) => {
-    setEditingCard(card);
-    setCardHolderInput(card.holder || '');
-    setShowEditCardModal(true);
-  };
+  // const handleEditCard = (card: any) => {
+  //   setEditingCard(card);
+  //   setCardHolderInput(card.holder || '');
+  //   setShowEditCardModal(true);
+  // };
 
   const handleCloseModal = () => {
     setShowEditModal(false);
-    setEditingAccount(null);
+    // setEditingAccount(null);
     setBankNameInput('');
   };
 
   const handleCloseCardModal = () => {
     setShowEditCardModal(false);
-    setEditingCard(null);
+    // setEditingCard(null);
     setCardHolderInput('');
   };
 
-  const handleUpdateAccount = async () => {
-    if (!editingAccount) return;
-    try {
-      const updates = {
-        // keep details shape, update bank name
-        details: {
-          ...(editingAccount.raw.details || {}),
-          bankName: bankNameInput,
-        },
-      };
-      await updatePaymentMethod({ userId, paymentMethodId: editingAccount.id, updates }).unwrap();
-      handleCloseModal();
-      // RTK invalidation will refetch
-    } catch (err) {
-      console.error('Failed to update account', err);
-    }
-  };
+  // const handleUpdateAccount = async () => {
+  //   if (!editingAccount) return;
+  //   try {
+  //     const updates = {
+  //       details: {
+  //         ...(editingAccount.raw.details || {}),
+  //         bankName: bankNameInput,
+  //       },
+  //     };
+  //     await updatePaymentMethod({ userId, paymentMethodId: editingAccount.id, updates }).unwrap();
+  //     handleCloseModal();
+  
+  //   } catch (err) {
+  //     console.error('Failed to update account', err);
+  //   }
+  // };
 
-  const handleUpdateCard = async () => {
-    if (!editingCard) return;
-    try {
-      const updates = {
-        details: {
-          ...(editingCard.raw.details || {}),
-          name: cardHolderInput,
-        },
-      };
-      await updatePaymentMethod({ userId, paymentMethodId: editingCard.id, updates }).unwrap();
-      handleCloseCardModal();
-    } catch (err) {
-      console.error('Failed to update card', err);
-    }
-  };
+  // const handleUpdateCard = async () => {
+  //   if (!editingCard) return;
+  //   try {
+  //     const updates = {
+  //       details: {
+  //         ...(editingCard.raw.details || {}),
+  //         name: cardHolderInput,
+  //       },
+  //     };
+  //     await updatePaymentMethod({ userId, paymentMethodId: editingCard.id, updates }).unwrap();
+  //     handleCloseCardModal();
+  //   } catch (err) {
+  //     console.error('Failed to update card', err);
+  //   }
+  // };
 
   // Delete handlers
- const handleDeleteCard = async (cardId: string) => {
+ 
+  const handleDeleteCard = async (cardId: string) => {
   console.log("id from handleDelete is", id);
   try {
     await deletePaymentMethod({ 
-      userId: id, 
+      userId: userId!, 
       paymentMethodId: cardId 
     }).unwrap();
   } catch (err) {
@@ -162,7 +164,7 @@ const userId =id
 
   const handleDeleteBankAccount = async (accountId: string) => {
     try {
-      await deletePaymentMethod({ userId, paymentMethodId: accountId }).unwrap();
+      await deletePaymentMethod({ userId: userId!, paymentMethodId: accountId }).unwrap();
     } catch (err) {
       console.error('Failed to delete bank account', err);
     }
@@ -290,12 +292,12 @@ const userId =id
                     </div>
                   </div>
                   <div className="flex items-center gap-2 self-end sm:self-auto">
-                    <button
+                    {/* <button
                       onClick={() => handleEditCard(card)}
                       className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
                     >
                       <Edit className="w-4 h-4" />
-                    </button>
+                    </button> */}
                     <button
                       onClick={() => handleDeleteCard(card.id)}
                       className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50"
@@ -355,12 +357,12 @@ const userId =id
                     </div>
                   </div>
                   <div className="flex items-center gap-2 self-end sm:self-auto">
-                    <button
+                    {/* <button
                       onClick={() => handleEditAccount(account)}
                       className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
                     >
                       <Edit className="w-4 h-4" />
-                    </button>
+                    </button> */}
                     <button
                       onClick={() => handleDeleteBankAccount(account.id)}
                       className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50"
@@ -400,7 +402,7 @@ const userId =id
       </div>
 
       {/* Edit Bank Account Modal */}
-      {showEditModal && editingAccount && (
+      {/* {showEditModal && editingAccount && (
         <div className="fixed inset-0 bg-[#FF6B35]/20 flex items-center justify-center p-3 sm:p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="p-4 sm:p-6">
@@ -468,10 +470,10 @@ const userId =id
             </div>
           </div>
         </div>
-      )}
+      )} */}
 
       {/* Edit Credit Card Modal */}
-      {showEditCardModal && editingCard && (
+      {/* {showEditCardModal && editingCard && (
         <div className="fixed inset-0 bg-[#FF6B35]/20 flex items-center justify-center p-3 sm:p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="p-4 sm:p-6">
@@ -539,7 +541,7 @@ const userId =id
             </div>
           </div>
         </div>
-      )}
+      )} */}
 
       {/* Add Payment Method Modal */}
       {showAddModal && (
@@ -576,7 +578,7 @@ const userId =id
                   className={`flex items-center justify-center gap-2 px-4 py-2.5 sm:py-3 rounded-lg border-2 transition-all text-sm sm:text-base ${
                     addMethodType === 'bank'
                       ? 'border-[#FF6B35] bg-[#FF6B35]/5'
-                      : 'border_gray-200 hover:border-gray-300'
+                      : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
                   <Building2 className="w-4 h-4 sm:w-5 sm:h-5" />
