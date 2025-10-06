@@ -1,6 +1,7 @@
 import EnhancedEvent from '../models/enhancedEvent.js';
 import EnhancedUser from '../models/enhancedUser.js';
 import Booking from '../models/bookingSpeaker.js';
+import { uploadToCloudinary } from '../configs/cloudinary.config.js';
 
 // Create a new enhanced event
 export const createEnhancedEvent = async (req, res) => {
@@ -630,6 +631,67 @@ export const deleteEventDraft = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to delete event draft',
+      error: error.message
+    });
+  }
+};
+
+// Upload banner image for enhanced events
+export const uploadBannerImage = async (req, res) => {
+  try {
+    // Check if file was uploaded
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No banner image file uploaded'
+      });
+    }
+
+    console.log('📸 Banner image upload request:', {
+      filename: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size,
+      buffer: req.file.buffer ? 'Buffer present' : 'No buffer'
+    });
+
+    // Validate file type
+    if (!req.file.mimetype.startsWith('image/')) {
+      return res.status(400).json({
+        success: false,
+        message: 'Only image files are allowed for banner uploads'
+      });
+    }
+
+    // Validate file size (max 10MB)
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (req.file.size > maxSize) {
+      return res.status(400).json({
+        success: false,
+        message: 'Banner image size cannot exceed 10MB'
+      });
+    }
+
+    // Upload to Cloudinary using the generic uploader
+    const imageUrl = await uploadToCloudinary(req.file.buffer, 'event-banners');
+
+    console.log('✅ Banner image uploaded successfully:', imageUrl);
+
+    res.status(200).json({
+      success: true,
+      message: 'Banner image uploaded successfully',
+      data: {
+        url: imageUrl,
+        filename: req.file.originalname,
+        size: req.file.size,
+        mimetype: req.file.mimetype
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error uploading banner image:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to upload banner image',
       error: error.message
     });
   }

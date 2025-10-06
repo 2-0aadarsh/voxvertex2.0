@@ -75,7 +75,7 @@ export interface EventFormData {
   addons: EventAddons;
   
   // Step 6: Final
-  status: 'draft' | 'published';
+  status: 'draft' | 'published' | 'cancelled';
 }
 
 // Legacy Speaker interface for compatibility
@@ -139,7 +139,7 @@ export interface CreateEventRequest {
   ticketTypes: TicketType[];
   speakers: EventSpeakers;
   addons: EventAddons;
-  status: 'draft' | 'published';
+  status: 'draft' | 'published' | 'cancelled';
 }
 
 export interface UpdateEventRequest extends Partial<CreateEventRequest> {

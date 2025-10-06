@@ -221,6 +221,41 @@ export const acceptBooking = async (req, res) => {
     booking.acceptedAt = new Date();
     await booking.save();
 
+    // Block availability slot for confirmed booking
+    try {
+      const availability = await Availability.findOne({ 
+        userId: booking.speaker,
+        date: booking.date 
+      });
+
+      if (availability) {
+        // Check if slot is already blocked for this booking
+        const existingBlock = availability.blockedSlots.find(
+          block => block.bookingId.toString() === booking._id.toString()
+        );
+
+        if (!existingBlock) {
+          // Add blocked slot
+          availability.blockedSlots.push({
+            bookingId: booking._id,
+            date: booking.date,
+            timeSlot: booking.timeSlot,
+            reason: 'booking_confirmed'
+          });
+          
+          await availability.save();
+          console.log(`🚫 Blocked availability slot for speaker ${booking.speaker} on ${booking.date} at ${booking.timeSlot}`);
+        } else {
+          console.log(`⚠️ Availability slot already blocked for booking ${booking._id}`);
+        }
+      } else {
+        console.log(`⚠️ No availability record found for speaker ${booking.speaker} on ${booking.date}`);
+      }
+    } catch (availabilityError) {
+      console.error('❌ Error blocking availability slot:', availabilityError);
+      // Don't fail the entire operation if availability blocking fails
+    }
+
     // Find the conversation
     const conversation = await Conversation.findById(booking.conversationId);
     if (!conversation) {

@@ -257,12 +257,20 @@ export const getAvailability = async (req, res) => {
     startDate.setHours(0, 0, 0, 0);
     endDate.setHours(23, 59, 59, 999);
 
-    const availability = await Availability.find({
+    const availabilityDocs = await Availability.find({
       userId,
       date: { $gte: startDate, $lte: endDate }
     }).sort({ date: 1 });
 
-    res.status(200).json({ success: true, data: availability });
+    // Filter out blocked time slots for each availability
+    const filteredAvailability = availabilityDocs.map(doc => {
+      const availabilityObj = doc.toObject();
+      // Replace timeSlots with available (non-blocked) time slots
+      availabilityObj.timeSlots = doc.getAvailableTimeSlots();
+      return availabilityObj;
+    });
+
+    res.status(200).json({ success: true, data: filteredAvailability });
   } catch (error) {
     console.error('Error fetching availability:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch availability' });
@@ -324,13 +332,21 @@ export const getSpeakerAvailability = async (req, res) => {
       });
     }
 
+    // Filter out blocked time slots for each availability
+    const filteredAvailabilityDocs = availabilityDocs.map(doc => {
+      const availabilityObj = doc.toObject();
+      // Replace timeSlots with available (non-blocked) time slots
+      availabilityObj.timeSlots = doc.getAvailableTimeSlots();
+      return availabilityObj;
+    });
+
     // Extract dates safely (skip if no date)
-    const availableDates = availabilityDocs
+    const availableDates = filteredAvailabilityDocs
       .filter(doc => doc.date instanceof Date) // only valid dates
       .map(doc => doc.date.toISOString().split("T")[0]);
 
     // Pick common settings from the first valid doc
-    const firstValidDoc = availabilityDocs.find(doc => doc.date instanceof Date) || availabilityDocs[0];
+    const firstValidDoc = filteredAvailabilityDocs.find(doc => doc.date instanceof Date) || filteredAvailabilityDocs[0];
 
     console.log("🔍 Available dates (formatted):", availableDates);
     console.log("🔍 Common settings:", {

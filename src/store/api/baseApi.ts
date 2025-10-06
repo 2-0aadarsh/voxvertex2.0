@@ -3,19 +3,14 @@
 // ============================================================================
 
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import type { RootState } from '../types';
 
 // Base query with authentication
 const baseQuery = fetchBaseQuery({
   baseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api',
   credentials: 'include', // Include cookies for authentication
-  prepareHeaders: (headers, { getState }) => {
-    // Get token from state if available
-    const token = (getState() as RootState).auth.token;
-    
-    if (token) {
-      headers.set('authorization', `Bearer ${token}`);
-    }
+  prepareHeaders: (headers) => {
+    // Only use cookie-based authentication - no Bearer tokens needed
+    // The backend will read tokens from cookies automatically
     
     // Don't set Content-Type here - let RTK Query handle it based on body type
     // For FormData, RTK Query will automatically set multipart/form-data
@@ -26,6 +21,7 @@ const baseQuery = fetchBaseQuery({
 });
 
 // Base query with re-authentication logic
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
   console.log('=== BASE API DEBUG ===');
   console.log('Making request to:', args.url);
@@ -34,7 +30,7 @@ const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
   console.log('Full URL:', `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}${args.url}`);
   console.log('=====================');
   
-  let result = await baseQuery(args, api, extraOptions);
+  const result = await baseQuery(args, api, extraOptions);
   
   console.log('=== BASE API RESPONSE ===');
   console.log('Response status:', result.meta?.response?.status);
@@ -42,30 +38,16 @@ const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
   console.log('Response error:', result.error);
   console.log('========================');
 
-  // If we get a 401, try to refresh the token
+  // If we get a 401, the session might have expired
   if (result?.error && result.error.status === 401) {
-    console.log('Token expired, attempting to refresh...');
+    console.log('Authentication failed - session may have expired');
+    console.log('Redirecting to login...');
     
-    // Try to refresh token
-    const refreshResult = await baseQuery(
-      {
-        url: '/auth/refresh-token',
-        method: 'POST',
-      },
-      api,
-      extraOptions
-    );
-
-    if (refreshResult?.data) {
-      // Store the new token
-      api.dispatch({ type: 'auth/setToken', payload: refreshResult.data });
-      
-      // Retry the original query with new token
-      result = await baseQuery(args, api, extraOptions);
-    } else {
-      // Refresh failed, logout user
-      api.dispatch({ type: 'auth/logout' });
-    }
+    // For cookie-based auth, we don't need to refresh tokens
+    // The backend handles token refresh automatically via cookies
+    // Just logout the user and let them re-authenticate
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (api as any).dispatch({ type: 'auth/logout' });
   }
 
   return result;
@@ -94,7 +76,8 @@ export const baseApi = createApi({
     'Negotiation',
     'OrganizerBooking',
     'SavedSpeaker',
-    'EnhancedEvent'
+    'EnhancedEvent',
+    'Document'
   ],
   endpoints: () => ({}),
 });

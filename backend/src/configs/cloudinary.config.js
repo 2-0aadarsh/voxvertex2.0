@@ -20,11 +20,39 @@ export const connectCloudinary = () => {
 
 export const uploadToCloudinary = async (file, folder = 'events') => {
   try {
-    const result = await cloudinary.uploader.upload(file, {
+    // Handle both buffer and file path uploads
+    let uploadOptions = {
       folder: folder,
       resource_type: "auto",
-    });
-    return result.secure_url;
+      use_filename: true,
+      unique_filename: true,
+      overwrite: true
+    };
+
+    // If file is a buffer, upload directly from buffer
+    if (Buffer.isBuffer(file)) {
+      uploadOptions = {
+        ...uploadOptions,
+        resource_type: "auto"
+      };
+      
+      // For buffer uploads, we need to handle the promise differently
+      return new Promise((resolve, reject) => {
+        cloudinary.uploader.upload_stream(uploadOptions, (error, result) => {
+          if (error) {
+            console.error('Cloudinary upload error:', error);
+            reject(error);
+          } else {
+            console.log('✅ Cloudinary upload successful:', result.secure_url);
+            resolve(result.secure_url);
+          }
+        }).end(file);
+      });
+    } else {
+      // Handle file path uploads (legacy support)
+      const result = await cloudinary.uploader.upload(file, uploadOptions);
+      return result.secure_url;
+    }
   } catch (error) {
     console.error('Error uploading to Cloudinary:', error);
     throw error;

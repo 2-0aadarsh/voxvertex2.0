@@ -40,6 +40,7 @@ import negotiationReducer from './slices/negotiationSlice';
 import organizerBookingsReducer from './slices/organizerBookingsSlice';
 import savedSpeakersReducer from './slices/savedSpeakersSlice';
 import enhancedEventReducer from './slices/enhancedEventSlice';
+import documentsUiReducer from './slices/documentsUiSlice';
 
 // Persist configuration
 const persistConfig = {
@@ -116,6 +117,7 @@ const rootReducer = combineReducers({
   organizerBookings: organizerBookingsReducer,
   savedSpeakers: savedSpeakersReducer,
   enhancedEvent: enhancedEventReducer,
+  documentsUi: documentsUiReducer,
 });
 
 // Persisted reducer

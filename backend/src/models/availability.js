@@ -150,6 +150,32 @@ const availabilitySchema = new mongoose.Schema({
 
   timeSlots: [timeSlotSchema],
 
+  // Blocked slots for confirmed bookings
+  blockedSlots: [{
+    bookingId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Booking',
+      required: true
+    },
+    date: {
+      type: Date,
+      required: true
+    },
+    timeSlot: {
+      type: String,
+      required: true
+    },
+    reason: {
+      type: String,
+      enum: ['booking_confirmed', 'booking_pending'],
+      default: 'booking_confirmed'
+    },
+    blockedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+
   createdAt: {
     type: Date,
     default: Date.now
@@ -162,6 +188,48 @@ const availabilitySchema = new mongoose.Schema({
 
 // Ensure unique combination of userId and date
 availabilitySchema.index({ userId: 1, date: 1 }, { unique: true });
+
+// Index for blocked slots performance
+availabilitySchema.index({ 'blockedSlots.bookingId': 1 });
+availabilitySchema.index({ 'blockedSlots.date': 1, 'blockedSlots.timeSlot': 1 });
+
+// Instance method to get available time slots (excluding blocked ones)
+availabilitySchema.methods.getAvailableTimeSlots = function() {
+  return this.timeSlots.filter(slot => 
+    !this.blockedSlots.some(blocked => 
+      blocked.timeSlot === slot.slot && 
+      blocked.reason === 'booking_confirmed'
+    )
+  );
+};
+
+// Instance method to check if a specific time slot is available
+availabilitySchema.methods.isTimeSlotAvailable = function(timeSlot) {
+  return !this.blockedSlots.some(blocked => 
+    blocked.timeSlot === timeSlot && 
+    blocked.reason === 'booking_confirmed'
+  );
+};
+
+// Instance method to unblock a slot (when booking is cancelled/declined)
+availabilitySchema.methods.unblockSlot = function(bookingId) {
+  this.blockedSlots = this.blockedSlots.filter(
+    blocked => blocked.bookingId.toString() !== bookingId.toString()
+  );
+  return this.save();
+};
+
+// Static method to get availability with blocked slots filtered
+availabilitySchema.statics.getAvailabilityWithBlocks = function(query) {
+  return this.find(query).then(availabilities => {
+    return availabilities.map(availability => {
+      const availabilityObj = availability.toObject();
+      // Filter out blocked time slots
+      availabilityObj.timeSlots = availability.getAvailableTimeSlots();
+      return availabilityObj;
+    });
+  });
+};
 
 // Update timestamp on save
 availabilitySchema.pre('save', function(next) {

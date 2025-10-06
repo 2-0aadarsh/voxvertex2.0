@@ -155,7 +155,7 @@ app.use('/api/subscriptions', subsRoutes);
 
 
 app.use("/api/enhanced-events", enhancedEventRoutes);
-app.use("/api/enhanced-events", enhancedEventRegisterRoutes);
+app.use("/api/enhanced-events/register", enhancedEventRegisterRoutes);
 
 // Document management routes
 app.use("/api/documents", documentRoutes);

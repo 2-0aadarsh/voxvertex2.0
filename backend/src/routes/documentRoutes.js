@@ -5,6 +5,8 @@ import {
   uploadDocument,
   assignDocumentToSpeaker,
   sendDocumentToSpeaker,
+  assignDocumentToOrganizer,
+  sendDocumentToOrganizer,
   getOrganizerDocuments,
   getSpeakerDocuments,
   getAllUserDocuments,
@@ -14,7 +16,8 @@ import {
   getOrganizerDocumentStats,
   getSpeakerDocumentStats,
   getDocumentById,
-  searchDocuments
+  searchDocuments,
+  getEligibleOrganizers
 } from '../controllers/documentController.js';
 
 const router = express.Router();
@@ -65,11 +68,11 @@ router.use(authenticateJWT);
 /**
  * @route   POST /api/documents/upload
  * @desc    Upload a new document
- * @access  Private (Organizer only)
+ * @access  Private (Organizer or Speaker)
  * @body    { documentName, documentType, tags?, notes? }
  * @file    file (PDF, DOC, DOCX)
  */
-router.post('/upload', authorizeRoles('organizer'), logFormData, upload.single('file'), uploadDocument);
+router.post('/upload', authorizeRoles('organizer', 'speaker'), logFormData, upload.single('file'), uploadDocument);
 
 // ============================================================================
 // DOCUMENT ASSIGNMENT ROUTES
@@ -89,6 +92,21 @@ router.post('/:documentId/assign', authorizeRoles('organizer'), assignDocumentTo
  * @access  Private (Organizer only)
  */
 router.post('/:documentId/send', authorizeRoles('organizer'), sendDocumentToSpeaker);
+
+/**
+ * @route   POST /api/documents/:documentId/assign-organizer
+ * @desc    Assign document to an organizer (for speakers)
+ * @access  Private (Speaker only)
+ * @body    { organizerId, relatedBookingId? }
+ */
+router.post('/:documentId/assign-organizer', authorizeRoles('speaker'), assignDocumentToOrganizer);
+
+/**
+ * @route   POST /api/documents/:documentId/send-to-organizer
+ * @desc    Send document to organizer
+ * @access  Private (Speaker only)
+ */
+router.post('/:documentId/send-to-organizer', authorizeRoles('speaker'), sendDocumentToOrganizer);
 
 // ============================================================================
 // DOCUMENT RETRIEVAL ROUTES
@@ -187,6 +205,13 @@ router.get('/speaker/stats', authorizeRoles('speaker'), getSpeakerDocumentStats)
  * @query   { query?, documentType?, status?, page?, limit? }
  */
 router.get('/search', authorizeRoles('organizer', 'speaker'), searchDocuments);
+
+/**
+ * @route   GET /api/documents/speaker/eligible-organizers
+ * @desc    Get organizers who have booked the speaker (for document assignment)
+ * @access  Private (Speaker only)
+ */
+router.get('/speaker/eligible-organizers', authorizeRoles('speaker'), getEligibleOrganizers);
 
 // ============================================================================
 // ERROR HANDLING MIDDLEWARE

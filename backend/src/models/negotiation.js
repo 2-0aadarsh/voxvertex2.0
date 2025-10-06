@@ -27,6 +27,14 @@ const negotiationSchema = new mongoose.Schema({
     default: null
   },
   
+  // Related booking (optional)
+  bookingId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Booking',
+    default: null,
+    sparse: true // This allows multiple null values but ensures uniqueness for non-null values
+  },
+  
   // Negotiation details
   topic: {
     type: String,
@@ -177,6 +185,7 @@ negotiationSchema.index({ conversation: 1 });
 negotiationSchema.index({ organizer: 1, speaker: 1 });
 negotiationSchema.index({ status: 1 });
 negotiationSchema.index({ 'currentProposal.proposedAt': -1 });
+negotiationSchema.index({ bookingId: 1 }, { unique: true, sparse: true });
 
 // Instance methods
 negotiationSchema.methods.addProposal = function(amount, currency, proposedBy, message = '') {

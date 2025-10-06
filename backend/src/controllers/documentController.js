@@ -12,7 +12,8 @@ export const uploadDocument = async (req, res) => {
     console.log('🔍 Debug - req.files:', req.files);
     console.log('🔍 Debug - req.headers:', req.headers);
     
-    const organizerId = req.user._id;
+    const userId = req.user._id;
+    const userRole = req.user.role;
     const file = req.file;
     
     // Get values directly from req.body (destructuring might not work with multipart/form-data)
@@ -50,7 +51,8 @@ export const uploadDocument = async (req, res) => {
     }
     
     const result = await documentService.uploadDocument(
-      organizerId,
+      userId,
+      userRole,
       { documentName: docName, documentType: docType, tags: docTags, notes: docNotes },
       file
     );
@@ -138,6 +140,78 @@ export const sendDocumentToSpeaker = async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message || 'Failed to send document',
+      error: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+};
+
+/**
+ * Assign document to an organizer (for speakers)
+ * POST /api/documents/:documentId/assign-organizer
+ */
+export const assignDocumentToOrganizer = async (req, res) => {
+  try {
+    console.log('📋 Document assignment to organizer request received');
+    
+    const { documentId } = req.params;
+    const { organizerId, relatedBookingId } = req.body;
+    const speakerId = req.user._id;
+    
+    // Validate required fields
+    if (!organizerId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Organizer ID is required'
+      });
+    }
+    
+    const result = await documentService.assignDocumentToOrganizer(
+      documentId,
+      organizerId,
+      speakerId,
+      relatedBookingId
+    );
+    
+    res.status(200).json({
+      success: true,
+      message: 'Document assigned to organizer successfully',
+      data: result.document
+    });
+    
+  } catch (error) {
+    console.error('❌ Assign document to organizer error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to assign document to organizer',
+      error: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+};
+
+/**
+ * Send document to organizer
+ * POST /api/documents/:documentId/send-to-organizer
+ */
+export const sendDocumentToOrganizer = async (req, res) => {
+  try {
+    console.log('📤 Send document to organizer request received');
+    
+    const { documentId } = req.params;
+    const speakerId = req.user._id;
+    
+    const result = await documentService.sendDocumentToOrganizer(documentId, speakerId);
+    
+    res.status(200).json({
+      success: true,
+      message: 'Document sent to organizer successfully',
+      data: result.document
+    });
+    
+  } catch (error) {
+    console.error('❌ Send document to organizer error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to send document to organizer',
       error: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
@@ -564,6 +638,74 @@ export const searchDocuments = async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message || 'Failed to search documents',
+      error: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+};
+
+/**
+ * Get eligible organizers for speaker (organizers who have booked the speaker)
+ * GET /api/documents/speaker/eligible-organizers
+ */
+export const getEligibleOrganizers = async (req, res) => {
+  try {
+    console.log('👥 Get eligible organizers request received');
+    
+    const speakerId = req.user._id;
+    
+    // Import Booking model
+    const Booking = (await import('../models/bookingSpeaker.js')).default;
+    
+    // Find all confirmed bookings for this speaker
+    const bookings = await Booking.find({
+      speaker: speakerId,
+      status: 'accepted' // Only confirmed bookings
+    })
+    .populate('organizer', 'firstName lastName email profileImageUrl companyName')
+    .populate('eventDetails', 'name type location')
+    .sort({ createdAt: -1 });
+    
+    // Extract unique organizers from bookings
+    const organizerMap = new Map();
+    
+    bookings.forEach(booking => {
+      if (booking.organizer && !organizerMap.has(booking.organizer._id.toString())) {
+        organizerMap.set(booking.organizer._id.toString(), {
+          _id: booking.organizer._id,
+          firstName: booking.organizer.firstName,
+          lastName: booking.organizer.lastName,
+          email: booking.organizer.email,
+          profileImageUrl: booking.organizer.profileImageUrl,
+          companyName: booking.organizer.companyName,
+          // Include booking info for context
+          recentBooking: {
+            bookingId: booking.bookingId,
+            eventDetails: booking.eventDetails,
+            date: booking.date,
+            timeSlot: booking.timeSlot,
+            status: booking.status,
+            createdAt: booking.createdAt
+          }
+        });
+      }
+    });
+    
+    const eligibleOrganizers = Array.from(organizerMap.values());
+    
+    console.log(`✅ Found ${eligibleOrganizers.length} eligible organizers for speaker`);
+    
+    res.status(200).json({
+      success: true,
+      message: 'Eligible organizers fetched successfully',
+      data: eligibleOrganizers,
+      total: eligibleOrganizers.length
+    });
+    
+  } catch (error) {
+    console.error('❌ Get eligible organizers error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to fetch eligible organizers',
       error: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }

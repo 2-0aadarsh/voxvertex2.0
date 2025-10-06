@@ -43,7 +43,7 @@ const documentSchema = new mongoose.Schema({
   organizer: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'EnhancedUser',
-    required: true
+    default: null
   },
   
   speaker: {
@@ -52,10 +52,23 @@ const documentSchema = new mongoose.Schema({
     default: null
   },
   
+  // Explicit sender and receiver (for clarity)
+  sender: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'EnhancedUser',
+    default: null
+  },
+  
+  receiver: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'EnhancedUser',
+    default: null
+  },
+  
   // Document flow and status
   direction: {
     type: String,
-    enum: ['outgoing', 'incoming'],
+    enum: ['draft', 'organizer_to_speaker', 'speaker_to_organizer'],
     required: true
   },
   
@@ -204,14 +217,22 @@ documentSchema.virtual('statusDisplay').get(function() {
 // Indexes for better query performance
 documentSchema.index({ organizer: 1, direction: 1, status: 1 });
 documentSchema.index({ speaker: 1, direction: 1, status: 1 });
+documentSchema.index({ sender: 1, status: 1 });
+documentSchema.index({ receiver: 1, status: 1 });
 documentSchema.index({ documentType: 1 });
 documentSchema.index({ status: 1 });
 documentSchema.index({ createdAt: -1 });
+documentSchema.index({ sentAt: -1 });
 documentSchema.index({ relatedBooking: 1 });
 
 // Pre-save middleware to update timestamps based on status changes
 documentSchema.pre('save', function(next) {
   const now = new Date();
+  
+  // Validate that either organizer or speaker is present
+  if (!this.organizer && !this.speaker) {
+    return next(new Error('Either organizer or speaker must be specified'));
+  }
   
   // Update timestamps based on status
   switch (this.status) {
@@ -289,6 +310,44 @@ documentSchema.statics.getConfirmedSpeakersForOrganizer = function() {
   return [];
 };
 
+// Static method to get confirmed organizers for a speaker
+documentSchema.statics.getConfirmedOrganizersForSpeaker = function() {
+  // This would typically join with the Booking model
+  // For now, we'll return a placeholder that should be implemented
+  // with proper aggregation or separate query to Booking model
+  return [];
+};
+
+// Static method to get documents sent by a user
+documentSchema.statics.getSentByUser = function(userId) {
+  return this.find({ sender: userId })
+    .populate('receiver', 'firstName lastName email profileImageUrl')
+    .populate('relatedBooking', 'bookingId eventDetails')
+    .sort({ sentAt: -1 });
+};
+
+// Static method to get documents received by a user
+documentSchema.statics.getReceivedByUser = function(userId) {
+  return this.find({ receiver: userId })
+    .populate('sender', 'firstName lastName email profileImageUrl')
+    .populate('relatedBooking', 'bookingId eventDetails')
+    .sort({ sentAt: -1 });
+};
+
+// Static method to get documents where user is involved (sent or received)
+documentSchema.statics.getUserDocuments = function(userId) {
+  return this.find({
+    $or: [
+      { sender: userId },
+      { receiver: userId }
+    ]
+  })
+    .populate('sender', 'firstName lastName email profileImageUrl')
+    .populate('receiver', 'firstName lastName email profileImageUrl')
+    .populate('relatedBooking', 'bookingId eventDetails')
+    .sort({ sentAt: -1, createdAt: -1 });
+};
+
 // Instance method to update status with timestamp
 documentSchema.methods.updateStatus = function(newStatus) {
   this.status = newStatus;
@@ -333,6 +392,32 @@ documentSchema.methods.assignToSpeaker = function(speakerId, relatedBookingId = 
 documentSchema.methods.sendToSpeaker = function() {
   this.status = 'sent';
   this.sentAt = new Date();
+  this.direction = 'organizer_to_speaker';
+  this.sender = this.organizer;
+  this.receiver = this.speaker;
+  return this.save();
+};
+
+// Instance method to assign to organizer (for speakers)
+documentSchema.methods.assignToOrganizer = function(organizerId, relatedBookingId = null) {
+  this.organizer = organizerId;
+  this.assignedAt = new Date();
+  this.status = 'assigned';
+  
+  if (relatedBookingId) {
+    this.relatedBooking = relatedBookingId;
+  }
+  
+  return this.save();
+};
+
+// Instance method to send to organizer
+documentSchema.methods.sendToOrganizer = function() {
+  this.status = 'sent';
+  this.sentAt = new Date();
+  this.direction = 'speaker_to_organizer';
+  this.sender = this.speaker;
+  this.receiver = this.organizer;
   return this.save();
 };
 

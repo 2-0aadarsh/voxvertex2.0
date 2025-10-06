@@ -9,9 +9,10 @@ class DocumentService {
   /**
    * Upload document to Cloudinary and create document record
    */
-  async uploadDocument(organizerId, documentData, file) {
+  async uploadDocument(userId, userRole, documentData, file) {
     try {
       console.log('📄 Starting document upload process...');
+      console.log('🔍 User role:', userRole);
       
       // Validate file type
       const allowedMimeTypes = [
@@ -34,8 +35,8 @@ class DocumentService {
       console.log('☁️ Uploading to Cloudinary...');
       const uploadResult = await this.uploadToCloudinary(file, 'documents');
       
-      // Create document record
-      const document = new Document({
+      // Create document record based on user role
+      const documentData_obj = {
         documentName: documentData.documentName,
         documentType: documentData.documentType,
         file: {
@@ -45,17 +46,28 @@ class DocumentService {
           mimeType: file.mimetype,
           size: file.size
         },
-        organizer: organizerId,
-        direction: 'outgoing',
+        direction: 'draft', // Set as draft until sent
         status: 'uploaded',
         tags: documentData.tags || [],
         notes: documentData.notes || ''
-      });
+      };
       
+      // Set organizer and speaker based on user role
+      if (userRole === 'organizer') {
+        documentData_obj.organizer = userId;
+      } else if (userRole === 'speaker') {
+        documentData_obj.speaker = userId;
+      }
+      
+      const document = new Document(documentData_obj);
       const savedDocument = await document.save();
       
-      // Populate organizer information
-      await savedDocument.populate('organizer', 'firstName lastName email profileImageUrl');
+      // Populate user information based on role
+      if (userRole === 'organizer') {
+        await savedDocument.populate('organizer', 'firstName lastName email profileImageUrl');
+      } else if (userRole === 'speaker') {
+        await savedDocument.populate('speaker', 'firstName lastName email profileImageUrl');
+      }
       
       console.log('✅ Document uploaded successfully:', savedDocument._id);
       
@@ -220,6 +232,116 @@ class DocumentService {
   }
   
   /**
+   * Assign document to an organizer (for speakers)
+   */
+  async assignDocumentToOrganizer(documentId, organizerId, speakerId, relatedBookingId = null) {
+    try {
+      console.log('📋 Assigning document to organizer...');
+      
+      // Find the document
+      const document = await Document.findById(documentId);
+      if (!document) {
+        throw new Error('Document not found');
+      }
+      
+      // Verify speaker owns the document
+      if (document.speaker.toString() !== speakerId.toString()) {
+        throw new Error('Unauthorized: You can only assign your own documents');
+      }
+      
+      // Verify organizer exists
+      const organizer = await EnhancedUser.findById(organizerId);
+      if (!organizer) {
+        throw new Error('Organizer not found');
+      }
+      
+      // If relatedBookingId is provided, verify the booking exists and is confirmed
+      if (relatedBookingId) {
+        const booking = await Booking.findById(relatedBookingId);
+        if (!booking) {
+          throw new Error('Related booking not found');
+        }
+        
+        if (booking.speaker.toString() !== speakerId.toString()) {
+          throw new Error('Unauthorized: Booking does not belong to you');
+        }
+        
+        if (booking.organizer.toString() !== organizerId.toString()) {
+          throw new Error('Organizer is not associated with this booking');
+        }
+        
+        if (booking.status !== 'accepted') {
+          throw new Error('Booking must be confirmed before assigning documents');
+        }
+      }
+      
+      // Assign document to organizer
+      await document.assignToOrganizer(organizerId, relatedBookingId);
+      
+      // Populate the updated document
+      await document.populate([
+        { path: 'organizer', select: 'firstName lastName email profileImageUrl' },
+        { path: 'speaker', select: 'firstName lastName email profileImageUrl' },
+        { path: 'relatedBooking', select: 'bookingId eventDetails' }
+      ]);
+      
+      console.log('✅ Document assigned to organizer successfully');
+      
+      return {
+        success: true,
+        document: document,
+        message: 'Document assigned to organizer successfully'
+      };
+      
+    } catch (error) {
+      console.error('❌ Error assigning document to organizer:', error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Send document to organizer (change status to sent)
+   */
+  async sendDocumentToOrganizer(documentId, speakerId) {
+    try {
+      console.log('📤 Sending document to organizer...');
+      
+      const document = await Document.findById(documentId);
+      if (!document) {
+        throw new Error('Document not found');
+      }
+      
+      if (document.speaker.toString() !== speakerId.toString()) {
+        throw new Error('Unauthorized: You can only send your own documents');
+      }
+      
+      if (!document.organizer) {
+        throw new Error('Document must be assigned to an organizer before sending');
+      }
+      
+      await document.sendToOrganizer();
+      
+      // Populate the updated document
+      await document.populate([
+        { path: 'organizer', select: 'firstName lastName email profileImageUrl' },
+        { path: 'speaker', select: 'firstName lastName email profileImageUrl' }
+      ]);
+      
+      console.log('✅ Document sent to organizer successfully');
+      
+      return {
+        success: true,
+        document: document,
+        message: 'Document sent to organizer successfully'
+      };
+      
+    } catch (error) {
+      console.error('❌ Error sending document to organizer:', error);
+      throw error;
+    }
+  }
+  
+  /**
    * Get organizer's documents
    */
   async getOrganizerDocuments(organizerId, direction = null, status = null, page = 1, limit = 10) {
@@ -286,6 +408,8 @@ class DocumentService {
       }
       
       // Note: direction parameter is not used for speakers as they only see incoming documents
+      // Suppress unused parameter warning
+      void direction;
       
       const skip = (page - 1) * limit;
       
@@ -603,24 +727,50 @@ class DocumentService {
       
       const total = await Document.countDocuments(query);
       
-      // Separate documents into incoming and outgoing arrays
+      // Separate documents into incoming and outgoing arrays based on direction and user role
       const outgoingDocuments = [];
       const incomingDocuments = [];
       
       documents.forEach(doc => {
-        const isOutgoing = doc.organizer._id.toString() === userId.toString();
-        const isIncoming = doc.speaker && doc.speaker._id.toString() === userId.toString();
+        let isOutgoing = false;
+        let isIncoming = false;
+        
+        // Determine if document is outgoing or incoming based on direction and user role
+        if (userRole === 'organizer') {
+          // For organizers:
+          // - outgoing: documents they sent to speakers (organizer_to_speaker)
+          // - incoming: documents they received from speakers (speaker_to_organizer)
+          isOutgoing = doc.direction === 'organizer_to_speaker' && doc.organizer._id.toString() === userId.toString();
+          isIncoming = doc.direction === 'speaker_to_organizer' && doc.organizer._id.toString() === userId.toString();
+        } else if (userRole === 'speaker') {
+          // For speakers:
+          // - outgoing: documents they sent to organizers (speaker_to_organizer)
+          // - incoming: documents they received from organizers (organizer_to_speaker)
+          isOutgoing = doc.direction === 'speaker_to_organizer' && doc.speaker._id.toString() === userId.toString();
+          isIncoming = doc.direction === 'organizer_to_speaker' && doc.speaker._id.toString() === userId.toString();
+        }
+        
+        // Also include drafts (only visible to the creator)
+        const isDraft = doc.direction === 'draft' && (
+          (userRole === 'organizer' && doc.organizer._id.toString() === userId.toString()) ||
+          (userRole === 'speaker' && doc.speaker._id.toString() === userId.toString())
+        );
+        
+        if (isDraft) {
+          // Drafts can be considered outgoing for the creator
+          isOutgoing = true;
+        }
         
         const documentData = {
           ...doc.toObject(),
           // Add role-specific information
           ...(isOutgoing && {
-            recipient: doc.speaker,
-            recipientType: 'speaker'
+            recipient: userRole === 'organizer' ? doc.speaker : doc.organizer,
+            recipientType: userRole === 'organizer' ? 'speaker' : 'organizer'
           }),
           ...(isIncoming && {
-            sender: doc.organizer,
-            senderType: 'organizer'
+            sender: userRole === 'organizer' ? doc.speaker : doc.organizer,
+            senderType: userRole === 'organizer' ? 'speaker' : 'organizer'
           })
         };
         

@@ -4,6 +4,7 @@ import Conversation from '../models/conversation.js';
 import Message from '../models/message.js';
 import EnhancedUser from '../models/enhancedUser.js';
 import Booking from '../models/bookingSpeaker.js';
+import Availability from '../models/availability.js';
 import socketService from '../services/socketService.js';
 
 // Create a new negotiation
@@ -70,7 +71,7 @@ export const createNegotiation = async (req, res) => {
     const existingBooking = await Booking.findOne({ conversationId: conversationId });
     if (existingBooking && existingBooking.status === 'pending') {
       console.log(`📋 Linking negotiation to existing booking ${existingBooking._id}`);
-      // The negotiation is now linked to this booking via conversationId
+      negotiation.bookingId = existingBooking._id;
     }
 
     await negotiation.save();
@@ -278,13 +279,56 @@ export const acceptProposal = async (req, res) => {
 
     // Update corresponding booking status if it exists
     const booking = await Booking.findOne({ conversationId: negotiation.conversation });
-    if (booking && booking.status === 'pending') {
-      booking.status = 'accepted';
-      booking.acceptedAt = new Date();
-      // Update the compensation amount to the negotiated amount
+    if (booking) {
+      // Always update the compensation amount to the negotiated amount, regardless of booking status
+      const oldAmount = booking.compensationAndArrangements.primaryCompensation.speakerFeeAmount;
       booking.compensationAndArrangements.primaryCompensation.speakerFeeAmount = lastProposal.amount;
+      
+      // Update status and timestamp if booking was pending
+      if (booking.status === 'pending') {
+        booking.status = 'accepted';
+        booking.acceptedAt = new Date();
+      }
+      
       await booking.save();
-      console.log(`📋 Updated booking ${booking._id} status to 'accepted' with negotiated amount: $${lastProposal.amount}`);
+      console.log(`📋 Updated booking ${booking._id} with negotiated amount: $${oldAmount} → $${lastProposal.amount} (status: ${booking.status})`);
+
+      // Block availability slot for confirmed booking
+      if (booking.status === 'accepted') {
+        try {
+          const availability = await Availability.findOne({ 
+            userId: booking.speaker,
+            date: booking.date 
+          });
+
+          if (availability) {
+            // Check if slot is already blocked for this booking
+            const existingBlock = availability.blockedSlots.find(
+              block => block.bookingId.toString() === booking._id.toString()
+            );
+
+            if (!existingBlock) {
+              // Add blocked slot
+              availability.blockedSlots.push({
+                bookingId: booking._id,
+                date: booking.date,
+                timeSlot: booking.timeSlot,
+                reason: 'booking_confirmed'
+              });
+              
+              await availability.save();
+              console.log(`🚫 Blocked availability slot for speaker ${booking.speaker} on ${booking.date} at ${booking.timeSlot}`);
+            } else {
+              console.log(`⚠️ Availability slot already blocked for booking ${booking._id}`);
+            }
+          } else {
+            console.log(`⚠️ No availability record found for speaker ${booking.speaker} on ${booking.date}`);
+          }
+        } catch (availabilityError) {
+          console.error('❌ Error blocking availability slot:', availabilityError);
+          // Don't fail the entire operation if availability blocking fails
+        }
+      }
     }
 
     const acceptanceMessage = new Message({

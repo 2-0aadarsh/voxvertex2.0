@@ -127,7 +127,7 @@ const enhancedEventSlice = createSlice({
       state.formData = { ...state.formData, ...action.payload };
     },
     
-    updateStatus: (state, action: PayloadAction<'draft' | 'published'>) => {
+    updateStatus: (state, action: PayloadAction<'draft' | 'published' | 'cancelled'>) => {
       state.formData.status = action.payload;
     },
     
@@ -187,6 +187,7 @@ const enhancedEventSlice = createSlice({
         description: event.description,
         bannerImage: null, // File object not available from API
         bannerImageUrl: event.bannerImage || '',
+        image: null, // File object not available from API
         tags: event.tags,
         ticketTypes: event.ticketTypes,
         speakers: event.speakers,
@@ -354,7 +355,7 @@ export const enhancedEventApi = baseApi.injectEndpoints({
       { eventId: string; ticketTierId: string; registrant: unknown; additionalParticipants?: unknown[] }
     >({
       query: ({ eventId, ticketTierId, registrant, additionalParticipants = [] }) => ({
-        url: `/enhanced-events/${eventId}/register`,
+        url: `/enhanced-events/register/${eventId}/register`,
         method: 'POST',
         body: {
           ticketTierId,
@@ -371,7 +372,7 @@ export const enhancedEventApi = baseApi.injectEndpoints({
       { registrationId: string; paymentMethodId: string }
     >({
       query: ({ registrationId, paymentMethodId }) => ({
-        url: `/enhanced-events/registrations/${registrationId}/create-payment`,
+        url: `/enhanced-events/register/registrations/${registrationId}/create-payment`,
         method: 'POST',
         body: { paymentMethodId },
       }),
@@ -383,7 +384,7 @@ export const enhancedEventApi = baseApi.injectEndpoints({
       { registrationId: string; razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }
     >({
       query: ({ registrationId, razorpay_order_id, razorpay_payment_id, razorpay_signature }) => ({
-        url: `/enhanced-events/registrations/${registrationId}/verify-payment`,
+        url: `/enhanced-events/register/registrations/${registrationId}/verify-payment`,
         method: 'POST',
         body: {
           razorpay_order_id,
@@ -400,7 +401,7 @@ export const enhancedEventApi = baseApi.injectEndpoints({
       string
     >({
       query: (registrationId) => ({
-        url: `/enhanced-events/registrations/${registrationId}/summary`,
+        url: `/enhanced-events/register/registrations/${registrationId}/summary`,
         method: 'GET',
       }),
     }),
@@ -411,7 +412,7 @@ export const enhancedEventApi = baseApi.injectEndpoints({
       void
     >({
       query: () => ({
-        url: '/enhanced-events/user/registrations',
+        url: '/enhanced-events/register/user/registrations',
         method: 'GET',
       }),
       providesTags: ['EnhancedEvent'],

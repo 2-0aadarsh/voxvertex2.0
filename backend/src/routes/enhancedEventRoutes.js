@@ -13,9 +13,10 @@ import {
   deleteEventDraft,
   validateEvent,
   getEventSpeakers,
-  getEventStats
+  getEventStats,
+  uploadBannerImage
 } from '../controllers/enhancedEventController.js';
-import upload from '../middleware/upload.js';
+import { imageUpload } from '../middleware/upload.js';
 import { authenticateJWT, authorizeRoles } from "../middleware/jwtAuth.js";
 
 const router = express.Router();
@@ -48,6 +49,9 @@ router.delete('/drafts/:id', authorizeRoles("Organizer"), deleteEventDraft);
 // Event Data Routes
 router.get('/:id/speakers', authorizeRoles("Organizer"), getEventSpeakers);
 router.get('/:id/stats', authorizeRoles("Organizer"), getEventStats);
+
+// Banner Image Upload Route
+router.post('/upload/banner', authorizeRoles("Organizer"), imageUpload.single('bannerImage'), uploadBannerImage);
 
 export default router;
 
