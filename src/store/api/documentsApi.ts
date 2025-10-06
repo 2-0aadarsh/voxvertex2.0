@@ -213,6 +213,24 @@ export const documentsApi = baseApi.injectEndpoints({
       query: ({ documentId }) => ({ url: `/documents/${documentId}`, method: 'DELETE' }),
       invalidatesTags: ['Document'],
     }),
+
+    // Get single document by ID
+    getDocumentById: builder.query<
+      { success: boolean; message: string; data: DocumentItem },
+      string
+    >({
+      query: (documentId) => ({ url: `/documents/${documentId}`, method: 'GET' }),
+      providesTags: ['Document'],
+    }),
+
+    // Get download URL for a document
+    downloadDocument: builder.query<
+      { success: boolean; message: string; data: { document: DocumentItem; downloadUrl: string } },
+      string
+    >({
+      query: (documentId) => ({ url: `/documents/${documentId}/download`, method: 'GET' }),
+      providesTags: ['Document'],
+    }),
   }),
 });
 
@@ -230,6 +248,10 @@ export const {
   useSendToSpeakerMutation,
   useUpdateStatusMutation,
   useDeleteDocumentMutation,
+  useGetDocumentByIdQuery,
+  useLazyGetDocumentByIdQuery,
+  useDownloadDocumentQuery,
+  useLazyDownloadDocumentQuery,
 } = documentsApi;
 
 

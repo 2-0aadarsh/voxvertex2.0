@@ -1,9 +1,15 @@
 //app\booking\components\parts\SpeakerCard.tsx
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import Image from 'next/image';
-import { Calendar, DollarSign, Clock, Calendar as CalendarIcon, User } from 'lucide-react';
+import React, { useState } from "react";
+import Image from "next/image";
+import {
+  Calendar,
+  DollarSign,
+  Clock,
+  Calendar as CalendarIcon,
+  User,
+} from "lucide-react";
 
 interface Speaker {
   id: string;
@@ -12,7 +18,7 @@ interface Speaker {
   date: string;
   price: number;
   image: string;
-  status: 'In Progress' | 'Confirmed' | 'Declined';
+  status: "In Progress" | "Confirmed" | "Declined";
   tags: string[];
   timeAgo: string;
   bookingId?: string;
@@ -26,11 +32,15 @@ interface SpeakerCardProps {
   onViewDetails?: (bookingId: string) => void;
 }
 
-export default function SpeakerCard({ speaker, showAttachButton = false, onViewDetails }: SpeakerCardProps) {
+export default function SpeakerCard({
+  speaker,
+  showAttachButton = false,
+  onViewDetails,
+}: SpeakerCardProps) {
   const [imageError, setImageError] = useState(false);
-  
+
   const getTagColor = () => {
-    return 'bg-[#FF6B35]/10 text-[#FF6B35] border border-[#FF6B35]';
+    return "bg-[#FF6B35]/10 text-[#FF6B35] border border-[#FF6B35]";
   };
 
   return (
@@ -42,8 +52,8 @@ export default function SpeakerCard({ speaker, showAttachButton = false, onViewD
             <User size={20} className="text-gray-400" />
           </div>
         ) : (
-          <Image 
-            src={speaker.image} 
+          <Image
+            src={speaker.image}
             alt={speaker.name}
             width={48}
             height={48}
@@ -52,8 +62,12 @@ export default function SpeakerCard({ speaker, showAttachButton = false, onViewD
           />
         )}
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-gray-900 text-xs truncate">{speaker.name}</h3>
-          <p className="text-[10px] text-gray-600 mt-1 leading-tight">{speaker.expertise || 'No expertise specified'}</p>
+          <h3 className="font-semibold text-gray-900 text-xs truncate">
+            {speaker.name}
+          </h3>
+          <p className="text-[10px] text-gray-600 mt-1 leading-tight">
+            {speaker.expertise || "No expertise specified"}
+          </p>
         </div>
       </div>
 
@@ -65,14 +79,16 @@ export default function SpeakerCard({ speaker, showAttachButton = false, onViewD
         </div>
         <div className="flex items-center space-x-2">
           <DollarSign size={12} className="text-gray-400" />
-          <span className="text-xs text-green-600">${speaker.price.toLocaleString()}</span>
+          <span className="text-xs text-green-600">
+            ${speaker.price.toLocaleString()}
+          </span>
         </div>
       </div>
 
       {/* Tags */}
       <div className="flex items-center gap-1 mb-4 flex-wrap">
         {speaker.tags.map((tag, index) => (
-          <span 
+          <span
             key={index}
             className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${getTagColor()}`}
           >
