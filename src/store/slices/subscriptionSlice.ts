@@ -233,28 +233,6 @@ export const subscriptionApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ['Subscription', 'User'],
     }),
-    
-    // Get subscription status
-    getSubscriptionStatus: builder.query<
-      { success: boolean; subscription: SubscriptionStatus | null; message?: string },
-      string
-    >({
-      query: (userId) => `/subscriptions/status/${userId}`,
-      providesTags: ['Subscription'],
-    }),
-    
-    // Cancel subscription
-    cancelSubscription: builder.mutation<
-      { success: boolean; message: string; subscription: any },
-      { userId: string }
-    >({
-      query: (data) => ({
-        url: '/subscriptions/cancel',
-        method: 'POST',
-        body: data,
-      }),
-      invalidatesTags: ['Subscription', 'User'],
-    }),
   }),
 });
 

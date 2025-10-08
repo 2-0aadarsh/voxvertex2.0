@@ -347,7 +347,7 @@ export const subscribeToPlan = async (req, res) => {
     }
 
     // Find subscription plan
-    const plan = await Subscription.findById(planId);
+    const plan = await SubscriptionPlan.findById(planId);
     if (!plan) {
       return res.status(404).json({ error: "Subscription plan not found" });
     }
@@ -584,7 +584,7 @@ export const changeSubscriptionPlan = async (req, res) => {
     }
 
     // Find new plan
-    const newPlan = await Subscription.findById(newPlanId);
+    const newPlan = await SubscriptionPlan.findById(newPlanId);
     if (!newPlan) {
       return res.status(404).json({ error: "New subscription plan not found" });
     }

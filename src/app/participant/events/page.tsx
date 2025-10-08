@@ -2,22 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-<<<<<<< HEAD
-import { Search, MapPin, Calendar, Clock, Users, Video, Building } from "lucide-react";
-import { useGetUpcomingEventsQuery } from "@/store/slices/enhancedEventSlice";
-=======
-import {
-  Search,
-  MapPin,
-  Calendar,
-  Clock,
-  Users,
-  Video,
-  Building,
-  ChevronDown,
-} from "lucide-react";
-import { useGetPublishedEventsQuery } from "@/store/slices/enhancedEventSlice";
->>>>>>> a624aa8 (payment dashboard and participant event crm done)
+import { Search, MapPin, Calendar, Clock, Users, Video, Building,ChevronDown 
+ } from "lucide-react";
+import { useGetUpcomingEventsQuery, useGetPublishedEventsQuery } from "@/store/slices/enhancedEventSlice";
 
 // --- Helper Functions ---
 const formatDate = (dateString: string) =>
@@ -35,15 +22,11 @@ const formatTime = (dateString: string) =>
     hour12: false,
   });
 
-<<<<<<< HEAD
-// Removed isEventUpcoming function since backend now handles this filtering
-=======
 const isEventUpcoming = (startDate: string) => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   return new Date(startDate) >= today;
 };
->>>>>>> a624aa8 (payment dashboard and participant event crm done)
 
 const isEventPast = (endDate: string) => {
   const today = new Date();
@@ -91,26 +74,6 @@ export default function ParticipantEvents() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedType, setSelectedType] = useState("all");
   const [selectedCategory, setSelectedCategory] = useState("upcoming");
-<<<<<<< HEAD
-  
-  // Use the new upcoming events API
-  const { data: eventsResponse, isLoading, error } = useGetUpcomingEventsQuery({
-    page: 1, 
-    limit: 50, 
-    sortBy: 'startDate', 
-    sortOrder: 'asc',
-    search: searchTerm || undefined // Pass search term to backend
-  });
-
-  // Backend already filters for upcoming events, so we just need to apply local filters
-  const upcomingEvents = eventsResponse?.data?.events || [];
-  const filteredEvents = upcomingEvents.filter((event: any) => {
-    const minPrice = getMinPriceTicket(event.ticketTypes);
-    const eventType = minPrice && minPrice >= 200 ? "vip" : "standard";
-    const matchesType = selectedType === "all" || eventType === selectedType;
-    const matchesCategory = selectedCategory === "all" || selectedCategory === "upcoming";
-    return matchesType && matchesCategory;
-=======
   const [activeTab, setActiveTab] = useState<"upcoming" | "past">("upcoming");
   const {
     data: eventsResponse,
@@ -139,7 +102,6 @@ export default function ParticipantEvents() {
     const eventType = minPrice && minPrice >= 200 ? "vip" : "standard";
     const matchesType = selectedType === "all" || eventType === selectedType;
     return matchesSearch && matchesType;
->>>>>>> a624aa8 (payment dashboard and participant event crm done)
   });
 
   const getLocationIcon = (mode: string) => {
@@ -180,45 +142,6 @@ export default function ParticipantEvents() {
           <p className="text-gray-600">Manage all your events in one place</p>
         </div>
 
-<<<<<<< HEAD
-        {/* Search and Filters Section */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8 gap-4 ">
-          <div className="flex items-center flex-grow max-w-md">
-            <div className="relative flex items-center w-full">
-              <Search className="absolute left-3 text-gray-400" size={20} />
-              <input
-                type="text"
-                placeholder="Search events..."
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35] bg-white text-base"
-              />
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-3 flex-wrap">
-            <select
-              value={selectedType}
-              onChange={e => setSelectedType(e.target.value)}
-              className="border border-gray-300 rounded-lg py-2.5 px-3 text-gray-700 focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35] bg-white min-w-[120px] text-base"
-            >
-              {filters.types.map(type => <option key={type.id} value={type.id}>{type.label}</option>)}
-            </select>
-            
-            <select
-              value={selectedCategory}
-              onChange={e => setSelectedCategory(e.target.value)}
-              className="border border-gray-300 rounded-lg py-2.5 px-3 text-gray-700 focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35] bg-white min-w-[140px] text-base"
-            >
-              {filters.categories.map(category => <option key={category.id} value={category.id}>{category.label}</option>)}
-            </select>
-            
-            <button className="p-2.5 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 transition-colors">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L15 14.414V19a1 1 0 01-1.447.894l-4-2A1 1 0 019 17v-2.586L3.293 6.707A1 1 0 013 6V4z" />
-              </svg>
-            </button>
-=======
         {/* Search Bar with simple category/type placeholders */}
         <div className="mb-6 w-full border border-gray-200 rounded-xl p-3 flex items-center gap-3">
           <div className="relative flex items-center flex-1">
@@ -230,7 +153,6 @@ export default function ParticipantEvents() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-9 pr-3 py-2.5 rounded-md focus:outline-none"
             />
->>>>>>> a624aa8 (payment dashboard and participant event crm done)
           </div>
           <button className="flex items-center gap-2 text-gray-700 bg-white border border-gray-200 px-3 py-2 rounded-md">
             <span>All Categories</span>
@@ -410,11 +332,6 @@ export default function ParticipantEvents() {
 
                       {/* Action Button - Centered without icons */}
                       <div className="flex justify-center mt-auto">
-<<<<<<< HEAD
-                        <button 
-                          onClick={() => router.push(`/participant/events/${event._id}`)}
-                          className="text-lg font-semibold text-white bg-[#FF6B35] hover:bg-[#FF6B35]/90 rounded-lg px-8 py-3 transition-colors w-full"
-=======
                         <button
                           onClick={() =>
                             router.push(`/participant/events/${event._id}`)
@@ -424,7 +341,6 @@ export default function ParticipantEvents() {
                               ? "bg-blue-600 hover:bg-blue-700"
                               : "bg-gray-600 hover:bg-gray-700"
                           }`}
->>>>>>> a624aa8 (payment dashboard and participant event crm done)
                         >
                           {activeTab === "upcoming"
                             ? "View Details"

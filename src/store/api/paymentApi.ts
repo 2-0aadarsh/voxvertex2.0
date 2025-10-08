@@ -36,11 +36,22 @@ export interface PaymentMethod {
 export interface SubscriptionPlan {
   _id: string;
   name: string;
-  planType: string;
-  pricePerMonth: number;
-  totalAmount: number;
+  planType?: string;
+  price: number;
+  pricePerMonth?: number; // For backward compatibility
+  totalAmount?: number;
   billingPeriod: string;
-  discountText: string;
+  discountText?: string;
+  isActive?: boolean;
+  billingCycle?: string;
+  features?: string[];
+  originalPrice?: number;
+  discountPercentage?: number;
+}
+
+export interface PlansResponse {
+  success: boolean;
+  plans: SubscriptionPlan[];
 }
 
 
@@ -164,8 +175,8 @@ createRazorpayOrder: builder.mutation<
 
 
     // Subscriptions
-    getPlans: builder.query<SubscriptionPlan[], void>({
-      query: () => `/subscriptions/`,
+    getPlans: builder.query<PlansResponse, void>({
+      query: () => `/subscriptions/plans`,
       providesTags: ["Subscriptions"],
     }),
     subscribePlan: builder.mutation<
