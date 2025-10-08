@@ -1,18 +1,20 @@
 'use client';
 import React, { useState } from 'react';
 import { X, User, Mail, Lock, Eye, EyeOff, Building2 } from 'lucide-react';
-import { API_CONFIG } from '@/config/api';
+import { useRegisterMutation } from '@/store/slices/authSlice';
 
 interface OrganizerSignupModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSignupSuccess: (userData: any) => void;
+  onSwitchToLogin: () => void;
 }
 
 export default function OrganizerSignupModal({ 
   isOpen, 
   onClose, 
-  onSignupSuccess 
+  onSignupSuccess,
+  onSwitchToLogin 
 }: OrganizerSignupModalProps) {
   const [formData, setFormData] = useState({
     firstName: '',
@@ -23,8 +25,10 @@ export default function OrganizerSignupModal({
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{[key: string]: string}>({});
+  
+  // Use Redux RTK Query mutation
+  const [registerMutation, { isLoading }] = useRegisterMutation();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -82,37 +86,30 @@ export default function OrganizerSignupModal({
       return;
     }
 
-    setIsLoading(true);
-    
     try {
-      // Call the registration API with organizer role
-      const response = await fetch(`${API_CONFIG.BASE_URL}/auth/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          password: formData.password,
-          role: 'organizer'
-        }),
-      });
+      // Use Redux RTK Query mutation
+      const result = await registerMutation({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        password: formData.password,
+        role: 'organizer'
+      }).unwrap();
 
-      const data = await response.json();
+      console.log('🔐 Registration result:', result);
 
-      if (data.success) {
-        onSignupSuccess(data.user);
+      if (result.success) {
+        // Redux state is automatically updated by the mutation
+        onSignupSuccess(result.user);
         onClose();
       } else {
-        setErrors({ general: data.message || 'Registration failed' });
+        setErrors({ general: result.message || 'Registration failed' });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Registration error:', error);
-      setErrors({ general: 'Registration failed. Please try again.' });
-    } finally {
-      setIsLoading(false);
+      setErrors({ 
+        general: error?.data?.message || error?.message || 'Registration failed. Please try again.' 
+      });
     }
   };
 
@@ -292,7 +289,7 @@ export default function OrganizerSignupModal({
           <div className="mt-6 text-center">
             <div className="text-gray-400 text-sm mb-2">OR</div>
             <button
-              onClick={() => {/* Handle sign in modal */}}
+              onClick={onSwitchToLogin}
               className="text-orange-500 hover:text-orange-600 text-sm font-medium"
             >
               Already have an account? Sign in

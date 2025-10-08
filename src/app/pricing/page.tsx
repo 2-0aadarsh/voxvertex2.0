@@ -239,6 +239,10 @@ const VoxvertexPricingPage = () => {
     dispatch(showSignupModal());
   };
 
+  const handleSwitchToLogin = () => {
+    dispatch(showLoginModal());
+  };
+
   // Toggle yearly/monthly
   const handleToggleYearly = (yearly: boolean) => {
     dispatch(setIsYearly(yearly));
@@ -507,6 +511,7 @@ const VoxvertexPricingPage = () => {
         isOpen={modalStates.showSignupModal}
         onClose={() => dispatch(hideAllModals())}
         onSignupSuccess={handleSignupSuccess}
+        onSwitchToLogin={handleSwitchToLogin}
       />
 
       <OrganizerLoginModal

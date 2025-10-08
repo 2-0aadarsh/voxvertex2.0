@@ -1,7 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 import { X, Mail, Lock, Eye, EyeOff } from 'lucide-react';
-import { API_CONFIG } from '@/config/api';
+import { useLoginMutation } from '@/store/slices/authSlice';
 
 interface OrganizerLoginModalProps {
   isOpen: boolean;
@@ -21,8 +21,10 @@ export default function OrganizerLoginModal({
     password: ''
   });
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{[key: string]: string}>({});
+  
+  // Use Redux RTK Query mutation
+  const [loginMutation, { isLoading }] = useLoginMutation();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -64,39 +66,32 @@ export default function OrganizerLoginModal({
       return;
     }
 
-    setIsLoading(true);
-    
     try {
-      // Call the login API
-      const response = await fetch(`${API_CONFIG.BASE_URL}/auth/login-jwt`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password
-        }),
-      });
+      // Use Redux RTK Query mutation
+      const result = await loginMutation({
+        email: formData.email,
+        password: formData.password
+      }).unwrap();
 
-      const data = await response.json();
+      console.log('🔐 Login result:', result);
 
-      if (data.success) {
+      if (result.success) {
         // Check if user is an organizer
-        if (data.user.role === 'organizer') {
-          onLoginSuccess(data.user);
+        if (result.user.role === 'organizer') {
+          // Redux state is automatically updated by the mutation
+          onLoginSuccess(result.user);
           onClose();
         } else {
           setErrors({ general: 'This account is not an organizer account. Please sign in with an organizer account.' });
         }
       } else {
-        setErrors({ general: data.message || 'Login failed' });
+        setErrors({ general: result.message || 'Login failed' });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Login error:', error);
-      setErrors({ general: 'Login failed. Please try again.' });
-    } finally {
-      setIsLoading(false);
+      setErrors({ 
+        general: error?.data?.message || error?.message || 'Login failed. Please try again.' 
+      });
     }
   };
 
