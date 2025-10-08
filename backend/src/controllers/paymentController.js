@@ -23,8 +23,38 @@ export const addPaymentMethod = async (req, res) => {
     const user = await EnhancedUser.findById(userId);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
+    // For development: Allow test bank accounts
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    
+    if (type === 'bank' && isDevelopment) {
+      // In development, auto-verify test bank accounts
+      details.verified = true;
+      details.isTestAccount = true;
+    } else if (type === 'bank' && !isDevelopment) {
+      // In production, require proper bank validation
+      if (!details.bankName || !details.accountNumber || !details.ifscCode) {
+        return res.status(400).json({ 
+          message: 'Bank account details incomplete. Please provide Bank Name, Account Number, and IFSC Code.',
+          code: 'INCOMPLETE_BANK_DETAILS'
+        });
+      }
+      
+      // Here you would integrate with bank verification APIs like:
+      // - Razorpay Bank Account Verification
+      // - NPCI Bank Account Verification
+      // - Third-party KYC services
+      
+      // For now, set as unverified (requires manual verification)
+      details.verified = false;
+      details.isTestAccount = false;
+    }
+
     const pm = await user.addPaymentMethod({ type, details, isDefault });
-    return res.json({ message: 'Payment method added', paymentMethod: pm });
+    return res.json({ 
+      message: 'Payment method added', 
+      paymentMethod: pm,
+      requiresVerification: type === 'bank' && !isDevelopment && !details.verified
+    });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: err.message });
@@ -140,6 +170,27 @@ export const addFunds = async (req, res) => {
 
     const user = await EnhancedUser.findById(userId);
     if (!user) return res.status(404).json({ message: 'User not found' });
+    
+    console.log('User wallet before update:', user.wallet);
+    console.log('Amount to add:', amount);
+    
+    // Ensure wallet exists
+    if (!user.wallet) {
+      user.wallet = { availableBalance: 0, pendingBalance: 0 };
+      console.log('Wallet initialized:', user.wallet);
+    }
+
+    // Check daily transaction limit
+    if (!user.canMakeTransaction(amount)) {
+      const limits = user.checkDailyLimits();
+      return res.status(400).json({
+        message: `Daily transaction limit exceeded. Limit: ₹${limits.transactionLimit}, Used: ₹${limits.transactionUsed}, Remaining: ₹${limits.transactionRemaining}`,
+        code: 'DAILY_TRANSACTION_LIMIT_EXCEEDED',
+        limit: limits.transactionLimit,
+        used: limits.transactionUsed,
+        remaining: limits.transactionRemaining
+      });
+    }
 
     // Validate payment method belongs to user
     let pm = null;
@@ -168,23 +219,35 @@ export const addFunds = async (req, res) => {
 }
 
 
-    // Create transaction record (pending)
+    // Create transaction record (cleared - funds immediately available)
     const transaction = await Transaction.create({
       user: user._id,
       amount,
       type: 'deposit',
-      status: 'pending', // still pending, can update to 'success' after backend confirmation
+      status: 'cleared', // funds are immediately available
       paymentMethodId: pm ? pm._id : undefined,
       paymentMethodSnapshot: pm ? { type: pm.type, details: pm.details } : {},
       gatewayTxnId: razorpayPaymentId,
     });
 
-    // Add to user's transactions and increment pendingBalance
+    // Add to user's transactions and increment availableBalance (direct funds)
     user.transactions.push(transaction._id);
-    await user.creditPending(amount);
+    user.wallet.availableBalance += amount;
+    
+    // Record daily transaction usage
+    await user.recordTransaction(amount);
+    
+    console.log('Before save - Available balance:', user.wallet.availableBalance);
+    console.log('Before save - Pending balance:', user.wallet.pendingBalance);
+    
+    await user.save();
+    
+    console.log('After save - Available balance:', user.wallet.availableBalance);
+    console.log('After save - Pending balance:', user.wallet.pendingBalance);
+    console.log('Funds added - User wallet after update:', user.wallet);
 
     return res.status(201).json({
-      message: 'Funds added (pending). Awaiting clearance.',
+      message: 'Funds added successfully to available balance.',
       transaction,
       wallet: user.wallet,
     });
@@ -205,9 +268,152 @@ export const getWalletBalance = async (req, res) => {
     const { userId } = req.params;
     const user = await EnhancedUser.findById(userId).select('wallet');
     if (!user) return res.status(404).json({ message: 'User not found' });
+    
+    // Ensure wallet exists
+    if (!user.wallet) {
+      user.wallet = { availableBalance: 0, pendingBalance: 0 };
+      await user.save();
+      console.log('Wallet initialized for user:', userId);
+    }
+    
     const totalBalance = (user.wallet.availableBalance || 0) + (user.wallet.pendingBalance || 0);
+    
+    console.log('Getting wallet balance for user:', userId);
+    console.log('Available balance:', user.wallet.availableBalance);
+    console.log('Pending balance:', user.wallet.pendingBalance);
+    console.log('Total balance:', totalBalance);
+    
     return res.json({ totalBalance, ...user.wallet });
   } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+};
+
+/**
+ * Withdraw funds to bank account
+ * POST /api/payments/withdraw
+ * body: { userId, amount, bankAccountId }
+ */
+export const withdrawFunds = async (req, res) => {
+  try {
+    const { userId, amount, bankAccountId } = req.body;
+
+    if (!userId || !amount || amount <= 0) {
+      return res.status(400).json({ message: 'Invalid payload' });
+    }
+
+    const user = await EnhancedUser.findById(userId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // Enhanced balance validation
+    if (user.wallet.availableBalance < amount) {
+      return res.status(400).json({
+        message: `Insufficient balance. Available: ₹${user.wallet.availableBalance}, Requested: ₹${amount}`,
+        code: 'INSUFFICIENT_BALANCE',
+        availableBalance: user.wallet.availableBalance,
+        requestedAmount: amount
+      });
+    }
+
+    // Check daily withdrawal limit
+    if (!user.canMakeWithdrawal(amount)) {
+      const limits = user.checkDailyLimits();
+      return res.status(400).json({
+        message: `Daily withdrawal limit exceeded. Limit: ₹${limits.withdrawalLimit}, Used: ₹${limits.withdrawalUsed}, Remaining: ₹${limits.withdrawalRemaining}`,
+        code: 'DAILY_WITHDRAWAL_LIMIT_EXCEEDED',
+        limit: limits.withdrawalLimit,
+        used: limits.withdrawalUsed,
+        remaining: limits.withdrawalRemaining
+      });
+    }
+
+    // Find the bank account
+    const bankAccount = user.paymentMethods.find(pm =>
+      pm._id.toString() === bankAccountId && pm.type === 'bank'
+    );
+
+    if (!bankAccount) {
+      return res.status(400).json({
+        message: 'Bank account not found',
+        code: 'BANK_ACCOUNT_NOT_FOUND'
+      });
+    }
+
+    // Check if bank account is verified (for production)
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    if (!isDevelopment && !bankAccount.details.verified) {
+      return res.status(400).json({
+        message: 'Bank account must be verified before withdrawals',
+        code: 'BANK_ACCOUNT_NOT_VERIFIED'
+      });
+    }
+
+    // Create withdrawal transaction
+    const transaction = await Transaction.create({
+      user: user._id,
+      amount,
+      type: 'withdrawal',
+      status: 'pending', // Will be processed by bank
+      paymentMethodId: bankAccount._id,
+      paymentMethodSnapshot: {
+        type: bankAccount.type,
+        details: bankAccount.details
+      },
+      notes: `Withdrawal to ${bankAccount.details.bankName}`,
+      createdAt: new Date()
+    });
+
+    // CRITICAL: Deduct from available balance immediately
+    // This prevents double-spending and ensures money is "locked"
+    user.wallet.availableBalance -= amount;
+    user.wallet.pendingBalance += amount;
+    user.transactions.push(transaction._id);
+    
+    // Record daily withdrawal usage
+    await user.recordWithdrawal(amount);
+    
+    await user.save();
+
+    console.log('Withdrawal initiated - Money locked:', {
+      userId,
+      amount,
+      bankAccount: bankAccount.details.bankName,
+      previousAvailableBalance: user.wallet.availableBalance + amount,
+      newAvailableBalance: user.wallet.availableBalance,
+      newPendingBalance: user.wallet.pendingBalance,
+      transactionId: transaction._id
+    });
+
+    // TODO: In production, integrate with actual bank transfer APIs:
+    // - Razorpay Payouts API
+    // - NPCI IMPS/NEFT APIs
+    // - Bank-specific APIs
+    
+    return res.status(201).json({
+      message: 'Withdrawal request submitted successfully. Money has been deducted from your available balance.',
+      transaction: {
+        id: transaction._id,
+        amount: transaction.amount,
+        status: transaction.status,
+        createdAt: transaction.createdAt
+      },
+      wallet: {
+        availableBalance: user.wallet.availableBalance,
+        pendingBalance: user.wallet.pendingBalance,
+        totalBalance: user.wallet.availableBalance + user.wallet.pendingBalance
+      },
+      bankAccount: {
+        id: bankAccount._id,
+        bankName: bankAccount.details.bankName,
+        accountNumber: bankAccount.details.accountNumber
+      },
+      note: isDevelopment 
+        ? 'Development mode: No actual bank transfer initiated'
+        : 'Bank transfer will be processed within 1-2 business days'
+    });
+
+  } catch (err) {
+    console.error('Withdrawal error:', err);
     return res.status(500).json({ message: err.message });
   }
 };

@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 // Enhanced User Schema with role-based functionality
 
 const paymentMethodSchema = new mongoose.Schema({
-  type: { type: String, enum: ["card", "paypal", "upi", "netbanking"], required: true },
+  type: { type: String, enum: ["card", "paypal", "upi", "netbanking", "bank"], required: true },
   details: { type: Object, required: true }, // store masked or tokenized data (never raw card PAN in production)
   isDefault: { type: Boolean, default: false },
   addedAt: { type: Date, default: Date.now },
@@ -131,6 +131,17 @@ wallet: {
   availableBalance: { type: Number, default: 0 },
   pendingBalance: { type: Number, default: 0 }
 },
+
+// Daily limits and usage tracking
+dailyLimits: {
+  transactionLimit: { type: Number, default: 1000000 }, // ₹10 lakh
+  withdrawalLimit: { type: Number, default: 100000 }     // ₹1 lakh
+},
+dailyUsage: {
+  transactionAmount: { type: Number, default: 0 },
+  withdrawalAmount: { type: Number, default: 0 },
+  lastResetDate: { type: Date, default: Date.now }
+},
 transactions: [{
   type: mongoose.Schema.Types.ObjectId,
   ref: 'Transaction'
@@ -140,6 +151,20 @@ activeSubscription: {
   type: mongoose.Schema.Types.ObjectId, 
   ref: 'Subscription',
   default: null 
+},
+subscription: {
+  planId: { type: mongoose.Schema.Types.ObjectId, ref: 'Subscription' },
+  startDate: Date,
+  endDate: Date,
+  trialEndDate: Date,
+  isActive: { type: Boolean, default: false },
+  isTrial: { type: Boolean, default: false },
+  paymentMethod: { type: String },
+  autoRenew: { type: Boolean, default: false },
+  lastBillingDate: Date,
+  nextBillingDate: Date,
+  cancelledAt: Date,
+  createdAt: Date
 },
   
   // Account Status
@@ -290,6 +315,62 @@ enhancedUserSchema.methods.clearPendingToAvailable = async function (amount) {
   this.wallet.availableBalance += amount;
   await this.save();
   return this.wallet;
+};
+
+// Daily limit validation methods
+enhancedUserSchema.methods.checkDailyLimits = function() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  // Reset daily usage if it's a new day
+  if (this.dailyUsage.lastResetDate < today) {
+    this.dailyUsage.transactionAmount = 0;
+    this.dailyUsage.withdrawalAmount = 0;
+    this.dailyUsage.lastResetDate = today;
+  }
+  
+  return {
+    transactionLimit: this.dailyLimits.transactionLimit,
+    withdrawalLimit: this.dailyLimits.withdrawalLimit,
+    transactionUsed: this.dailyUsage.transactionAmount,
+    withdrawalUsed: this.dailyUsage.withdrawalAmount,
+    transactionRemaining: this.dailyLimits.transactionLimit - this.dailyUsage.transactionAmount,
+    withdrawalRemaining: this.dailyLimits.withdrawalLimit - this.dailyUsage.withdrawalAmount
+  };
+};
+
+enhancedUserSchema.methods.canMakeTransaction = function(amount) {
+  const limits = this.checkDailyLimits();
+  return amount <= limits.transactionRemaining;
+};
+
+enhancedUserSchema.methods.canMakeWithdrawal = function(amount) {
+  const limits = this.checkDailyLimits();
+  return amount <= limits.withdrawalRemaining;
+};
+
+enhancedUserSchema.methods.recordTransaction = async function(amount) {
+  const limits = this.checkDailyLimits();
+  
+  if (amount > limits.transactionRemaining) {
+    throw new Error(`Daily transaction limit exceeded. Remaining: ₹${limits.transactionRemaining}`);
+  }
+  
+  this.dailyUsage.transactionAmount += amount;
+  await this.save();
+  return this.dailyUsage;
+};
+
+enhancedUserSchema.methods.recordWithdrawal = async function(amount) {
+  const limits = this.checkDailyLimits();
+  
+  if (amount > limits.withdrawalRemaining) {
+    throw new Error(`Daily withdrawal limit exceeded. Remaining: ₹${limits.withdrawalRemaining}`);
+  }
+  
+  this.dailyUsage.withdrawalAmount += amount;
+  await this.save();
+  return this.dailyUsage;
 };
 
 // Subscribe to plan

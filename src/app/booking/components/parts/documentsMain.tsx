@@ -380,7 +380,7 @@ export default function DocumentsMain() {
           );
       }
     }
-
+    
     // For outgoing documents, always show Process Payment
     return (
       <button className="bg-[#FF6B35]/10 border border-[#FF6B35] text-[#FF6B35] px-6 py-1 rounded-lg text-sm font-medium hover:bg-[#FF6B35] hover:text-white transition-colors">
@@ -420,8 +420,8 @@ export default function DocumentsMain() {
   const filteredDocuments = currentDocuments.filter((doc) => {
     const matchesSearch =
       doc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      doc.recipient.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      doc.event.toLowerCase().includes(searchQuery.toLowerCase());
+                         doc.recipient.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         doc.event.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesSearch;
   });
 
@@ -603,7 +603,7 @@ export default function DocumentsMain() {
                   Upload a document that can be later assigned to speakers
                 </p>
               </div>
-              <button
+              <button 
                 onClick={handleCloseModal}
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
               >
@@ -965,14 +965,14 @@ export default function DocumentsMain() {
           </p>
         </div>
         <div className="flex gap-3">
-          <button
+          <button 
             onClick={handleUploadDocument}
             className="flex items-center gap-2 px-4 py-2 border border-gray-400 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors font-medium"
           >
             <Upload className="w-4 h-4" />
             Upload Document
           </button>
-          <button
+          <button 
             onClick={handleGenerateMOU}
             className="bg-[#FF6B35] text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-[#FF6B35]/90 font-medium"
           >
@@ -1012,7 +1012,7 @@ export default function DocumentsMain() {
 
       {/* Document Tabs */}
       <div className="bg-gray-50 p-1 rounded-lg mb-6 flex w-full">
-        <button
+        <button 
           onClick={() => setActiveTab("outgoing")}
           className={`flex-1 py-3 px-4 rounded-md text-center font-medium ${
             isOutgoing
@@ -1022,7 +1022,7 @@ export default function DocumentsMain() {
         >
           Outgoing Documents
         </button>
-        <button
+        <button 
           onClick={() => setActiveTab("incoming")}
           className={`flex-1 py-3 px-4 rounded-md text-center font-medium ${
             isIncoming
@@ -1135,7 +1135,7 @@ export default function DocumentsMain() {
                           Send
                         </button>
                       )}
-                      {getActionButton(doc.status, doc.amount, false)}
+                    {getActionButton(doc.status, doc.amount, false)}
                     </div>
                   </td>
                   <td className="py-6 px-6 align-top text-center">
@@ -1145,8 +1145,8 @@ export default function DocumentsMain() {
                         className="p-2 hover:scale-110 transition-transform duration-200"
                         title="View Document"
                       >
-                        <Eye className="w-5 h-5 text-[#FF6B35]" />
-                      </button>
+                      <Eye className="w-5 h-5 text-[#FF6B35]" />
+                    </button>
                       {doc.status !== "sent" && (
                         <button
                           onClick={() => handleDelete(doc.id)}
@@ -1233,7 +1233,7 @@ export default function DocumentsMain() {
                   </td>
                   <td className="py-6 px-6 align-top">
                     <div className="flex items-center gap-3">
-                      {getActionButton(doc.status, doc.amount, true)}
+                    {getActionButton(doc.status, doc.amount, true)}
                       <button
                         onClick={() => handleView(doc.id)}
                         className="p-2 hover:scale-110 transition-transform duration-200"

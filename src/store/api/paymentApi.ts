@@ -100,6 +100,23 @@ addFunds: builder.mutation<
   invalidatesTags: ["Wallet", "Transactions"],
 }),
 
+// Withdraw Funds
+withdrawFunds: builder.mutation<
+  any,
+  {
+    userId: string;
+    amount: number;
+    bankAccountId: string;
+  }
+>({
+  query: (body) => ({
+    url: `/payments/withdraw`,
+    method: "POST",
+    body,
+  }),
+  invalidatesTags: ["Wallet", "Transactions"],
+}),
+
 
     // Payment Methods
     getPaymentMethods: builder.query<PaymentMethod[], string>({
@@ -162,6 +179,26 @@ createRazorpayOrder: builder.mutation<
       }),
       invalidatesTags: ["Wallet", "Transactions", "Subscriptions"],
     }),
+    getSubscriptionStatus: builder.query<any, string>({
+      query: (userId) => `/subscriptions/status/${userId}`,
+      providesTags: ["Subscriptions"],
+    }),
+    cancelSubscription: builder.mutation<any, { userId: string }>({
+      query: (body) => ({
+        url: `/subscriptions/cancel`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Subscriptions"],
+    }),
+    changeSubscriptionPlan: builder.mutation<any, { userId: string; newPlanId: string }>({
+      query: (body) => ({
+        url: `/subscriptions/change-plan`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Subscriptions"],
+    }),
   }),
 });
 
@@ -169,11 +206,15 @@ export const {
   useGetBalanceQuery,
   useGetTransactionsQuery,
   useAddFundsMutation,
+  useWithdrawFundsMutation,
   useGetPaymentMethodsQuery,
   useAddPaymentMethodMutation,
   useUpdatePaymentMethodMutation,
   useDeletePaymentMethodMutation,
   useGetPlansQuery,
   useSubscribePlanMutation,
+  useGetSubscriptionStatusQuery,
+  useCancelSubscriptionMutation,
+  useChangeSubscriptionPlanMutation,
   useCreateRazorpayOrderMutation,
 } = paymentApi;
