@@ -672,7 +672,7 @@ export default function TransactionHistory({ data }: TransactionHistoryProps) {
                 <option value="pending">Pending</option>
                 <option value="failed">Failed</option>
               </select>
-              </div>
+            </div>
 
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-gray-400" />
@@ -810,17 +810,17 @@ export default function TransactionHistory({ data }: TransactionHistoryProps) {
                       <span className="text-sm font-medium text-gray-900">
                         {getTransactionTitle(transaction.type)}
                       </span>
-                        </div>
+                    </div>
                     <div className="text-sm text-gray-600">
                       {getTransactionDescription(transaction)}
-                        </div>
+                    </div>
                     <div
                       className={`text-sm font-semibold ${getAmountColor(
                         transaction.type
                       )}`}
                     >
-                          {formatAmount(transaction.amount, transaction.type)}
-                        </div>
+                      {formatAmount(transaction.amount, transaction.type)}
+                    </div>
                     <div>{getStatusBadge(transaction.status)}</div>
                     <div className="flex items-center gap-2">
                       <button
@@ -846,7 +846,7 @@ export default function TransactionHistory({ data }: TransactionHistoryProps) {
                     </div>
                   </div>
                 </div>
- 
+
                 {expandedTransaction === transaction._id && (
                   <div className="px-6 pb-6 bg-gray-50">
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-6">
@@ -890,8 +890,8 @@ export default function TransactionHistory({ data }: TransactionHistoryProps) {
                               </span>
                               <span className="text-sm text-gray-900">
                                 {(transaction as any).gatewayTxnId}
-                            </span>
-                          </div>
+                              </span>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -1194,8 +1194,8 @@ export default function TransactionHistory({ data }: TransactionHistoryProps) {
                 <Download className="w-4 h-4" />
                 Download Receipt
               </button>
-        </div>
-      </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
