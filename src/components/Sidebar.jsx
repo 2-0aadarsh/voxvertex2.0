@@ -127,7 +127,7 @@ const Sidebar = ({ userRole = "newuser" }) => {
   const baseNavigationItems = [
     {
       icon: <CiUser />,
-      label: "Dashboard",
+      label: "Profile",
       href: getProfileRedirect(),
       active:
         currentPath === getProfileRedirect() ||

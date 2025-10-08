@@ -12,7 +12,7 @@ const sendEmailVerification = async (to, subject, htmlContent) => {
 
     // Mail options
     const mailOptions = {
-      from: 'Chittchat <no-reply@chittchat.com>', // Valid sender address
+      from: 'Voxvertex <noreply@voxvertex.com>', // Valid sender address
       to: to, // Recipient
       subject: subject, // Subject line
       html: emailHtml, // Email body (HTML format)
@@ -38,7 +38,7 @@ const sendForgetPassword = async(to, subject, emailContent) => {
       .replaceAll('[Your App Name]', emailContent.appName);
 
     const mailOptions = {
-      from: 'Chittchat <no-reply@chittchat.com>',
+      from: 'Voxvertex <noreply@voxvertex.com>',
       to,
       subject,
       html: emailHtml,
@@ -62,7 +62,7 @@ const sendContactUsMail = async (userData) => {
 
     // Mail options
     const mailOptions = {
-      from: `"Makeover Contact" <no-reply@chittchat.com>`,
+      from: `"Voxvertex Contact" <noreply@voxvertex.com>`,
       to: "aadarsh0811@gmail.com", // 🔥 Admin email (replace with real admin email)
       subject: `New Contact Us Message `,
       replyTo: email, // allows admin to reply directly to user
@@ -97,7 +97,7 @@ const sendPasswordResetOTP = async (to, subject, emailContent) => {
     }
 
     const mailOptions = {
-      from: 'VoxVertex <noreply@voxvertex.com>',
+      from: 'Voxvertex <noreply@voxvertex.com>',
       to,
       subject,
       html: emailHtml,
@@ -122,7 +122,7 @@ const sendPasswordChangedConfirmation = async (to, subject, emailContent) => {
       .replaceAll('[Date]', emailContent.date);
 
     const mailOptions = {
-      from: 'VoxVertex <noreply@voxvertex.com>',
+      from: 'Voxvertex <noreply@voxvertex.com>',
       to,
       subject,
       html: emailHtml,
@@ -148,7 +148,7 @@ const sendEventRegistrationConfirmation = async (to, subject, eventData, ticketD
     console.log('📧 Email HTML generated, length:', emailHtml.length);
 
     const mailOptions = {
-      from: 'VoxVertex <noreply@voxvertex.com>',
+      from: 'Voxvertex <noreply@voxvertex.com>',
       to,
       subject,
       html: emailHtml,
