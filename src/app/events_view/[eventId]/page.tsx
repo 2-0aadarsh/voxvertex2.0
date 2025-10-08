@@ -264,7 +264,7 @@ export default function EventDetailsPage() {
                 onSave={handleEventSave}
               />
             )}
-            {activeTab === 'participants' && <Participants eventId={params.eventId} />}
+            {activeTab === 'participants' && <Participants eventId={params.eventId as string} />}
             {activeTab === 'actions' && <Actions />}
           </div>
         </div>

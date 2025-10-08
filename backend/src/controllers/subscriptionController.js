@@ -759,13 +759,28 @@ export const getSubscriptionStatus = async (req, res) => {
       });
     }
 
+    console.log('🔍 DEBUG: Looking for subscription for userId:', user._id);
+
     // Find active subscription using the new schema
     const subscription = await Subscription.findOne({
       userId: user._id,
       status: { $in: ['trial', 'active'] }
     }).populate('planId');
 
+    console.log('🔍 DEBUG: Found subscription:', subscription ? 'YES' : 'NO');
+    if (subscription) {
+      console.log('🔍 DEBUG: Subscription details:', {
+        _id: subscription._id,
+        userId: subscription.userId,
+        status: subscription.status,
+        isTrialActive: subscription.isTrialActive,
+        isActive: subscription.isActive,
+        trialEndDate: subscription.trialEndDate
+      });
+    }
+
     if (!subscription) {
+      console.log('🔍 DEBUG: No subscription found, returning null');
       return res.status(200).json({
         success: true,
         subscription: null,
@@ -782,7 +797,7 @@ export const getSubscriptionStatus = async (req, res) => {
       trialDaysRemaining = Math.max(0, Math.ceil(timeDiff / (1000 * 60 * 60 * 24)));
     }
 
-    res.status(200).json({
+    const responseData = {
       success: true,
       subscription: {
         plan: subscription.planId,
@@ -796,7 +811,12 @@ export const getSubscriptionStatus = async (req, res) => {
         autoRenew: subscription.autoRenew,
         paymentMethod: subscription.paymentMethod
       }
-    });
+    };
+
+    console.log('🔍 DEBUG: getSubscriptionStatus response:', JSON.stringify(responseData, null, 2));
+    console.log('🔍 DEBUG: Raw subscription from DB:', JSON.stringify(subscription, null, 2));
+
+    res.status(200).json(responseData);
 
   } catch (err) {
     console.error('Get subscription status error:', err);

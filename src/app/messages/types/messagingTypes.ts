@@ -151,7 +151,7 @@ export interface ConversationSettings {
   autoArchiveAfter: number;
 }
 
-export interface MessageStatus {
+export interface UserMessageStatus {
   _id: string;
   user: string;
   conversation: string;

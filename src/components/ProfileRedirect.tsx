@@ -193,7 +193,7 @@ export default function ProfileRedirect({
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
             <h3 className="font-semibold">Profile Access Error</h3>
             <p className="text-sm mt-1">
-              {error?.message || 'There was an error loading your profile information.'}
+              {(error && 'message' in error ? error.message : 'There was an error loading your profile information.')}
             </p>
           </div>
           <div className="space-x-4">

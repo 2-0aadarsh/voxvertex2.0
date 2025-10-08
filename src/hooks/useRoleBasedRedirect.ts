@@ -196,7 +196,7 @@ export function useRoleBasedRedirect(
     userRole: userRole as UserRole | null,
     isAuthenticated,
     isLoading: authLoading || isUserLoading,
-    error: userError || null,
+    error: userError ? new Error('message' in userError ? String(userError.message) : 'User fetch error') : null,
     redirect,
     getRouteForRole,
     hasValidRoute,

@@ -50,15 +50,17 @@ export default function PaymentsDashboard() {
     }
     
     // Handle object with data and contentType (Buffer)
-    if (typeof profileImage === 'object' && profileImage.data && profileImage.contentType) {
-      const dataUrl = `data:${profileImage.contentType};base64,${profileImage.data.toString('base64')}`;
+    if (typeof profileImage === 'object' && 'data' in profileImage && 'contentType' in profileImage) {
+      const img = profileImage as { data: { toString: (encoding: string) => string }, contentType: string };
+      const dataUrl = `data:${img.contentType};base64,${img.data.toString('base64')}`;
       return dataUrl;
     }
     
     // Handle object with url property
-    if (typeof profileImage === 'object' && profileImage.url) {
-      if (profileImage.url.startsWith('http')) return profileImage.url;
-      return `https://res.cloudinary.com/demo/image/fetch/${profileImage.url}`;
+    if (typeof profileImage === 'object' && 'url' in profileImage) {
+      const img = profileImage as { url: string };
+      if (img.url.startsWith('http')) return img.url;
+      return `https://res.cloudinary.com/demo/image/fetch/${img.url}`;
     }
     
     return null;

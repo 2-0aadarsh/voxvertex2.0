@@ -1,6 +1,8 @@
 'use client';
 import React, { useState } from 'react';
 import { X, CreditCard, User, MapPin } from 'lucide-react';
+import { useDispatch } from 'react-redux';
+import { subscriptionApi } from '@/store/slices/subscriptionSlice';
 
 interface SubscriptionPlan {
   _id: string;
@@ -92,9 +94,12 @@ export default function CompleteSubscriptionModal({
   console.log('isYearly:', isYearly);
   console.log('user:', user);
   console.log('=====================================');
-
+  
   const [isProcessing, setIsProcessing] = useState(false);
   const [errors, setErrors] = useState<{[key: string]: string}>({});
+  
+  // For cache invalidation
+  const dispatch = useDispatch();
 
   const calculateTotal = () => {
     if (!selectedPlan || !selectedPlan.price) {
@@ -201,6 +206,10 @@ export default function CompleteSubscriptionModal({
 
             if (verifyData.success) {
               console.log('✅ Trial started successfully with validated payment');
+              
+              // Invalidate subscription cache to refresh subscription status
+              dispatch(subscriptionApi.util.invalidateTags(['Subscription']));
+              
               onPaymentSuccess(verifyData);
               // Let parent handle modal transitions
             } else {

@@ -287,7 +287,7 @@ const messagingSlice = createSlice({
         state.messages[conversationId] = [];
       }
       
-      state.messages[conversationId].unshift(message as MessageWithOptimistic);
+      state.messages[conversationId].unshift(message as unknown as MessageWithOptimistic);
     },
     
     confirmMessageSent: (state, action: PayloadAction<{ tempId: string; conversationId: string; message: Message }>) => {
@@ -329,7 +329,7 @@ const messagingSlice = createSlice({
           conversation.lastMessage = {
             content: message.content,
             sender: message.sender._id,
-            timestamp: message.createdAt,
+            timestamp: typeof message.createdAt === 'string' ? new Date(message.createdAt) : message.createdAt,
             messageType: message.messageType,
           };
         }
@@ -506,7 +506,7 @@ const messagingSlice = createSlice({
           conversation.lastMessage = {
             content: message.content,
             sender: message.sender._id,
-            timestamp: message.createdAt,
+            timestamp: typeof message.createdAt === 'string' ? new Date(message.createdAt) : message.createdAt,
             messageType: message.messageType,
           };
         }

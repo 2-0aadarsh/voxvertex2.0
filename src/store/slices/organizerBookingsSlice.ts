@@ -6,6 +6,7 @@ export interface Speaker {
   _id: string;
   firstName: string;
   lastName: string;
+  email: string;
   profileImageUrl: string;
   expertise?: string;
   professionalTitle?: string;

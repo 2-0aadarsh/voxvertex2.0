@@ -88,9 +88,9 @@ const Navbar: React.FC<NavbarProps> = ({
     console.log('🔍 Navbar Profile Image Debug:', {
       profileImage,
       type: typeof profileImage,
-      hasData: (profileImage as unknown)?.data ? 'yes' : 'no',
-      hasContentType: (profileImage as unknown)?.contentType ? 'yes' : 'no',
-      hasUrl: (profileImage as unknown)?.url ? 'yes' : 'no',
+      hasData: (profileImage && typeof profileImage === 'object' && 'data' in profileImage) ? 'yes' : 'no',
+      hasContentType: (profileImage && typeof profileImage === 'object' && 'contentType' in profileImage) ? 'yes' : 'no',
+      hasUrl: (profileImage && typeof profileImage === 'object' && 'url' in profileImage) ? 'yes' : 'no',
       hasGetProfileImageUrl: !!getProfileImageUrl
     });
     

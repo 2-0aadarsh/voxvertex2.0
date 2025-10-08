@@ -12,17 +12,15 @@ import DescriptionStep from '../components/steps/DescriptionStep';
 import ReviewStep from '../components/steps/ReviewStep';
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL as string) || 'http://localhost:3001';
-interface CreateDisputeProps {
-  onClose: () => void;  // define the prop
-}
 
-export default function CreateDispute({ onClose }: CreateDisputeProps) {
+export default function CreateDispute() {
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
 
   const [formData, setFormData] = useState<DisputeFormData>({
     eventName: '',
     eventId: '',
+    respondentId: [],
     disputeReason: '',
     disputeTitle: '',
     amount: 0,

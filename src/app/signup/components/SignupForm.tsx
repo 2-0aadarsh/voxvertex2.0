@@ -69,7 +69,7 @@ export default function SignupForm() {
         lastName: formData.lastName,
         email: formData.email,
         password: formData.password,
-        phone: null, // No phone number required
+        phone: undefined, // No phone number required
         role: formData.whoAreYou,
         industry: formData.companyTitle,
         activities: formData.activity

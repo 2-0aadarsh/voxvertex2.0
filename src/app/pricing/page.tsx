@@ -1,9 +1,10 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/store/hooks';
-import { useGetCurrentUserQuery, useGetSubscriptionStatusQuery } from '@/store/slices/authSlice';
+import { useGetCurrentUserQuery } from '@/store/slices/authSlice';
+import { useGetSubscriptionStatusQuery } from '@/store/slices/subscriptionSlice';
 import { useDispatch, useSelector } from 'react-redux';
 import { 
   showSignupModal, 
@@ -78,18 +79,50 @@ const VoxvertexPricingPage = () => {
   const { user, isAuthenticated } = useAuth();
   const { data: currentUserData, isLoading: userLoading } = useGetCurrentUserQuery();
   
-  // Get subscription status if user is authenticated
+  // Get subscription status if user is authenticated - using subscription slice
   const { 
     data: subscriptionData, 
-    isLoading: subscriptionLoading 
+    isLoading: subscriptionLoading,
+    refetch: refetchSubscriptionStatus,
+    error: subscriptionError
   } = useGetSubscriptionStatusQuery(user?._id || '', {
-    skip: !user?._id || !isAuthenticated
+    skip: !user?._id || !isAuthenticated,
+    refetchOnMountOrArgChange: true, // Force refetch when component mounts or user changes
+    refetchOnFocus: true // Refetch when window regains focus
   });
 
   // Fetch subscription plans from API
   const { data: plansData, isLoading: plansLoading, error: plansError } = useGetSubscriptionPlansQuery();
 
   console.log("plansData:", plansData);
+  console.log("subscriptionData:", subscriptionData);
+  console.log("user:", user);
+  console.log("subscriptionData?.subscription:", subscriptionData?.subscription);
+  console.log("isTrialActive:", subscriptionData?.subscription?.isTrialActive);
+  console.log("trialDaysRemaining:", subscriptionData?.subscription?.trialDaysRemaining);
+  console.log("Raw subscriptionData:", JSON.stringify(subscriptionData, null, 2));
+  console.log("=== DEBUGGING SUBSCRIPTION STATUS ===");
+  console.log("subscriptionData?.subscription?.isTrialActive:", subscriptionData?.subscription?.isTrialActive);
+  console.log("subscriptionData?.subscription?.status:", subscriptionData?.subscription?.status);
+  console.log("subscriptionData?.subscription?.trialDaysRemaining:", subscriptionData?.subscription?.trialDaysRemaining);
+  console.log("subscriptionData?.subscription?.trialEndDate:", subscriptionData?.subscription?.trialEndDate);
+  console.log("user?.subscription:", user?.subscription);
+  console.log("user?.activeSubscription:", user?.activeSubscription);
+  console.log("subscriptionLoading:", subscriptionLoading);
+  console.log("subscriptionError:", subscriptionError);
+
+  // Debug: Log when subscription data changes
+  useEffect(() => {
+    console.log("🔄 Subscription data changed:", subscriptionData);
+  }, [subscriptionData]);
+
+  // Auto-refetch subscription status when user changes
+  useEffect(() => {
+    if (user?._id && isAuthenticated) {
+      console.log("🔄 User authenticated, refetching subscription status for:", user._id);
+      refetchSubscriptionStatus();
+    }
+  }, [user?._id, isAuthenticated, refetchSubscriptionStatus]);
 
   // Helper function to get profile image URL
   const getProfileImageUrl = (profileImage: unknown) => {
@@ -137,8 +170,6 @@ const VoxvertexPricingPage = () => {
     console.log('currentPlan:', currentPlan);
     console.log('isAuthenticated:', isAuthenticated);
     console.log('user:', user);
-    console.log('user.role:', user?.role);
-    console.log('currentUserData:', currentUserData);
     console.log('subscriptionData:', subscriptionData);
     console.log('=============================');
 
@@ -172,19 +203,17 @@ const VoxvertexPricingPage = () => {
       return;
     }
 
-    // 🚨 NEW: Check if user already has active subscription or trial
-    if (subscriptionData?.success && subscriptionData.subscription) {
-      const subscription = subscriptionData.subscription;
-      
-      if (subscription.isActive || subscription.isTrialActive) {
-        if (subscription.isTrialActive) {
-          const daysRemaining = subscription.trialDaysRemaining;
-          alert(`You already have an active trial with ${daysRemaining} days remaining. Your trial will automatically convert to a paid subscription.`);
-        } else {
-          alert('You already have an active subscription. Please manage your subscription from your dashboard.');
-        }
-        return;
+    // Check if user already has active subscription or trial using subscription slice
+    const subscription = subscriptionData?.subscription;
+    
+    if (subscription?.isActive || subscription?.isTrialActive) {
+      if (subscription.isTrialActive) {
+        const daysRemaining = subscription.trialDaysRemaining;
+        alert(`You already have an active trial with ${daysRemaining} days remaining. Your trial will automatically convert to a paid subscription.`);
+      } else {
+        alert('You already have an active subscription. Please manage your subscription from your dashboard.');
       }
+      return;
     }
 
     // User is organizer with no active subscription - proceed to subscription flow
@@ -227,7 +256,16 @@ const VoxvertexPricingPage = () => {
   // Handle welcome modal actions
   const handleGoToDashboard = () => {
     dispatch(hideAllModals());
-    window.location.href = '/dashboard';
+    // Redirect to appropriate dashboard based on user role
+    if (user?.role === 'organizer') {
+      window.location.href = '/newuser';
+    } else if (user?.role === 'speaker') {
+      window.location.href = '/speakerUser';
+    } else if (user?.role === 'participant') {
+      window.location.href = '/participant';
+    } else {
+      window.location.href = '/newuser'; // fallback
+    }
   };
 
   const handleContinueExploring = () => {
@@ -376,14 +414,33 @@ const VoxvertexPricingPage = () => {
                 
                 <button 
                   onClick={handleStartTrial}
-                  className="w-full bg-[#FF6B35] text-white py-3 px-6 rounded-lg font-medium hover:bg-orange-600 transition-colors"
+                  disabled={subscriptionLoading}
+                  className="w-full bg-[#FF6B35] text-white py-3 px-6 rounded-lg font-medium hover:bg-orange-600 transition-colors disabled:opacity-50"
                 >
-                  {subscriptionData?.subscription?.isTrialActive 
-                    ? `Trial Active (${subscriptionData.subscription.trialDaysRemaining} days left)`
-                    : subscriptionData?.subscription?.isActive
-                    ? 'Subscription Active'
-                    : `Start Your ${currentPlan.trialDays}-Day Free Trial`
-                  }
+                  {subscriptionLoading ? (
+                    'Loading...'
+                  ) : (() => {
+                    // Check subscription status from subscription slice
+                    const subscription = subscriptionData?.subscription;
+                    
+                    console.log("Button logic - subscription:", subscription);
+                    
+                    if (subscription?.isTrialActive) {
+                      return `Trial Active (${subscription.trialDaysRemaining} days left)`;
+                    } else if (subscription?.isActive) {
+                      return 'Subscription Active';
+                    } else {
+                      return `Start Your ${currentPlan.trialDays}-Day Free Trial`;
+                    }
+                  })()}
+                </button>
+                
+                {/* Debug: Manual refetch button */}
+                <button 
+                  onClick={() => refetchSubscriptionStatus()}
+                  className="w-full mt-2 bg-gray-500 text-white py-2 px-4 rounded-lg text-sm"
+                >
+                  🔄 Refetch Subscription Status
                 </button>
               </div>
 
@@ -486,12 +543,18 @@ const VoxvertexPricingPage = () => {
             onClick={handleStartTrial}
             className="bg-[#FF6B35] text-white px-8 py-4 rounded-lg text-lg font-medium hover:bg-orange-600 transition-colors"
           >
-            {subscriptionData?.subscription?.isTrialActive 
-              ? `Trial Active (${subscriptionData.subscription.trialDaysRemaining} days left)`
-              : subscriptionData?.subscription?.isActive
-              ? 'Subscription Active'
-              : 'Start Your Free Trial Today'
-            }
+            {(() => {
+              // Check subscription status from subscription slice
+              const subscription = subscriptionData?.subscription;
+              
+              if (subscription?.isTrialActive) {
+                return `Trial Active (${subscription.trialDaysRemaining} days left)`;
+              } else if (subscription?.isActive) {
+                return 'Subscription Active';
+              } else {
+                return 'Start Your Free Trial Today';
+              }
+            })()}
           </button>
         </div>
       </main>

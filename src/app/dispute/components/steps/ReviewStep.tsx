@@ -10,6 +10,7 @@ interface ReviewStepProps {
   formData: DisputeFormData;
   onStepChange: (step: number) => void;
   onClose: () => void;
+  onSubmit?: () => Promise<void>;
   isLoading?: boolean;
 }
 
@@ -17,6 +18,8 @@ export default function ReviewStep({
   formData,
   onStepChange,
   onClose,
+  onSubmit,
+  isLoading: externalIsLoading,
 }: ReviewStepProps) {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
@@ -34,6 +37,13 @@ console.log('ReviewStep formData1 respondent:', formData.respondentId);
   console.log("Submitting parties:", formData.partiesInvolved);
 
     e.preventDefault();
+    
+    // If parent provides onSubmit, use it instead
+    if (onSubmit) {
+      await onSubmit();
+      return;
+    }
+    
     setIsLoading(true);
     console.log('ReviewStep formData2:', formData);
       // ✅ Inspect JWT payload

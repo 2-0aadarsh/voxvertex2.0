@@ -144,7 +144,7 @@ export default function MessagesPage() {
             }`}>
               {activeConversationId ? (
                 <>
-                  <ChatHeader conversation={activeConversation} />
+                  <ChatHeader conversation={activeConversation || null} />
                   
                   <RealTimeMessageList 
                     conversationId={activeConversationId}
@@ -154,7 +154,6 @@ export default function MessagesPage() {
                   
                   <RealTimeMessageInput 
                     conversationId={activeConversationId}
-                    placeholder="Type your message..."
                   />
                 </>
               ) : (

@@ -71,9 +71,9 @@ export const RealTimeMessageInput: React.FC<RealTimeMessageInputProps> = ({
       priority: 'normal' as const,
       attachments: [],
       readBy: [],
-      createdAt: now.toISOString(), // Convert to string for serialization
-      updatedAt: now.toISOString(), // Convert to string for serialization
-      isOptimistic: true,
+      createdAt: now, // Use Date object
+      updatedAt: now, // Use Date object
+      isOptimistic: true as const,
     };
 
     // Add optimistic message to store

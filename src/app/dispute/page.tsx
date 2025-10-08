@@ -8,7 +8,7 @@ import {
   X,
 } from 'lucide-react';
 import Link from 'next/link';
-import CreateDispute from './create/page';
+import { useRouter } from 'next/navigation';
 import { useGetDisputesQuery } from '../../store/api/disputApi';
 import { Dispute } from './types/disputeTypes';
 import Sidebar from '@/components/Sidebar';
@@ -30,11 +30,11 @@ import { useGetCurrentUserQuery } from '@/store/slices/authSlice';
 // }
 
 export default function DisputeManagement() {
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All Statuses');
   const [stageFilter, setStageFilter] = useState('All Stages');
   const [page, setPage] = useState(1);
-  const [showModal, setShowModal] = useState(false);
 
   // Authentication hooks
   const { user, isAuthenticated } = useAuth();
@@ -122,7 +122,7 @@ console.log("filtered data", filtered);
                 Manage and resolve disputes efficiently with streamlined workflows
               </p>
             </div>
-            <button onClick={() => setShowModal(true)} className="bg-[#FF6B35] text-white px-4 py-2 rounded-md font-medium">
+            <button onClick={() => router.push('/dispute/create')} className="bg-[#FF6B35] text-white px-4 py-2 rounded-md font-medium">
               + File New Dispute
             </button>
           </div>
@@ -251,16 +251,7 @@ console.log("filtered data", filtered);
             </button>
           </div>
 
-          {showModal && (
-            <div className="fixed inset-0 flex items-center justify-center bg-[#FFF4EB]/20 backdrop-blur-[1px] z-50">
-              <div className="bg-white rounded-2xl shadow-lg w-full max-w-5xl h-[90vh] overflow-y-auto relative">
-                <button onClick={() => setShowModal(false)} className="absolute top-4 right-4 text-gray-500 hover:text-gray-700">
-                  <X size={22} />
-                </button>
-                <CreateDispute onClose={() => setShowModal(false)} />
-              </div>
-            </div>
-          )}
+          {/* Modal removed - navigating to /dispute/create instead */}
         </main>
       </div>
     </div>

@@ -19,6 +19,11 @@ export interface DocumentUserRef {
   lastName?: string;
   email?: string;
   profileImageUrl?: string;
+  recentBooking?: {
+    eventDetails?: {
+      name?: string;
+    };
+  };
 }
 
 export interface DocumentItem {

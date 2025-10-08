@@ -38,10 +38,12 @@ interface Document {
   event: string;
   amount: string;
   recipient: string;
-  status: "signed" | "sent" | "pending" | "approved" | "pending_review";
+  status: "uploaded" | "assigned" | "sent" | "pending_review" | "approved" | "signed" | "declined" | "cancelled" | "pending";
   signedDate?: string;
   originalDoc?: DocumentItem; // Store original document for icon rendering
 }
+
+
 
 type TabType = "outgoing" | "incoming";
 

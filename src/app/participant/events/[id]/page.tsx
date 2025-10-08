@@ -118,7 +118,7 @@ export default function EventDetails() {
     );
   }
 
-  const event = eventResponse.data as EventData;
+  const event = eventResponse.data as unknown as EventData;
   const organizerInfo = getOrganizerInfo(event.organizer);
 
   // Calculate ticket price safely

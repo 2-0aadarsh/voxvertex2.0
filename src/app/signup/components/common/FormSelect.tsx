@@ -1,4 +1,17 @@
-export default function FormSelect({ id, label, value, onChange, options }) {
+interface Option {
+  value: string;
+  label: string;
+}
+
+interface FormSelectProps {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+  options: Option[];
+}
+
+export default function FormSelect({ id, label, value, onChange, options }: FormSelectProps) {
   return (
     <div className="space-y-1">
       <label htmlFor={id} className="block text-xs font-medium text-gray-700">{label}</label>

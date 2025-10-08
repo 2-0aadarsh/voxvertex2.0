@@ -235,3 +235,5 @@ const problemEvents = await EnhancedEvent.findNonCompliantPolicies();
 
 This schema design provides a robust, scalable, and maintainable foundation for managing event policies and terms while ensuring optimal performance and compliance.
 
+
+

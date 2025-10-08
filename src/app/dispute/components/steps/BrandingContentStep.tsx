@@ -10,7 +10,7 @@ interface BrandingContentStepProps {
 export default function BrandingContentStep({ formData, onInputChange, onFormDataUpdate }: BrandingContentStepProps) {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null
-    onFormDataUpdate({ evidence: file })
+    onFormDataUpdate({ evidence: file ? { file } : null })
   }
 
   const handleContactMethodChange = (method: string) => {

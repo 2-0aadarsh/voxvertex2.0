@@ -40,13 +40,16 @@ import {
   validateAllSteps,
   useCreateEventMutation,
   useUpdateEventMutation,
-  useUploadBannerImageMutation,
-  type EventFormData,
-  type EventStep,
-  type EventValidation,
-  type EnhancedEvent,
-  type CreateEventRequest
+  useUploadBannerImageMutation
 } from '@/store/slices/enhancedEventSlice';
+
+import type {
+  EventFormData,
+  EventStep,
+  EventValidation,
+  EnhancedEvent,
+  CreateEventRequest
+} from '../types/eventTypes';
 
 export const useEventForm = () => {
   const dispatch = useAppDispatch();
@@ -172,12 +175,12 @@ export const useEventForm = () => {
       tags: formData.tags,
       ticketTypes: formData.ticketTypes.map(ticket => ({
         ...ticket,
-        price: typeof ticket.price === 'string' ? parseFloat(ticket.price) : ticket.price,
-        quantity: typeof ticket.quantity === 'string' ? parseInt(ticket.quantity) : ticket.quantity,
+        price: String(typeof ticket.price === 'string' ? ticket.price : ticket.price),
+        quantity: String(typeof ticket.quantity === 'string' ? ticket.quantity : ticket.quantity),
         discount: ticket.discount ? {
           ...ticket.discount,
-          value: typeof ticket.discount.value === 'string' ? parseFloat(ticket.discount.value) : ticket.discount.value,
-          maxUses: ticket.discount.maxUses ? (typeof ticket.discount.maxUses === 'string' ? parseInt(ticket.discount.maxUses) : ticket.discount.maxUses) : undefined
+          value: String(typeof ticket.discount.value === 'string' ? ticket.discount.value : ticket.discount.value),
+          maxUses: String(ticket.discount.maxUses || '0')
         } : undefined
       })),
       speakers: formData.speakers,
@@ -263,7 +266,7 @@ export const useEventForm = () => {
         dispatch(clearDraft());
         return result.data;
       } else {
-        throw new Error(result.error || 'Failed to update event');
+        throw new Error('Failed to update event');
       }
     } catch (error) {
       console.error('Update event error:', error);
