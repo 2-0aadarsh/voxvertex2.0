@@ -2,9 +2,10 @@
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { Heart, MessageCircle, Calendar, MapPin } from 'lucide-react';
 import {  CreditCard, Monitor, UserCheck, Grid3X3, Target, Clipboard } from 'lucide-react';
-import { useAuth, useAppDispatch } from '@/store/hooks';
+import { useAuth, useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useGetCurrentUserQuery } from '@/store/slices/authSlice';
 import { useGetFeedPostsQuery, useToggleFeedPostLikeMutation, useTestConnectionQuery, useTestDatabaseQuery, useDebugPostsQuery, useTestUserLikesQuery, useAddCommentMutation, feedApi } from '@/store/slices/feedSlice';
+import { useGetUpcomingEventsQuery, useGetPromotedEventsQuery } from '@/store/slices/enhancedEventSlice';
 import dynamic from 'next/dynamic';
 
 // Dynamic imports with loading states and prefetching
@@ -42,6 +43,9 @@ export default function EventManagementPage() {
   const { user, isAuthenticated } = useAuth();
   const { data: currentUserData } = useGetCurrentUserQuery();
   const dispatch = useAppDispatch();
+
+  // Home state from Redux store
+  const { featuredSpeakers, topSpeakers, recentBlogs, advertisements } = useAppSelector((state) => state.home);
 
   // Helper function to get profile image URL
   const getProfileImageUrl = (profileImage: any) => {
@@ -282,7 +286,10 @@ export default function EventManagementPage() {
           : currentUserData?.user?.firstName && currentUserData?.user?.lastName
           ? `${currentUserData.user.firstName} ${currentUserData.user.lastName}`
           : "You",
-        userProfileImageUrl: user?.profileImageUrl || currentUserData?.user?.profileImageUrl || user?.profileImage || currentUserData?.user?.profileImage,
+        userProfileImageUrl: (() => {
+          const profileImage = user?.profileImageUrl || currentUserData?.user?.profileImageUrl || user?.profileImage || currentUserData?.user?.profileImage;
+          return typeof profileImage === 'string' ? profileImage : undefined;
+        })(),
         user: user?._id || currentUserData?.user?._id || 'unknown',
         likes: [],
         likesCount: 0,
@@ -311,7 +318,7 @@ export default function EventManagementPage() {
               if (!draft.data.posts[postIndex].comments) {
                 draft.data.posts[postIndex].comments = [];
               }
-              draft.data.posts[postIndex].comments.unshift(optimisticComment);
+              draft.data.posts[postIndex].comments.unshift(optimisticComment as any);
               draft.data.posts[postIndex].commentsCount = optimisticCommentCount;
               console.log('✅ Optimistic comment update applied to cache');
             }
@@ -398,7 +405,23 @@ export default function EventManagementPage() {
 
 
 
-  const promotedEvents = [
+  // Fetch promoted events from API
+  const { data: promotedEventsResponse, isLoading: promotedEventsLoading } = useGetPromotedEventsQuery({
+    page: 1,
+    limit: 10,
+    sortBy: 'startDate',
+    sortOrder: 'asc'
+  });
+
+  // Transform API data to match the expected format
+  const promotedEvents = promotedEventsResponse?.data?.events?.map(event => ({
+    title: event.eventName,
+    description: event.description,
+    image: event.bannerImage || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=200&fit=crop"
+  })) || [];
+
+  // Fallback to static data if no promoted events are available
+  const staticPromotedEvents = [
     {
       title: "Global Leadership Summit 2025",
       description: "Join industry leaders for three days of inspiring talks and networking opportunities.",
@@ -416,24 +439,26 @@ export default function EventManagementPage() {
     }
   ];
 
-  const extendedEvents = [...promotedEvents, promotedEvents[0]];
+  // Use API data if available, otherwise use static data
+  const finalPromotedEvents = promotedEvents.length > 0 ? promotedEvents : staticPromotedEvents;
+  const extendedEvents = [...finalPromotedEvents, finalPromotedEvents[0]];
 
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentEventIndex((prevIndex) => {
-        if (prevIndex === promotedEvents.length - 1) {
+        if (prevIndex === finalPromotedEvents.length - 1) {
          
           setTimeout(() => {
             setCurrentEventIndex(0);
           }, 2000); 
-          return promotedEvents.length; 
+          return finalPromotedEvents.length; 
         }
         return prevIndex + 1;
       });
     }, 6000); 
 
     return () => clearInterval(interval);
-  }, [promotedEvents.length]);
+  }, [finalPromotedEvents.length]);
 
  
   useEffect(() => {
@@ -452,113 +477,31 @@ export default function EventManagementPage() {
     return () => clearInterval(adInterval);
   }, []);
 
-  const featuredSpeakers = [
-    {
-      name: "Dr. Anya Sharma",
-      title: "AI Ethicist",
-      description: "A leading voice in ethical AI development.",
-      image: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=80&h=80&fit=crop&crop=face"
-    }
-  ];
+  // Data is now coming from Redux store - no hardcoded data
 
-  const topSpeakers = [
-    {
-      name: "Dr. Anya Sharma",
-      title: "AI Ethicist",
-      bio: "Leading ethical AI development",
-      image: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=80&h=80&fit=crop&crop=face"
-    },
-    {
-      name: "Marcus Johnson",
-      title: "Tech CEO",
-      bio: "Transforming digital landscapes",
-      image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&h=80&fit=crop&crop=face"
-    },
-    {
-      name: "Sarah Chen",
-      title: "Data Scientist",
-      bio: "Turning data into insights",
-      image: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=80&h=80&fit=crop&crop=face"
-    },
-    {
-      name: "David Rodriguez",
-      title: "Design Director",
-      bio: "Creating meaningful experiences",
-      image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&h=80&fit=crop&crop=face"
-    },
-    {
-      name: "Lisa Thompson",
-      title: "Marketing Expert",
-      bio: "Building powerful brand stories",
-      image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=80&h=80&fit=crop&crop=face"
-    },
-    {
-      name: "Alex Kim",
-      title: "Startup Founder",
-      bio: "Building powerful brand stories",
-      image: "https://images.unsplash.com/photo-1519345182560-3f2917c472ef?w=80&h=80&fit=crop&crop=face"
-    }
-  ];
+  // Fetch upcoming events from API
+  const { data: upcomingEventsResponse, isLoading: upcomingEventsLoading } = useGetUpcomingEventsQuery({
+    page: 1,
+    limit: 5,
+    sortBy: 'startDate',
+    sortOrder: 'asc'
+  });
 
-  const recentBlogs = [
-    {
-      title: "5 Essential Public Speaking Tips",
-      description: "Master the art of confident presentation",
-      image: "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=60&h=60&fit=crop"
-    }
-  ];
+  // Transform API data to match the expected format
+  const upcomingEvents = upcomingEventsResponse?.data?.events?.slice(0, 5).map(event => ({
+    name: event.eventName,
+    date: new Date(event.startDate).toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric' 
+    }),
+    location: event.eventMode === 'online' ? 'Online' : 
+              event.eventMode === 'hybrid' ? `${event.location} (Hybrid)` : 
+              event.location || 'TBA'
+  })) || [];
 
-  const upcomingEvents = [
-    { name: "Tech Innovation Conference", date: "March 15, 2025", location: "Virtual" },
-    { name: "Women in Leadership Forum", date: "March 22, 2025", location: "New York" },
-    { name: "Digital Marketing Masterclass", date: "March 28, 2025", location: "Online" },
-    { name: "Startup Pitch Competition", date: "April 5, 2025", location: "San Francisco" },
-    { name: "AI & Future of Work Summit", date: "April 12, 2025", location: "London" }
-  ];
-
-  // Create 5 identical Dr. Anya Sharma entries with similar images to reference
-  const repeatedSpeakers = [
-    {
-      name: "Dr. Anya Sharma",
-      title: "AI Ethicist",
-      description: "A leading voice in ethical AI development and its societal impact.",
-      image: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=80&h=80&fit=crop&crop=face"
-    },
-    {
-      name: "Dr. Anya Sharma",
-      title: "AI Ethicist",
-      description: "A leading voice in ethical AI development and its societal impact.",
-      image: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=80&h=80&fit=crop&crop=face"
-    },
-    {
-      name: "Dr. Anya Sharma",
-      title: "AI Ethicist",
-      description: "A leading voice in ethical AI development and its societal impact.",
-      image: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=80&h=80&fit=crop&crop=face"
-    },
-    {
-      name: "Dr. Anya Sharma",
-      title: "AI Ethicist",
-      description: "A leading voice in ethical AI development and its societal impact.",
-      image: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=80&h=80&fit=crop&crop=face"
-    },
-    {
-      name: "Dr. Anya Sharma",
-      title: "AI Ethicist",
-      description: "A leading voice in ethical AI development and its societal impact.",
-      image: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=80&h=80&fit=crop&crop=face"
-    }
-  ];
-
-  // Advertisement images
-  const adImages = [
-  "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&h=400&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=400&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=600&h=400&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?w=600&h=400&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1553484771-371a605b060b?w=600&h=400&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1590402494682-cd3fb53b1f70?w=600&h=400&fit=crop&q=80"
-];
+  // Advertisement images - now using dynamic data from Redux store
+  const adImages = advertisements.map(ad => ad.image);
 
   return (
     <div className="min-h-screen bg-white">
@@ -583,76 +526,102 @@ export default function EventManagementPage() {
             <div className="hidden lg:block lg:col-span-3">
               <div className="bg-white rounded-lg p-3 mb-4">
                 <h2 className="text-base font-semibold mb-3 text-[#00425D]">Featured Speakers</h2>
-                <div className="space-y-10">
-                  {repeatedSpeakers.map((speaker, index) => (
-                    <div key={index} className={`flex items-start gap-2 ${index % 2 === 1 ? 'flex-row-reverse' : ''}`}>
-                      <img
-                        src={speaker.image}
-                        alt={speaker.name}
-                        className="w-12 h-17 rounded-lg object-cover flex-shrink-0"
-                      />
-                      <div className={`flex-1 min-w-0 ${index % 2 === 1 ? 'text-right' : ''}`}>
-                        <h3 className="font-semibold text-xs text-gray-900 mb-0.5">{speaker.name}</h3>
-                        <p className="text-xs text-gray-600 font-medium mb-0.5">{speaker.title}</p>
-                        <p className="text-xs text-gray-500 leading-tight">{speaker.description}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Top 5 Speakers */}
-              <div className="bg-white rounded-lg p-3 mb-4">
-                <h2 className="text-base font-semibold mb-3 text-[#00425D]">Top 5 Speakers</h2>
-                <div className="relative overflow-hidden">
-                  <div 
-                    className="flex transition-transform ease-linear"
-                    style={{
-                      transform: `translateX(-${(speakerScrollPosition % (topSpeakers.length * 120))}px)`,
-                      width: `${topSpeakers.length * 2 * 120}px`
-                    }}
-                  >
-                    {/* Duplicate speakers array for seamless loop */}
-                    {[...topSpeakers, ...topSpeakers].map((speaker, index) => (
-                      <div key={index} className="flex-shrink-0 w-28 mx-1">
-                        <div className="bg-gray-100 rounded-lg p-2 text-center">
-                          <img
-                            src={speaker.image}
-                            alt={speaker.name}
-                            className="w-12 h-12 rounded-full mx-auto mb-2 object-cover"
-                          />
-                          <p className="text-xs font-medium text-gray-900 mb-1 truncate">{speaker.name}</p>
-                          <p className="text-xs text-gray-600 mb-1 truncate">{speaker.title}</p>
-                          <p className="text-xs text-gray-500 leading-tight text-center px-1">{speaker.bio}</p>
+                {featuredSpeakers.length > 0 ? (
+                  <div className="space-y-10">
+                    {featuredSpeakers.map((speaker, index) => (
+                      <div key={speaker.id || index} className={`flex items-start gap-2 ${index % 2 === 1 ? 'flex-row-reverse' : ''}`}>
+                        <img
+                          src={speaker.image}
+                          alt={speaker.name}
+                          className="w-12 h-17 rounded-lg object-cover flex-shrink-0"
+                        />
+                        <div className={`flex-1 min-w-0 ${index % 2 === 1 ? 'text-right' : ''}`}>
+                          <h3 className="font-semibold text-xs text-gray-900 mb-0.5">{speaker.name}</h3>
+                          <p className="text-xs text-gray-600 font-medium mb-0.5">{speaker.title}</p>
+                          <p className="text-xs text-gray-500 leading-tight">{speaker.description}</p>
                         </div>
                       </div>
                     ))}
                   </div>
-                </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <div className="w-16 h-16 mx-auto mb-3 bg-gray-100 rounded-full flex items-center justify-center">
+                      <UserCheck className="w-8 h-8 text-gray-400" />
+                    </div>
+                    <p className="text-sm text-gray-500">No featured speakers available</p>
+                    <p className="text-xs text-gray-400 mt-1">Check back later for updates</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Top 10 Speakers */}
+              <div className="bg-white rounded-lg p-3 mb-4">
+                <h2 className="text-base font-semibold mb-3 text-[#00425D]">Top 10 Speakers</h2>
+                {topSpeakers.length > 0 ? (
+                  <div className="relative overflow-hidden">
+                    <div 
+                      className="flex transition-transform ease-linear"
+                      style={{
+                        transform: `translateX(-${(speakerScrollPosition % (topSpeakers.length * 120))}px)`,
+                        width: `${topSpeakers.length * 2 * 120}px`
+                      }}
+                    >
+                      {/* Duplicate speakers array for seamless loop */}
+                      {[...topSpeakers, ...topSpeakers].map((speaker, index) => (
+                        <div key={speaker.id || index} className="flex-shrink-0 w-28 mx-1">
+                          <div className="bg-gray-100 rounded-lg p-2 text-center">
+                            <img
+                              src={speaker.image}
+                              alt={speaker.name}
+                              className="w-12 h-12 rounded-full mx-auto mb-2 object-cover"
+                            />
+                            <p className="text-xs font-medium text-gray-900 mb-1 truncate">{speaker.name}</p>
+                            <p className="text-xs text-gray-600 mb-1 truncate">{speaker.title}</p>
+                            <p className="text-xs text-gray-500 leading-tight text-center px-1">{speaker.bio}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <div className="w-16 h-16 mx-auto mb-3 bg-gray-100 rounded-full flex items-center justify-center">
+                      <UserCheck className="w-8 h-8 text-gray-400" />
+                    </div>
+                    <p className="text-sm text-gray-500">No top speakers available</p>
+                    <p className="text-xs text-gray-400 mt-1">Check back later for updates</p>
+                  </div>
+                )}
               </div>
 
               {/* Recent Blogs */}
               <div className="bg-white rounded-lg p-3">
                 <h2 className="text-base font-semibold mb-3 text-[#00425D]">Recent Blogs</h2>
-                {[...Array(5)].map((_, index) => (
-                  <div key={index} className="flex items-center space-x-2 mb-6 last:mb-0">
-                    <img
-                      src={[
-                        "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=40&h=40&fit=crop",
-                        "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=40&h=40&fit=crop",
-                        "https://images.unsplash.com/photo-1505373877841-8d25f7d46678?w=40&h=40&fit=crop",
-                        "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=40&h=40&fit=crop",
-                        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop"
-                      ][index]}
-                      alt="Blog"
-                      className="w-14 h-14 rounded object-cover"
-                    />
-                    <div>
-                      <h3 className="text-xs font-medium">5 Essential Public Speaking Tips</h3>
-                      <p className="text-xs text-gray-500">Master the art of confident presentation</p>
-                    </div>
+                {recentBlogs.length > 0 ? (
+                  <div className="space-y-4">
+                    {recentBlogs.map((blog, index) => (
+                      <div key={blog.id || index} className="flex items-center space-x-2 mb-6 last:mb-0">
+                        <img
+                          src={blog.image}
+                          alt={blog.title}
+                          className="w-14 h-14 rounded object-cover"
+                        />
+                        <div>
+                          <h3 className="text-xs font-medium">{blog.title}</h3>
+                          <p className="text-xs text-gray-500">{blog.description}</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                ) : (
+                  <div className="text-center py-8">
+                    <div className="w-16 h-16 mx-auto mb-3 bg-gray-100 rounded-full flex items-center justify-center">
+                      <Clipboard className="w-8 h-8 text-gray-400" />
+                    </div>
+                    <p className="text-sm text-gray-500">No recent blogs available</p>
+                    <p className="text-xs text-gray-400 mt-1">Check back later for updates</p>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -687,56 +656,76 @@ export default function EventManagementPage() {
               <div className="lg:hidden px-3 sm:px-4 mb-4">
                 <div className="bg-white rounded-lg p-3">
                   <h2 className="text-base font-semibold mb-3 text-[#00425D]">Featured Speakers</h2>
-                  <div className="flex overflow-x-auto space-x-3 pb-2 scrollbar-hide">
-                    {repeatedSpeakers.map((speaker, index) => (
-                      <div key={index} className="flex-shrink-0 w-48 bg-gray-50 rounded-lg p-3">
-                        <div className="flex items-start gap-3">
-                          <img
-                            src={speaker.image}
-                            alt={speaker.name}
-                            className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
-                          />
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold text-xs text-gray-900 mb-1">{speaker.name}</h3>
-                            <p className="text-xs text-gray-600 font-medium mb-1">{speaker.title}</p>
-                            <p className="text-xs text-gray-500 leading-tight line-clamp-2">{speaker.description}</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Mobile Top 5 Speakers - Horizontal Scroll with Auto-scrolling */}
-              <div className="lg:hidden px-3 sm:px-4 mb-4">
-                <div className="bg-white rounded-lg p-3">
-                  <h2 className="text-base font-semibold mb-3 text-[#00425D]">Top 5 Speakers</h2>
-                  <div className="relative overflow-hidden">
-                    <div 
-                      className="flex transition-transform ease-linear"
-                      style={{
-                        transform: `translateX(-${(speakerScrollPosition % (topSpeakers.length * 120))}px)`,
-                        width: `${topSpeakers.length * 2 * 120}px`
-                      }}
-                    >
-                      {/* Duplicate speakers array for seamless loop */}
-                      {[...topSpeakers, ...topSpeakers].map((speaker, index) => (
-                        <div key={index} className="flex-shrink-0 w-28 mx-1">
-                          <div className="bg-gray-100 rounded-lg p-2 text-center">
+                  {featuredSpeakers.length > 0 ? (
+                    <div className="flex overflow-x-auto space-x-3 pb-2 scrollbar-hide">
+                      {featuredSpeakers.map((speaker, index) => (
+                        <div key={speaker.id || index} className="flex-shrink-0 w-48 bg-gray-50 rounded-lg p-3">
+                          <div className="flex items-start gap-3">
                             <img
                               src={speaker.image}
                               alt={speaker.name}
-                              className="w-12 h-12 rounded-full mx-auto mb-2 object-cover"
+                              className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
                             />
-                            <p className="text-xs font-medium text-gray-900 mb-1 truncate">{speaker.name}</p>
-                            <p className="text-xs text-gray-600 mb-1 truncate">{speaker.title}</p>
-                            <p className="text-xs text-gray-500 leading-tight text-center px-1">{speaker.bio}</p>
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-semibold text-xs text-gray-900 mb-1">{speaker.name}</h3>
+                              <p className="text-xs text-gray-600 font-medium mb-1">{speaker.title}</p>
+                              <p className="text-xs text-gray-500 leading-tight line-clamp-2">{speaker.description}</p>
+                            </div>
                           </div>
                         </div>
                       ))}
                     </div>
-                  </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <div className="w-16 h-16 mx-auto mb-3 bg-gray-100 rounded-full flex items-center justify-center">
+                        <UserCheck className="w-8 h-8 text-gray-400" />
+                      </div>
+                      <p className="text-sm text-gray-500">No featured speakers available</p>
+                      <p className="text-xs text-gray-400 mt-1">Check back later for updates</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Mobile Top 10 Speakers - Horizontal Scroll with Auto-scrolling */}
+              <div className="lg:hidden px-3 sm:px-4 mb-4">
+                <div className="bg-white rounded-lg p-3">
+                  <h2 className="text-base font-semibold mb-3 text-[#00425D]">Top 10 Speakers</h2>
+                  {topSpeakers.length > 0 ? (
+                    <div className="relative overflow-hidden">
+                      <div 
+                        className="flex transition-transform ease-linear"
+                        style={{
+                          transform: `translateX(-${(speakerScrollPosition % (topSpeakers.length * 120))}px)`,
+                          width: `${topSpeakers.length * 2 * 120}px`
+                        }}
+                      >
+                        {/* Duplicate speakers array for seamless loop */}
+                        {[...topSpeakers, ...topSpeakers].map((speaker, index) => (
+                          <div key={speaker.id || index} className="flex-shrink-0 w-28 mx-1">
+                            <div className="bg-gray-100 rounded-lg p-2 text-center">
+                              <img
+                                src={speaker.image}
+                                alt={speaker.name}
+                                className="w-12 h-12 rounded-full mx-auto mb-2 object-cover"
+                              />
+                              <p className="text-xs font-medium text-gray-900 mb-1 truncate">{speaker.name}</p>
+                              <p className="text-xs text-gray-600 mb-1 truncate">{speaker.title}</p>
+                              <p className="text-xs text-gray-500 leading-tight text-center px-1">{speaker.bio}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <div className="w-16 h-16 mx-auto mb-3 bg-gray-100 rounded-full flex items-center justify-center">
+                        <UserCheck className="w-8 h-8 text-gray-400" />
+                      </div>
+                      <p className="text-sm text-gray-500">No top speakers available</p>
+                      <p className="text-xs text-gray-400 mt-1">Check back later for updates</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1054,34 +1043,44 @@ export default function EventManagementPage() {
 
                    
                     <div className="relative h-[240px] sm:h-[280px] overflow-hidden">
-                      <div
-                        className={`flex flex-col transition-transform ease-in-out duration-[2000ms] space-y-2 sm:space-y-3`}
-                        style={{
-                          transform: `translateY(-${currentEventIndex * (window.innerWidth < 640 ? 240 : 280)}px)`,
-                        }}
-                      >
-                        {extendedEvents.map((event, index) => (
-                          <div
-                            key={index}
-                            className="h-[240px] sm:h-[280px] flex-shrink-0 px-3"
-                          >
-                            <img
-                              src={event.image}
-                              alt={event.title}
-                              className="w-full h-20 sm:h-24 object-cover rounded-lg mb-2"
-                            />
-                            <div className="px-0">
-                              <h3 className="font-bold text-xs sm:text-sm mb-1 text-gray-900">{event.title}</h3>
-                              <p className="text-xs text-gray-600 mb-2 leading-tight line-clamp-3">
-                                {event.description}
-                              </p>
-                              <button className="w-full bg-orange-500 hover:bg-orange-600 text-white py-1.5 sm:py-2 rounded-lg text-xs font-semibold transition-colors">
-                                Ticket & Info
-                              </button>
+                      {promotedEventsLoading ? (
+                        <div className="flex items-center justify-center h-full">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+                        </div>
+                      ) : finalPromotedEvents.length > 0 ? (
+                        <div
+                          className={`flex flex-col transition-transform ease-in-out duration-[2000ms] space-y-2 sm:space-y-3`}
+                          style={{
+                            transform: `translateY(-${currentEventIndex * (window.innerWidth < 640 ? 240 : 280)}px)`,
+                          }}
+                        >
+                          {extendedEvents.map((event, index) => (
+                            <div
+                              key={index}
+                              className="h-[240px] sm:h-[280px] flex-shrink-0 px-3"
+                            >
+                              <img
+                                src={event.image}
+                                alt={event.title}
+                                className="w-full h-20 sm:h-24 object-cover rounded-lg mb-2"
+                              />
+                              <div className="px-0">
+                                <h3 className="font-bold text-xs sm:text-sm mb-1 text-gray-900">{event.title}</h3>
+                                <p className="text-xs text-gray-600 mb-2 leading-tight line-clamp-3">
+                                  {event.description}
+                                </p>
+                                <button className="w-full bg-orange-500 hover:bg-orange-600 text-white py-1.5 sm:py-2 rounded-lg text-xs font-semibold transition-colors">
+                                  Ticket & Info
+                                </button>
+                              </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center h-full">
+                          <p className="text-xs text-gray-500 text-center">No promoted events available</p>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -1089,42 +1088,62 @@ export default function EventManagementPage() {
                   <div className="bg-white rounded-lg p-3 mb-3 sm:mb-4">
                     <h2 className="text-sm sm:text-base font-semibold mb-3 text-[#00425D]">Upcoming Events</h2>
                     <div className="space-y-4 sm:space-y-6">
-                      {upcomingEvents.map((event, index) => (
-                        <div key={index} className="border-l-4 border-orange-500 pl-2">
-                          <h3 className="font-medium text-xs sm:text-sm">{event.name}</h3>
-                          <div className="flex items-center text-xs text-gray-500 mt-0.5">
-                            <Calendar className="w-3 h-3 mr-1 flex-shrink-0" />
-                            <span className="mr-2 truncate">{event.date}</span>
-                            <MapPin className="w-3 h-3 mr-1 flex-shrink-0" />
-                            <span className="truncate">{event.location}</span>
-                          </div>
+                      {upcomingEventsLoading ? (
+                        <div className="flex items-center justify-center py-4">
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500"></div>
                         </div>
-                      ))}
+                      ) : upcomingEvents.length > 0 ? (
+                        upcomingEvents.map((event, index) => (
+                          <div key={index} className="border-l-4 border-orange-500 pl-2">
+                            <h3 className="font-medium text-xs sm:text-sm">{event.name}</h3>
+                            <div className="flex items-center text-xs text-gray-500 mt-0.5">
+                              <Calendar className="w-3 h-3 mr-1 flex-shrink-0" />
+                              <span className="mr-2 truncate">{event.date}</span>
+                              <MapPin className="w-3 h-3 mr-1 flex-shrink-0" />
+                              <span className="truncate">{event.location}</span>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center py-4">
+                          <p className="text-xs text-gray-500">No upcoming events found</p>
+                        </div>
+                      )}
                     </div>
                   </div>
 
                   {/* Advertisements with Auto-scrolling Images */}
 <div className="bg-white rounded-lg p-3">
   <h2 className="text-sm sm:text-base font-semibold mb-3">Advertisements</h2>
-  <div className="h-40 sm:h-50 overflow-hidden relative rounded-lg">
-    <div 
-      className="flex flex-col transition-transform ease-linear"
-      style={{
-        transform: `translateY(-${(adScrollPosition % (adImages.length * 140))}px)`,
-        height: `${adImages.length * 2 * 140}px`
-      }}
-    >
-                       {[...adImages, ...adImages].map((image, index) => (
-        <div key={index} className="flex-shrink-0 w-full h-32 sm:h-40 mb-2">
-          <img
-            src={image}
-            alt={`Advertisement ${index + 1}`}
-            className="w-full h-full object-cover rounded-lg"
-          />
-        </div>
-      ))}
+  {advertisements.length > 0 ? (
+    <div className="h-40 sm:h-50 overflow-hidden relative rounded-lg">
+      <div 
+        className="flex flex-col transition-transform ease-linear"
+        style={{
+          transform: `translateY(-${(adScrollPosition % (adImages.length * 140))}px)`,
+          height: `${adImages.length * 2 * 140}px`
+        }}
+      >
+        {[...adImages, ...adImages].map((image, index) => (
+          <div key={index} className="flex-shrink-0 w-full h-32 sm:h-40 mb-2">
+            <img
+              src={image}
+              alt={`Advertisement ${index + 1}`}
+              className="w-full h-full object-cover rounded-lg"
+            />
+          </div>
+        ))}
+      </div>
     </div>
-  </div>
+  ) : (
+    <div className="text-center py-8">
+      <div className="w-16 h-16 mx-auto mb-3 bg-gray-100 rounded-full flex items-center justify-center">
+        <Monitor className="w-8 h-8 text-gray-400" />
+      </div>
+      <p className="text-sm text-gray-500">No advertisements available</p>
+      <p className="text-xs text-gray-400 mt-1">Check back later for updates</p>
+    </div>
+  )}
 </div>
                   </div>
                 </div>

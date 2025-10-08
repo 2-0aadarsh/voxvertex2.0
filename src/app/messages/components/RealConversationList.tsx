@@ -4,6 +4,7 @@ import React from 'react';
 import { useAppSelector } from '@/store/hooks';
 import { selectUnreadCount, useGetUserConversationsQuery } from '@/store/slices/messagingSlice';
 import { Conversation as ConversationType } from '@/app/messages/types/messagingTypes';
+import { MessageSquare, Clock, User } from 'lucide-react';
 
 interface RealConversationListProps {
   selectedConversationId?: string;
@@ -95,7 +96,7 @@ export function RealConversationList({
 
   const getStatusColor = (status: string, isSelected: boolean) => {
     if (isSelected) {
-      return 'bg-[#FF6B35] text-white';
+      return 'bg-orange-500 text-white';
     }
     
     switch (status) {
@@ -130,15 +131,14 @@ export function RealConversationList({
   // Loading state
   if (conversationsLoading) {
     return (
-      <div className="w-80 h-full p-4">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 h-full overflow-hidden">
-          <div className="p-4">
-            <div className="flex items-center justify-center h-32">
-              <div className="flex flex-col items-center space-y-2">
-                <div className="w-8 h-8 border-4 border-[#FF6B35] border-t-transparent rounded-full animate-spin" />
-                <p className="text-sm text-gray-500">Loading conversations...</p>
-              </div>
-            </div>
+      <div className="h-full bg-white border-r border-gray-200">
+        <div className="p-6 border-b border-gray-200">
+          <h2 className="text-xl font-semibold text-gray-900">Conversations</h2>
+        </div>
+        <div className="flex items-center justify-center h-64">
+          <div className="flex flex-col items-center space-y-3">
+            <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+            <p className="text-sm text-gray-500">Loading conversations...</p>
           </div>
         </div>
       </div>
@@ -148,17 +148,19 @@ export function RealConversationList({
   // Error state
   if (conversationsError) {
     return (
-      <div className="w-80 h-full p-4">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 h-full overflow-hidden">
-          <div className="p-4">
-            <div className="flex items-center justify-center h-32">
-              <div className="text-center">
-                <p className="text-red-500 text-sm mb-2">Failed to load conversations</p>
-                <p className="text-xs text-gray-500">
-                  {'message' in conversationsError ? conversationsError.message : 'Unknown error'}
-                </p>
-              </div>
+      <div className="h-full bg-white border-r border-gray-200">
+        <div className="p-6 border-b border-gray-200">
+          <h2 className="text-xl font-semibold text-gray-900">Conversations</h2>
+        </div>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <MessageSquare className="w-6 h-6 text-red-500" />
             </div>
+            <p className="text-red-600 font-medium mb-1">Failed to load conversations</p>
+            <p className="text-sm text-gray-500">
+              {'message' in conversationsError ? conversationsError.message : 'Unknown error'}
+            </p>
           </div>
         </div>
       </div>
@@ -168,20 +170,17 @@ export function RealConversationList({
   // Empty state
   if (conversations.length === 0) {
     return (
-      <div className="w-80 h-full p-4">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 h-full overflow-hidden">
-          <div className="p-4">
-            <div className="flex items-center justify-center h-32">
-              <div className="text-center">
-                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                  </svg>
-                </div>
-                <h3 className="text-sm font-medium text-gray-900 mb-1">No conversations yet</h3>
-                <p className="text-xs text-gray-500">Start a conversation by booking a speaker</p>
-              </div>
+      <div className="h-full bg-white border-r border-gray-200">
+        <div className="p-6 border-b border-gray-200">
+          <h2 className="text-xl font-semibold text-gray-900">Conversations</h2>
+        </div>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <User className="w-8 h-8 text-gray-400" />
             </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No conversations yet</h3>
+            <p className="text-gray-500">Start a conversation by booking a speaker</p>
           </div>
         </div>
       </div>
@@ -189,111 +188,112 @@ export function RealConversationList({
   }
 
   return (
-    <div className="w-80 h-full p-4">
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 h-full overflow-hidden">
-        <div className="p-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Conversations</h2>
-          <p className="text-xs text-gray-500 mt-1">{conversations.length} conversation{conversations.length !== 1 ? 's' : ''}</p>
+    <div className="h-full bg-white border-r border-gray-200 flex flex-col">
+      {/* Header */}
+      <div className="p-6 border-b border-gray-200">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">Conversations</h2>
+            <p className="text-sm text-gray-500 mt-1">
+              {conversations.length} conversation{conversations.length !== 1 ? 's' : ''}
+            </p>
+          </div>
         </div>
-        
-        <div className="overflow-y-auto flex-1" style={{ height: 'calc(100% - 88px)' }}>
-          {conversations.map((conversation) => {
-            const isSelected = selectedConversationId === conversation._id;
-            const status = getConversationStatus(conversation);
-            const unreadCount = allUnreadCounts[conversation._id] || 0;
-            
-            return (
-              <div
-                key={conversation._id}
-                onClick={() => onSelectConversation(conversation._id)}
-                className={`p-4 cursor-pointer transition-colors m-2 rounded-lg ${
-                  isSelected 
-                    ? 'bg-[#FF6B35] text-white shadow-md' 
-                    : 'hover:bg-gray-50'
-                }`}
-                title={isSelected ? 'Click to close conversation' : 'Click to open conversation'}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center min-w-0 flex-1">
-                    {/* Profile Image */}
-                    <div className="w-12 h-12 rounded-full flex-shrink-0 mr-3 overflow-hidden bg-gray-200">
+      </div>
+
+      {/* Conversation List */}
+      <div className="flex-1 overflow-y-auto">
+        {conversations.map((conversation) => {
+          const isSelected = selectedConversationId === conversation._id;
+          const status = getConversationStatus(conversation);
+          const unreadCount = allUnreadCounts[conversation._id] || 0;
+          
+          return (
+            <div
+              key={conversation._id}
+              onClick={() => onSelectConversation(conversation._id)}
+              className={`border-b border-gray-100 cursor-pointer transition-all duration-200 ${
+                isSelected 
+                  ? 'bg-orange-50 border-orange-200' 
+                  : 'hover:bg-gray-50'
+              }`}
+            >
+              <div className="p-4">
+                <div className="flex items-start space-x-3">
+                  {/* Profile Image */}
+                  <div className="flex-shrink-0">
+                    <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center relative">
                       {(() => {
                         const otherParticipants = conversation.participants.filter(p => 
                           p.user._id.toString() !== currentUserId?.toString()
                         );
                         const otherParticipant = otherParticipants[0];
-                        return otherParticipant?.user.profileImageUrl ? (
-                          <img 
-                            src={otherParticipant.user.profileImageUrl}
-                            alt={`${otherParticipant.user.firstName} ${otherParticipant.user.lastName}`}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              // Fallback to initials
-                              const target = e.target as HTMLImageElement;
-                              target.style.display = 'none';
-                              if (target.nextElementSibling) {
-                                (target.nextElementSibling as HTMLElement).style.display = 'flex';
-                              }
-                            }}
-                          />
-                        ) : null;
-                      })()}
-                      <div
-                        className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold text-sm"
-                        style={{ display: (() => {
-                          const otherParticipants = conversation.participants.filter(p => 
-                            p.user._id.toString() !== currentUserId?.toString()
+                        
+                        if (otherParticipant?.user.profileImageUrl) {
+                          return (
+                            <img 
+                              src={otherParticipant.user.profileImageUrl}
+                              alt={`${otherParticipant.user.firstName} ${otherParticipant.user.lastName}`}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                              }}
+                            />
                           );
-                          const otherParticipant = otherParticipants[0];
-                          return otherParticipant?.user.profileImageUrl ? 'none' : 'flex';
-                        })() }}
-                      >
-                        {(() => {
-                          const otherParticipants = conversation.participants.filter(p => 
-                            p.user._id.toString() !== currentUserId?.toString()
-                          );
-                          const otherParticipant = otherParticipants[0];
-                          return `${otherParticipant?.user.firstName?.[0] || ''}${otherParticipant?.user.lastName?.[0] || ''}`.toUpperCase();
-                        })()}
-                      </div>
-                    </div>
-
-                    {/* Conversation Info */}
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between mb-1">
-                        <h3 className={`text-sm font-medium truncate ${isSelected ? 'text-white' : 'text-gray-900'}`}>
-                          {getConversationTitle(conversation)}
-                        </h3>
-                        {unreadCount > 0 && (
-                          <span className={`text-xs px-2 py-1 rounded-full ${
-                            isSelected ? 'bg-white text-[#FF6B35]' : 'bg-[#FF6B35] text-white'
-                          }`}>
-                            {unreadCount}
+                        }
+                        
+                        return (
+                          <span className="text-white font-semibold text-sm">
+                            {`${otherParticipant?.user.firstName?.[0] || ''}${otherParticipant?.user.lastName?.[0] || ''}`.toUpperCase()}
                           </span>
-                        )}
-                      </div>
+                        );
+                      })()}
                       
-                      <p className={`text-xs truncate ${isSelected ? 'text-white' : 'text-gray-600'}`}>
-                        {getConversationPreview(conversation)}
-                      </p>
-                      
-                      <div className="flex items-center justify-between mt-1">
-                        <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(status, isSelected)}`}>
-                          {getStatusText(status)}
-                        </span>
-                        {conversation.lastMessage && (
-                          <span className={`text-xs ${isSelected ? 'text-white' : 'text-gray-500'}`}>
+                      {/* Online Status Indicator */}
+                      <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
+                    </div>
+                  </div>
+
+                  {/* Conversation Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between mb-1">
+                      <h3 className={`font-medium truncate ${isSelected ? 'text-orange-700' : 'text-gray-900'}`}>
+                        {getConversationTitle(conversation)}
+                      </h3>
+                      {conversation.lastMessage && (
+                        <div className="flex items-center space-x-1 text-gray-500">
+                          <Clock className="w-3 h-3" />
+                          <span className="text-xs whitespace-nowrap">
                             {formatTimeAgo(conversation.lastMessage.timestamp)}
                           </span>
-                        )}
-                      </div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <p className={`text-sm truncate mb-2 ${isSelected ? 'text-orange-600' : 'text-gray-600'}`}>
+                      {getConversationPreview(conversation)}
+                    </p>
+                    
+                    <div className="flex items-center justify-between">
+                      <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(status, isSelected)}`}>
+                        {getStatusText(status)}
+                      </span>
+                      
+                      {unreadCount > 0 && (
+                        <span className={`text-xs px-2 py-1 rounded-full min-w-6 text-center ${
+                          isSelected ? 'bg-orange-500 text-white' : 'bg-orange-500 text-white'
+                        }`}>
+                          {unreadCount}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
               </div>
-            );
-          })}
-        </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

@@ -94,7 +94,8 @@ export default function EventDetailsPage() {
   const { 
     data: eventData, 
     isLoading: loading, 
-    error: apiError 
+    error: apiError,
+    refetch: refetchEvent
   } = useGetEventByIdQuery(eventId, {
     skip: !eventId
   })
@@ -115,7 +116,7 @@ export default function EventDetailsPage() {
       status: enhancedEvent.status === 'published' ? 'Published' : 
               enhancedEvent.status === 'draft' ? 'Draft' : 'Postponed',
       attendees: `${enhancedEvent.totalTicketsSold || 0}/${enhancedEvent.totalCapacity || 0}`,
-      revenue: `$${enhancedEvent.totalRevenue || 0}`,
+      revenue: `₹${enhancedEvent.totalRevenue || 0}`,
       description: enhancedEvent.description,
       mode: enhancedEvent.eventMode === 'offline' ? 'Offline' : 
             enhancedEvent.eventMode === 'online' ? 'Online' : 'Hybrid',
@@ -150,10 +151,11 @@ export default function EventDetailsPage() {
           expertise: speaker.title
         })),
         ...enhancedEvent.speakers.platformSpeakers.map(speaker => ({
-          name: speaker.speakerName,
-          title: speaker.speakerTitle,
-          bio: speaker.speakerBio,
-          expertise: speaker.speakerTitle
+          name: speaker.speakerDetails?.fullName || 'Unknown Speaker',
+          title: speaker.speakerDetails?.professionalTitle || 'Speaker',
+          bio: speaker.speakerDetails?.bio || '',
+          image: speaker.speakerDetails?.profileImageUrl,
+          expertise: speaker.speakerDetails?.professionalTitle || 'Speaker'
         }))
       ]
     }
@@ -168,8 +170,10 @@ export default function EventDetailsPage() {
     }
   }, [eventData])
 
-  const handleEventSave = (updatedEvent: Event) => {
+  const handleEventSave = async (updatedEvent: Event) => {
     setCurrentEvent(updatedEvent)
+    // Refetch the latest data from the server to ensure consistency
+    await refetchEvent()
     console.log('Event updated:', updatedEvent)
   }
 
@@ -260,7 +264,7 @@ export default function EventDetailsPage() {
                 onSave={handleEventSave}
               />
             )}
-            {activeTab === 'participants' && <Participants />}
+            {activeTab === 'participants' && <Participants eventId={params.eventId} />}
             {activeTab === 'actions' && <Actions />}
           </div>
         </div>

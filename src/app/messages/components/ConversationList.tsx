@@ -53,7 +53,7 @@ export function ConversationList({
                 <div className="min-w-0 flex-1">
                   <h3 className="text-xs font-medium text-white">Jane Doe</h3>
                   <p className="text-xs text-white">Innovate 2025</p>
-                  <p className="text-xs mt-1 text-white">The fee of $7000 has been confirmed.</p>
+                  <p className="text-xs mt-1 text-white">The fee of ₹7000 has been confirmed.</p>
                 </div>
               </div>
               <div className="text-right">
@@ -79,7 +79,7 @@ export function ConversationList({
                 <div className="min-w-0 flex-1">
                   <h3 className="text-xs font-medium text-gray-900">Jane Doe</h3>
                   <p className="text-xs text-gray-600">Innovate 2025</p>
-                  <p className="text-xs mt-1 text-gray-500">The fee of $7000 has been confirmed.</p>
+                  <p className="text-xs mt-1 text-gray-500">The fee of ₹7000 has been confirmed.</p>
                 </div>
               </div>
               <div className="text-right">

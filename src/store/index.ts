@@ -41,6 +41,8 @@ import organizerBookingsReducer from './slices/organizerBookingsSlice';
 import savedSpeakersReducer from './slices/savedSpeakersSlice';
 import enhancedEventReducer from './slices/enhancedEventSlice';
 import documentsUiReducer from './slices/documentsUiSlice';
+import homeReducer from './slices/homeSlice';
+import subscriptionReducer from './slices/subscriptionSlice';
 
 // Persist configuration
 const persistConfig = {
@@ -66,7 +68,9 @@ const persistConfig = {
     'negotiation',
     'organizerBookings',
     'savedSpeakers',
-    'enhancedEvent'
+    'enhancedEvent',
+    'home',
+    'subscription'
   ],
 };
 
@@ -118,6 +122,8 @@ const rootReducer = combineReducers({
   savedSpeakers: savedSpeakersReducer,
   enhancedEvent: enhancedEventReducer,
   documentsUi: documentsUiReducer,
+  home: homeReducer,
+  subscription: subscriptionReducer,
 });
 
 // Persisted reducer
@@ -175,6 +181,8 @@ export const resetStore = () => {
   store.dispatch({ type: 'organizerBookings/clearOrganizerBookings' });
   store.dispatch({ type: 'savedSpeakers/clearSavedSpeakers' });
   store.dispatch({ type: 'enhancedEvent/resetForm' });
+  store.dispatch({ type: 'home/clearHomeData' });
+  store.dispatch({ type: 'subscription/resetSubscription' });
   
   // Reset API cache
   store.dispatch(baseApi.util.resetApiState());
@@ -200,7 +208,8 @@ export const invalidateUserData = () => {
       'Negotiation',
       'OrganizerBooking',
       'SavedSpeaker',
-      'EnhancedEvent'
+      'EnhancedEvent',
+      'Subscription'
     ])
   );
 };
@@ -241,6 +250,8 @@ export {
   organizerBookingsReducer,
   savedSpeakersReducer,
   enhancedEventReducer,
+  homeReducer,
+  subscriptionReducer,
   
   // API
   baseApi,

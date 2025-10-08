@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { DollarSign, Send } from 'lucide-react';
+import { BadgeIndianRupee, Send } from 'lucide-react';
 interface ChatInputProps {
   onSendMessage: (message: string) => void;
 }
@@ -32,7 +32,7 @@ export function ChatInput({ onSendMessage }: ChatInputProps) {
           type="button"
           className="p-3 bg-orange-50 text-[#FF6B35] rounded-lg hover:bg-orange-100 transition-colors"
         >
-          <DollarSign className="w-5 h-5" />
+          <BadgeIndianRupee className="w-5 h-5" />
         </button>
         
         <button

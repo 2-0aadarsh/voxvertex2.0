@@ -29,10 +29,21 @@ export interface ManualSpeaker {
 
 export interface PlatformSpeaker {
   speakerId: string;
-  speakerName: string;
-  speakerTitle: string;
-  speakerBio: string;
-  bookingId?: string;
+  bookingId: string;
+  speakerDetails: {
+    firstName?: string;
+    lastName?: string;
+    fullName: string;
+    profileImageUrl?: string;
+    bio: string;
+    professionalTitle: string;
+    areaOfExpertise?: string[];
+    yearsOfExperience?: number;
+  };
+  // Legacy properties for backward compatibility (deprecated)
+  speakerName?: string;
+  speakerTitle?: string;
+  speakerBio?: string;
 }
 
 export interface EventSpeakers {
@@ -44,6 +55,55 @@ export interface EventAddons {
   featureOnHome: boolean;
   includeInNewsletter: boolean;
   socialMediaPromotion: boolean;
+}
+
+export interface ParticipantRefundPolicy {
+  allowRefunds: boolean;
+  refundDeadline: number | ''; // days before event
+  refundPercentage: number | '';
+  processingFee: number | '';
+  processingTime: string;
+  allowEmergencyRefunds: boolean;
+  emergencyConditions: string;
+  refundConditions: string[];
+}
+
+export interface SpeakerCancellationPolicy {
+  allowCancellation: boolean;
+  cancellationDeadline: number | ''; // days before event
+  penaltyPercentage: number | '';
+  requireReplacement: boolean;
+  forceMajeureClause: boolean;
+  paymentTerms: string;
+  speakerConditions: string[];
+}
+
+export interface EventCancellationPolicy {
+  allowCancellation: boolean;
+  fullRefundDeadline: number | ''; // days before event
+  partialRefundDeadline: number | ''; // days before event
+  partialRefundPercentage: number | '';
+  administrativeFee: number | '';
+  refundMethod: string;
+  processingTime: string;
+}
+
+export interface EventPostponementPolicy {
+  allowPostponement: boolean;
+  noticeRequired: number | ''; // days
+  maxPostponementDuration: number | ''; // days
+  ticketsValidForNewDate: boolean;
+  offerRefundOnPostponement: boolean;
+  refundPercentageOnPostponement: number | '';
+  postponementConditions: string[];
+}
+
+export interface EventPolicies {
+  participantRefund: ParticipantRefundPolicy;
+  speakerCancellation: SpeakerCancellationPolicy;
+  eventCancellation: EventCancellationPolicy;
+  eventPostponement: EventPostponementPolicy;
+  generalTerms: string;
 }
 
 export interface EventFormData {
@@ -74,7 +134,10 @@ export interface EventFormData {
   // Step 5: Addons
   addons: EventAddons;
   
-  // Step 6: Final
+  // Step 6: Policies & Terms
+  policies: EventPolicies;
+  
+  // Step 7: Final
   status: 'draft' | 'published' | 'cancelled';
 }
 
@@ -101,6 +164,7 @@ export interface EnhancedEvent {
   ticketTypes: TicketType[];
   speakers: EventSpeakers;
   addons: EventAddons;
+  policies: EventPolicies;
   organizer: string;
   status: 'draft' | 'published' | 'cancelled';
   createdAt: string;
@@ -139,6 +203,7 @@ export interface CreateEventRequest {
   ticketTypes: TicketType[];
   speakers: EventSpeakers;
   addons: EventAddons;
+  policies: EventPolicies;
   status: 'draft' | 'published' | 'cancelled';
 }
 
@@ -185,10 +250,11 @@ export interface StepValidation {
   step4: EventValidation;
   step5: EventValidation;
   step6: EventValidation;
+  step7: EventValidation;
 }
 
 // Form step types
-export type EventStep = 1 | 2 | 3 | 4 | 5 | 6;
+export type EventStep = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
 export interface StepProps {
   formData: EventFormData;

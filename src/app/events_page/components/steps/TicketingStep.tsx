@@ -287,7 +287,7 @@ export default function TicketingStep({ formData, onFormDataUpdate }: TicketingS
                       placeholder="0"
                     />
                     <label className="absolute -top-2 left-3 bg-orange-50 px-1 text-xs font-medium text-[#FF6B35]">
-                      Price($) *
+                      Price(₹) *
                     </label>
                   </div>
 
@@ -531,13 +531,13 @@ export default function TicketingStep({ formData, onFormDataUpdate }: TicketingS
                           <span className="text-sm text-gray-600">Price Preview:</span>
                           <div className="text-right">
                             <span className="text-lg font-semibold text-gray-900">
-                              ${calculateDiscountedPrice(ticket.price, ticket.discount?.type || 'percentage', ticket.discount?.value || '0')}
+                              ₹{calculateDiscountedPrice(ticket.price, ticket.discount?.type || 'percentage', ticket.discount?.value || '0')}
                             </span>
                             {parseFloat(ticket.discount?.value || '0') > 0 && (
                               <div className="text-sm text-gray-500">
-                                <span className="line-through">${ticket.price}</span>
+                                <span className="line-through">₹{ticket.price}</span>
                                 <span className="ml-2 text-green-600">
-                                  Save {ticket.discount?.type === 'percentage' ? `${ticket.discount?.value}%` : `$${ticket.discount?.value}`}
+                                  Save {ticket.discount?.type === 'percentage' ? `${ticket.discount?.value}%` : `₹${ticket.discount?.value}`}
                                 </span>
                               </div>
                             )}

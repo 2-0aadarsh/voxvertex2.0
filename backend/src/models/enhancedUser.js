@@ -81,7 +81,7 @@ const enhancedUserSchema = new mongoose.Schema({
   // Role Information
   role: {
     type: String,
-    enum: ["participant", "speaker", "organizer"],
+    enum: ["participant", "speaker", "organizer", "admin"],
     required: true
   },
   
@@ -135,13 +135,11 @@ transactions: [{
   type: mongoose.Schema.Types.ObjectId,
   ref: 'Transaction'
 }],
-subscription: {
-  planId: { type: mongoose.Schema.Types.ObjectId, ref: 'Subscription' },
-  startDate: Date,
-  endDate: Date,
-  isActive: { type: Boolean, default: false },
-  paymentMethod: { type: String, enum: ['card', 'paypal', 'upi', 'wallet'] },
-  autoRenew: { type: Boolean, default: false }
+// Reference to user's active subscription (if any)
+activeSubscription: { 
+  type: mongoose.Schema.Types.ObjectId, 
+  ref: 'Subscription',
+  default: null 
 },
   
   // Account Status

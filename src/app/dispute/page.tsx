@@ -131,7 +131,7 @@ console.log("filtered data", filtered);
             <StatCard title="Active Disputes" value={active} color="text-[#FF6B35]" />
             <StatCard title="Resolved" value={resolved} color="text-[#FF8B00]" />
             <StatCard title="Escalated" value={escalated} color="text-[#FF3B30]" />
-            <StatCard title="Total Amount" value={`$${totalAmt}`} color="text-[#FF6B35]" />
+            <StatCard title="Total Amount" value={`₹${totalAmt}`} color="text-[#FF6B35]" />
           </div>
 
           <div className="flex items-center justify-between mb-4">

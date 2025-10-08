@@ -77,8 +77,8 @@ export const NegotiationActionButtons: React.FC<NegotiationActionButtonsProps> =
       const result = await proposeAmount({
         negotiationId,
         amount,
-        currency: 'USD',
-        message: `Counter-proposal: I propose $${amount} for this engagement.`,
+        currency: 'INR',
+        message: `Counter-proposal: I propose ₹${amount} for this engagement.`,
       }).unwrap();
       console.log('✅ Counter-proposal sent:', result);
       

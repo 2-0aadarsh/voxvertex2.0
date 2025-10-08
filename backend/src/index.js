@@ -35,6 +35,8 @@ import speakerManagementRoutes from './routes/speakerManagementRoutes.js';
 import eventRegisterRoutes from './routes/eventRegisterRoutes.js'
 import paymentRoutes from './routes/paymentRoutes.js'
 import subsRoutes from './routes/subscriptionRoutes.js'
+import subscriptionPlanRoutes from './routes/subscriptionPlanRoutes.js'
+import adminSubscriptionPlanRoutes from './routes/adminSubscriptionPlanRoutes.js'
 
 import enhancedEventRoutes from './routes/enhancedEventRoutes.js'
 import enhancedEventRegisterRoutes from './routes/enhancedEventRegisterRoutes.js'
@@ -52,6 +54,7 @@ import fs from 'fs';
 import path from 'path';
 import socketService from './services/socketService.js';
 import startReservationCleanupJob from './jobs/reservationCleanupJob.js';
+import startSubscriptionCleanupJob from './jobs/subscriptionCleanupJob.js';
 
 import dotenv from "dotenv";
 import { connectCloudinary } from "./configs/cloudinary.config.js";
@@ -153,6 +156,9 @@ app.use("/api/registrations", eventRegisterRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/subscriptions', subsRoutes);
 
+// Subscription Plan Management Routes
+app.use('/api/subscription-plans', subscriptionPlanRoutes);        // Public routes
+app.use('/api/admin/subscription-plans', adminSubscriptionPlanRoutes); // Admin routes
 
 app.use("/api/enhanced-events", enhancedEventRoutes);
 app.use("/api/enhanced-events/register", enhancedEventRegisterRoutes);
@@ -198,6 +204,7 @@ server.listen(PORT, () => {
     
     // Start background jobs
     startReservationCleanupJob();
+    startSubscriptionCleanupJob();
     
     console.log('===============================');
 });

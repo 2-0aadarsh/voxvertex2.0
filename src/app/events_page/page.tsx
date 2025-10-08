@@ -244,7 +244,7 @@ export default function EventManagement() {
                         {event.totalTicketsSold || 0}/{event.totalCapacity || 0}
                       </td>
                       <td className="py-4 px-4 text-gray-600">
-                        ${event.totalRevenue || 0}
+                        ₹{event.totalRevenue || 0}
                       </td>
                       <td className="py-4 px-4">
                         <div className="flex items-center space-x-1">

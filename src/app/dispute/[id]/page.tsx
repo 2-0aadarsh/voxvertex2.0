@@ -1,7 +1,7 @@
 'use client'
 
 import {
-  ArrowLeft, Calendar, Users, DollarSign, FileText, Send
+  ArrowLeft, Calendar, Users, FileText, Send
 } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'

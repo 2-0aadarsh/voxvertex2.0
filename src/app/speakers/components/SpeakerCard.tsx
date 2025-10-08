@@ -6,7 +6,7 @@ import {
   Bookmark,
   Check,
   Eye,
-  DollarSign,
+  BadgeIndianRupee,
   X
 } from 'lucide-react';
 import Step1 from './steps/step1';
@@ -214,7 +214,7 @@ const SpeakerCard: React.FC<SpeakerCardProps> = ({
     
     // Step 3 - Preferences
     offerAmount: 0,
-    currency: '$',
+    currency: '₹',
     specialRequests: '',
     topics: []
   });
@@ -266,7 +266,7 @@ const SpeakerCard: React.FC<SpeakerCardProps> = ({
       
       // Step 3 - Preferences
       offerAmount: 0,
-      currency: '$',
+      currency: '₹',
       specialRequests: '',
       topics: []
     });
@@ -371,8 +371,8 @@ const SpeakerCard: React.FC<SpeakerCardProps> = ({
 
             {/* Price */}
             <div className="flex items-center gap-1 mb-4">
-              <DollarSign className="w-4 h-4 text-gray-500" />
-              <span className="text-sm text-gray-600">${speaker.price.toLocaleString()} - $8,000</span>
+              <BadgeIndianRupee className="w-4 h-4 text-gray-500" />
+              <span className="text-sm text-gray-600">₹{speaker.price.toLocaleString()} - ₹8,000</span>
             </div>
           </div>
 
@@ -508,8 +508,8 @@ const SpeakerCard: React.FC<SpeakerCardProps> = ({
             <span className="text-xs text-gray-600">{speaker.location}</span>
           </div>
           <div className="flex items-center gap-1">
-            <DollarSign className="w-3 h-3 text-gray-500" />
-            <span className="text-xs text-gray-600">${speaker.price.toLocaleString()} - $8,000</span>
+            <BadgeIndianRupee className="w-3 h-3 text-gray-500" />
+            <span className="text-xs text-gray-600">₹{speaker.price.toLocaleString()} - ₹8,000</span>
           </div>
         </div>
 

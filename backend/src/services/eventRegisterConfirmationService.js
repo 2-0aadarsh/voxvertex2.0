@@ -1,40 +1,20 @@
-import nodemailer from "nodemailer";
 import dotenv from "dotenv";
+import { sendEventRegistrationConfirmation } from "./email.service.js";
+import transporter from "../configs/nodemailer.config.js";
 dotenv.config();
 
-// Check if email credentials are available
-const hasEmailCredentials = process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS;
+// Check if email credentials are available using the same config as main email service
+const hasEmailCredentials = process.env.EMAIL_USER && process.env.EMAIL_PASSWORD;
 
-console.log("📧 SMTP Host:", process.env.SMTP_HOST ? "✅ Present" : "❌ Missing");
-console.log("📧 SMTP User:", process.env.SMTP_USER ? "✅ Present" : "❌ Missing");
-console.log("📧 SMTP Pass:", process.env.SMTP_PASS ? "✅ Present" : "❌ Missing");
-
-let transporter = null;
-
-if (hasEmailCredentials) {
-  try {
-    transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT || 587),
-      secure: false,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
-      }
-    });
-    console.log("✅ Email transporter initialized successfully");
-  } catch (error) {
-    console.error("❌ Failed to initialize email transporter:", error);
-  }
-} else {
-  console.warn("⚠️ Email credentials missing. Using mock email service.");
-}
+console.log("📧 Email Service:", process.env.EMAIL_SERVICE ? "✅ Present" : "❌ Missing");
+console.log("📧 Email User:", process.env.EMAIL_USER ? "✅ Present" : "❌ Missing");
+console.log("📧 Email Pass:", process.env.EMAIL_PASSWORD ? "✅ Present" : "❌ Missing");
 
 export async function sendConfirmationEmail(registration, event) {
   const { registrant } = registration;
 
   // If email service is not available, use mock
-  if (!transporter) {
+  if (!hasEmailCredentials) {
     console.log("🎭 Mock email sent to:", registrant.email);
     console.log("📧 Subject: Registration confirmed for", event.eventName);
     console.log("📧 Amount: ₹", registration.totalAmount);
@@ -42,25 +22,59 @@ export async function sendConfirmationEmail(registration, event) {
   }
 
   try {
-    const html = `
-      <h2>Registration Confirmed</h2>
-      <p>Hello ${registrant.name},</p>
-      <p>You are registered for <strong>${event.eventName}</strong> happening on ${new Date(event.startDate).toLocaleDateString()}.</p>
-      ${event.eventMode === "online" ? `<p>Join link: ${event.eventUrl}</p>` : ""}
-      ${event.eventMode === "offline" ? `<p>Venue: ${event.location}</p>` : ""}
-      <p>Amount Paid: ₹${registration.totalAmount}</p>
-      <p>Registration ID: ${registration._id}</p>
-    `;
+    // Debug: Log the event object structure
+    console.log("🔍 Event object received:", JSON.stringify(event, null, 2));
+    
+    // Format event data for email template
+    const eventData = {
+      eventName: event.eventName || 'Event Name Not Available',
+      eventId: event._id ? event._id.toString() : 'unknown',
+      format: event.format || 'Event',
+      eventDate: event.startDate ? new Date(event.startDate).toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric' 
+      }) : 'Date Not Available',
+      eventTime: event.startDate ? new Date(event.startDate).toLocaleTimeString('en-US', { 
+        hour: 'numeric', 
+        minute: '2-digit',
+        hour12: true 
+      }) : 'Time Not Available',
+      eventLocation: event.eventMode === 'online' ? 'Online' :
+                     event.eventMode === 'hybrid' ? `Hybrid - ${event.location || 'Location Not Available'}` :
+                     event.location || 'Location Not Available',
+      organizerName: event.organizer ? `${event.organizer.firstName || ''} ${event.organizer.lastName || ''}`.trim() || 'Organizer Not Available' : 'Organizer Not Available'
+    };
+
+    // Debug: Log the registration object structure
+    console.log("🔍 Registration object received:", JSON.stringify(registration, null, 2));
+    
+    // Format ticket data for email template
+    const ticketData = {
+      name: registration.ticketTier?.tierName || 'Event Ticket',
+      price: `₹${(registration.totalAmount || 0).toLocaleString()}`
+    };
+
+    // Format user data for email template
+    const userData = {
+      name: registrant.name || 'User Name Not Available'
+    };
 
     console.log("📧 Sending confirmation email to:", registrant.email);
-    const result = await transporter.sendMail({
-      from: process.env.EMAIL_FROM || "noreply@voxvertex.com",
-      to: registrant.email,
-      subject: `Registration confirmed for ${event.eventName}`,
-      html
-    });
+    console.log("📧 Event data:", JSON.stringify(eventData, null, 2));
+    console.log("📧 Ticket data:", JSON.stringify(ticketData, null, 2));
+    console.log("📧 User data:", JSON.stringify(userData, null, 2));
     
-    console.log("✅ Confirmation email sent:", result.messageId);
+    // Use the new email template service
+    const result = await sendEventRegistrationConfirmation(
+      registrant.email,
+      `Registration Confirmed - ${event.eventName}`,
+      eventData,
+      ticketData,
+      userData
+    );
+    
+    console.log("✅ Confirmation email sent successfully:", result.messageId);
     return result;
   } catch (error) {
     console.error("❌ Failed to send confirmation email:", error);

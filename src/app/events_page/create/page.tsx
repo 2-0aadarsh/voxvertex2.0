@@ -8,6 +8,7 @@ import BrandingContentStep from '../components/steps/BrandingContentStep'
 import TicketingStep from '../components/steps/TicketingStep'
 import SpeakersStep from '../components/steps/SpeakersStep'
 import AddonsStep from '../components/steps/AddonsStep'
+import PoliciesStep from '../components/steps/PoliciesStep'
 import ReviewPublishStep from '../components/steps/ReviewPublishStep'
 import Sidebar from '@/components/Sidebar'
 import Navbar from '@/components/Navbar'
@@ -35,6 +36,7 @@ export default function CreateEvent() {
     updateStep3,
     updateStep4,
     updateStep5,
+    updateStep6,
     canProceedToNext,
     canGoToPrevious,
     createNewEvent,
@@ -44,13 +46,14 @@ export default function CreateEvent() {
     clearFormError
   } = useEventForm()
 
-  const totalSteps = 6
+  const totalSteps = 7
   const stepTitles = [
     'Core Details',
     'Branding & Content', 
     'Ticketing',
     'Speakers',
     'Add-ons',
+    'Policies & Terms',
     'Review & Publish'
   ]
 
@@ -203,6 +206,7 @@ export default function CreateEvent() {
             formData={formData}
             onInputChange={handleInputChange}
           />
+          
         )
       
       case 2:
@@ -237,7 +241,6 @@ export default function CreateEvent() {
               }))
               const platformSpeakers = (speakersArray as Array<{ speakerId: string; bookingId: string; name: string; title: string; bio: string; image?: string }>)
                 .filter((speaker) => speaker.speakerId)
-                // @ts-expect-error - Type compatibility issue with legacy Speaker interface
                 .map((speaker) => ({
                   speakerId: speaker.speakerId,
                   bookingId: speaker.bookingId, // This will now be the MongoDB ObjectId
@@ -269,6 +272,14 @@ export default function CreateEvent() {
       
       case 6:
         return (
+          <PoliciesStep 
+            formData={{ policies: formData.policies }}
+            onFormDataUpdate={updateStep6}
+          />
+        )
+      
+      case 7:
+        return (
           <ReviewPublishStep 
             formData={{
               eventName: formData.eventName,
@@ -281,7 +292,8 @@ export default function CreateEvent() {
               tags: formData.tags,
               ticketTypes: formData.ticketTypes,
               speakers: formData.speakersArray || [],
-              addons: formData.addons
+              addons: formData.addons,
+              policies: formData.policies
             }}
             onStepChange={handleStepChange}
             onSubmit={handleSubmit}
@@ -363,7 +375,7 @@ export default function CreateEvent() {
               )}
 
               {/* Navigation Buttons */}
-              {currentStep < 6 && (
+              {currentStep < 7 && (
                 <div className="flex justify-center space-x-3 mt-8">
                   <button
                     type="button"

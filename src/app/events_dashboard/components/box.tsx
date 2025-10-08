@@ -148,6 +148,35 @@ export default function EventBox({ event }: EventBoxProps) {
   const total = subtotal + platformFee
   const save = selectedTicket?.save || "0"
 
+  // Format date and time for display
+  const formatEventDate = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric' 
+    })
+  }
+
+  const formatEventTime = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleTimeString('en-US', { 
+      hour: 'numeric', 
+      minute: '2-digit',
+      hour12: true 
+    })
+  }
+
+  const getEventLocation = () => {
+    if (event.eventMode === 'online') {
+      return 'Online'
+    } else if (event.eventMode === 'hybrid') {
+      return `Hybrid - ${event.location}`
+    } else {
+      return event.location || 'TBA'
+    }
+  }
+
   // Handle registration
   const handleRegistration = async () => {
     if (!user || !selectedTicket) return
@@ -225,7 +254,6 @@ export default function EventBox({ event }: EventBoxProps) {
             }).unwrap()
 
             setStep(3) // Move to completion step
-            alert('Payment successful! Registration confirmed.')
           } catch (error) {
             console.error('Payment verification failed:', error)
             alert('Payment verification failed. Please contact support.')
@@ -352,7 +380,7 @@ export default function EventBox({ event }: EventBoxProps) {
             {/* Header */}
             <div className="sticky top-0 bg-white border-b border-gray-200 p-6 rounded-t-xl">
               <div className="text-center">
-                <p className="text-orange-500 text-xl font-semibold">AI & Machine Learning Summit 2025</p>
+                <p className="text-orange-500 text-xl font-semibold">{event.eventName}</p>
                 <p className="text-gray-500 text-sm mt-1">Choose your ticket</p>
               </div>
               
@@ -467,14 +495,16 @@ export default function EventBox({ event }: EventBoxProps) {
                         </div>
                         <div className="flex justify-between text-sm text-gray-600">
                           <span>Platform Fee (2%)</span>
-                          <span>₹38</span>
+                          <span>₹{platformFee.toLocaleString()}</span>
                         </div>
                         <hr className="my-3" />
                         <div className="flex justify-between font-semibold text-orange-600">
                           <span>Total</span>
-                          <span>₹1,937</span>
+                          <span>₹{total.toLocaleString()}</span>
                         </div>
-                        <p className="text-green-600 text-sm font-medium">You save ₹600!</p>
+                        {selectedTicket?.save && (
+                          <p className="text-green-600 text-sm font-medium">You save {selectedTicket.save}!</p>
+                        )}
                       </div>
                     </div>
 
@@ -482,9 +512,9 @@ export default function EventBox({ event }: EventBoxProps) {
                     <div className="bg-white border border-gray-200 rounded-xl p-5">
                       <h3 className="font-semibold text-gray-900 mb-3">Event Details</h3>
                       <div className="space-y-2 text-sm text-gray-700">
-                        <p>📅 Sep 16, 2025</p>
-                        <p>⏰ 9:00 AM</p>
-                        <p>📍 Hybrid - Mumbai, India</p>
+                        <p>📅 {formatEventDate(event.startDate)}</p>
+                        <p>⏰ {formatEventTime(event.startDate)}</p>
+                        <p>📍 {getEventLocation()}</p>
                       </div>
                     </div>
 
@@ -669,23 +699,25 @@ export default function EventBox({ event }: EventBoxProps) {
                         </div>
                         <div className="flex justify-between text-sm text-gray-600">
                           <span>Platform Fee (2%)</span>
-                          <span>₹38</span>
+                          <span>₹{platformFee.toLocaleString()}</span>
                         </div>
                         <hr className="my-3" />
                         <div className="flex justify-between font-semibold text-orange-600">
                           <span>Total</span>
-                          <span>₹1,937</span>
+                          <span>₹{total.toLocaleString()}</span>
                         </div>
-                        <p className="text-green-600 text-sm font-medium">You save ₹600!</p>
+                        {selectedTicket?.save && (
+                          <p className="text-green-600 text-sm font-medium">You save {selectedTicket.save}!</p>
+                        )}
                       </div>
                     </div>
 
                     <div className="bg-white border border-gray-200 rounded-xl p-5">
                       <h3 className="font-semibold text-gray-900 mb-3">Event Details</h3>
                       <div className="space-y-2 text-sm text-gray-700">
-                        <p>📅 Sep 16, 2025</p>
-                        <p>⏰ 9:00 AM</p>
-                        <p>📍 Hybrid - Mumbai, India</p>
+                        <p>📅 {formatEventDate(event.startDate)}</p>
+                        <p>⏰ {formatEventTime(event.startDate)}</p>
+                        <p>📍 {getEventLocation()}</p>
                       </div>
                     </div>
 
@@ -777,23 +809,25 @@ export default function EventBox({ event }: EventBoxProps) {
                         </div>
                         <div className="flex justify-between text-sm text-gray-600">
                           <span>Platform Fee (2%)</span>
-                          <span>₹38</span>
+                          <span>₹{platformFee.toLocaleString()}</span>
                         </div>
                         <hr className="my-3" />
                         <div className="flex justify-between font-semibold text-orange-600">
                           <span>Total</span>
-                          <span>₹1,937</span>
+                          <span>₹{total.toLocaleString()}</span>
                         </div>
-                        <p className="text-green-600 text-sm font-medium">You save ₹600!</p>
+                        {selectedTicket?.save && (
+                          <p className="text-green-600 text-sm font-medium">You save {selectedTicket.save}!</p>
+                        )}
                       </div>
                     </div>
 
                     <div className="bg-white border border-gray-200 rounded-xl p-5">
                       <h3 className="font-semibold text-gray-900 mb-3">Event Details</h3>
                       <div className="space-y-2 text-sm text-gray-700">
-                        <p>📅 Sep 16, 2025</p>
-                        <p>⏰ 9:00 AM</p>
-                        <p>📍 Hybrid - Mumbai, India</p>
+                        <p>📅 {formatEventDate(event.startDate)}</p>
+                        <p>⏰ {formatEventTime(event.startDate)}</p>
+                        <p>📍 {getEventLocation()}</p>
                       </div>
                     </div>
 
@@ -823,21 +857,112 @@ export default function EventBox({ event }: EventBoxProps) {
 
               {/* Step 3 - Complete */}
               {step === 3 && (
-                <div className="text-center py-12">
-                  <div className="bg-green-50 border border-green-200 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-6">
-                    <span className="text-green-500 text-3xl">✓</span>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Success Message - 2 columns */}
+                  <div className="lg:col-span-2">
+                    <div className="bg-white p-6 rounded-xl border border-gray-200 text-center">
+                      <div className="bg-green-50 border border-green-200 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-6">
+                        <span className="text-green-500 text-3xl">✓</span>
+                      </div>
+                      <h2 className="text-2xl font-bold text-green-600 mb-4">Registration Complete!</h2>
+                      <p className="text-gray-700 mb-2 text-lg">
+                        Your ticket for <span className="font-semibold text-orange-600">{selectedTicket?.title}</span> is confirmed.
+                      </p>
+                      <p className="text-gray-500 mb-8">A confirmation email has been sent to your registered address.</p>
+                      
+                      {/* Action Buttons */}
+                      <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                        <button
+                          onClick={() => setOpen(false)}
+                          className="bg-orange-600 text-white px-8 py-3 rounded-lg hover:bg-orange-700 transition-colors font-medium"
+                        >
+                          Close
+                        </button>
+                        <button
+                          onClick={() => {
+                            // Navigate to dashboard or event page
+                            window.location.href = '/dashboard'
+                          }}
+                          className="border border-orange-600 text-orange-600 px-8 py-3 rounded-lg hover:bg-orange-50 transition-colors font-medium"
+                        >
+                          Go to Dashboard
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                  <h2 className="text-2xl font-bold text-green-600 mb-4">Registration Complete!</h2>
-                  <p className="text-gray-700 mb-2 text-lg">
-                    Your ticket for <span className="font-semibold">{selectedTicket?.title}</span> is confirmed.
-                  </p>
-                  <p className="text-gray-500 mb-8">A confirmation email has been sent to your registered address.</p>
-                  <button
-                    onClick={() => setOpen(false)}
-                    className="bg-orange-600 text-white px-8 py-3 rounded-lg hover:bg-orange-700 transition-colors font-medium"
-                  >
-                    Close
-                  </button>
+
+                  {/* Event Details Card - 1 column */}
+                  <div className="space-y-6">
+                    {/* Event Ticket Card */}
+                    <div className="bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200 rounded-xl p-5">
+                      <div className="flex items-center justify-between mb-4">
+                        <span className="bg-orange-200 text-orange-800 text-xs font-semibold px-3 py-1 rounded-full">
+                          {event.format}
+                        </span>
+                        <span className="text-orange-600 text-sm font-medium">Ticket Confirmed</span>
+                      </div>
+                      <h3 className="font-bold text-lg text-gray-900 mb-2">{event.eventName}</h3>
+                      <p className="text-orange-600 font-bold text-xl mb-4">{selectedTicket?.price}</p>
+                      
+                      {/* Event Details */}
+                      <div className="space-y-3 text-sm text-gray-700">
+                        <div className="flex items-center gap-2">
+                          <span className="text-orange-500">📅</span>
+                          <span>{formatEventDate(event.startDate)}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-orange-500">⏰</span>
+                          <span>{formatEventTime(event.startDate)}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-orange-500">📍</span>
+                          <span>{getEventLocation()}</span>
+                        </div>
+                      </div>
+                      
+                      {/* Ticket ID */}
+                      <div className="mt-4 pt-4 border-t border-orange-200">
+                        <p className="text-xs text-gray-600 mb-1">Ticket ID</p>
+                        <p className="text-sm font-mono text-orange-700 bg-orange-50 px-2 py-1 rounded">
+                          VV-2025-{event._id.slice(-6).toUpperCase()}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Next Steps */}
+                    <div className="bg-white border border-gray-200 rounded-xl p-5">
+                      <h3 className="font-semibold text-gray-900 mb-4">What's Next?</h3>
+                      <div className="space-y-3">
+                        <div className="flex items-start gap-3">
+                          <div className="w-6 h-6 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <span className="text-orange-600 text-xs font-bold">1</span>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">Check Your Email</p>
+                            <p className="text-xs text-gray-600">We've sent your ticket and event details to your email</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <div className="w-6 h-6 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <span className="text-orange-600 text-xs font-bold">2</span>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">Access Event Dashboard</p>
+                            <p className="text-xs text-gray-600">Use VoxVertex platform to manage your event experience</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <div className="w-6 h-6 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <span className="text-orange-600 text-xs font-bold">3</span>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">Connect & Network</p>
+                            <p className="text-xs text-gray-600">Connect with speakers and other attendees</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

@@ -291,7 +291,7 @@ ${req.user.firstName} ${req.user.lastName}`,
         bookingId: booking._id,
         eventId: null,
         amount: booking.compensationAndArrangements.primaryCompensation.speakerFeeAmount,
-        currency: 'USD',
+        currency: 'INR',
         proposalType: 'accepted'
       }
     });
@@ -753,7 +753,7 @@ ${req.user.firstName} ${req.user.lastName}`,
         bookingId: booking._id,
         eventId: null,
         amount: offerAmount,
-        currency: currency || 'USD',
+        currency: currency || 'INR',
         proposalType: 'initial'
       }
     });

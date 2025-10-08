@@ -11,7 +11,7 @@ import socketService from '../services/socketService.js';
 export const createNegotiation = async (req, res) => {
   try {
     const { conversationId } = req.params;
-    const { amount, currency = 'USD', topic, message, eventId } = req.body;
+    const { amount, currency = 'INR', topic, message, eventId } = req.body;
     const currentUserId = req.user._id;
     const currentUserRole = req.user.role;
 
@@ -158,7 +158,7 @@ export const getNegotiation = async (req, res) => {
 export const proposeAmount = async (req, res) => {
   try {
     const { negotiationId } = req.params;
-    const { amount, currency = 'USD', message } = req.body;
+    const { amount, currency = 'INR', message } = req.body;
     const currentUserId = req.user._id;
 
     const negotiation = await Negotiation.findById(negotiationId);

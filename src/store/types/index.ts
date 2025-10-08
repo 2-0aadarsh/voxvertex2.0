@@ -64,6 +64,7 @@ export interface User {
     };
   };
   accountStatus?: 'active' | 'suspended' | 'deactivated';
+  activeSubscription?: string; // ObjectId reference to Subscription
   lastLogin?: string;
   createdAt: string;
   updatedAt: string;

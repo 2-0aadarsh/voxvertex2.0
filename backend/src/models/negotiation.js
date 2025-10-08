@@ -51,8 +51,8 @@ const negotiationSchema = new mongoose.Schema({
     },
     currency: {
       type: String,
-      default: 'USD',
-      enum: ['USD', 'EUR', 'GBP', 'INR']
+      default: 'INR',
+      enum: ['INR', 'USD', 'EUR', 'GBP']
     },
     proposedBy: {
       type: mongoose.Schema.Types.ObjectId,
@@ -82,7 +82,7 @@ const negotiationSchema = new mongoose.Schema({
     },
     currency: {
       type: String,
-      default: 'USD'
+      default: 'INR'
     },
     proposedBy: {
       type: mongoose.Schema.Types.ObjectId,
@@ -125,7 +125,7 @@ const negotiationSchema = new mongoose.Schema({
     },
     currency: {
       type: String,
-      default: 'USD'
+      default: 'INR'
     },
     acceptedAt: {
       type: Date

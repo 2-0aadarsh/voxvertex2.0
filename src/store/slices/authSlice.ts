@@ -336,6 +336,33 @@ export const authApi = baseApi.injectEndpoints({
       },
       providesTags: ['User'],
     }),
+
+    // Get subscription status for user
+    getSubscriptionStatus: builder.query<
+      { 
+        success: boolean; 
+        subscription: {
+          plan: any;
+          status: string;
+          isActive: boolean;
+          isTrialActive: boolean;
+          trialDaysRemaining: number;
+          trialEndDate: string;
+          endDate: string;
+          nextBillingDate: string;
+          autoRenew: boolean;
+          paymentMethod: string;
+        } | null;
+        message: string;
+      },
+      string
+    >({
+      query: (userId) => ({
+        url: `/subscriptions/status/${userId}`,
+        method: 'GET',
+      }),
+      providesTags: ['Subscription'],
+    }),
     
     // Update user profile
     updateCurrentUser: builder.mutation<
@@ -372,6 +399,7 @@ export const {
   useValidateTokenQuery,
   useRefreshTokenMutation,
   useGetCurrentUserQuery,
+  useGetSubscriptionStatusQuery,
   useUpdateCurrentUserMutation,
 } = authApi;
 

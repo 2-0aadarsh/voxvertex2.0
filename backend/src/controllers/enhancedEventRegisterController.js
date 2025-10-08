@@ -41,8 +41,10 @@ export const registerForEnhancedEvent = async (req, res) => {
         });
       }
 
-      // ✅ 1. Find and validate enhanced event
-      const event = await EnhancedEvent.findById(eventId).session(session);
+      // ✅ 1. Find and validate enhanced event (including policies)
+      const event = await EnhancedEvent.findById(eventId)
+        .populate('organizer', 'firstName lastName email')
+        .session(session);
       if (!event) {
         return res.status(404).json({ 
           success: false,
@@ -55,6 +57,22 @@ export const registerForEnhancedEvent = async (req, res) => {
           success: false,
           error: "Event is not available for registration" 
         });
+      }
+
+      // ✅ 1.5. Validate event policies compliance
+      if (event.policies && event.policies.metadata) {
+        const policyValidation = event.validatePolicies();
+        if (!policyValidation.isCompliant) {
+          console.log("⚠️ Event policies are not compliant:", policyValidation.errors);
+          // Allow registration but log the policy issues
+          // In production, you might want to block registration for non-compliant policies
+        }
+        console.log("📋 Event policies validation:", {
+          isCompliant: policyValidation.isCompliant,
+          lastUpdated: event.policies.metadata.lastUpdated
+        });
+      } else {
+        console.log("⚠️ Event has no policies configured");
       }
 
       // ✅ 2. Find and validate ticket tier
@@ -212,7 +230,12 @@ export const registerForEnhancedEvent = async (req, res) => {
             totalAmount,
             currency: "INR",
             totalParticipants,
-            confirmationSent: true
+            confirmationSent: true,
+            eventPolicies: event.policies ? {
+              summary: event.getPolicySummary(),
+              isCompliant: event.policies.metadata?.isCompliant || false,
+              lastUpdated: event.policies.metadata?.lastUpdated
+            } : null
           }
         });
       }
@@ -228,7 +251,7 @@ export const registerForEnhancedEvent = async (req, res) => {
       registration.paymentOrderId = paymentOrder.id;
       await registration.save({ session });
 
-      // ✅ 11. Return response with payment details
+      // ✅ 11. Return response with payment details and policy info
       res.status(201).json({
         success: true,
         message: "Registration created successfully. Proceed to payment.",
@@ -238,7 +261,12 @@ export const registerForEnhancedEvent = async (req, res) => {
           currency: "INR",
           totalParticipants,
           ticketTier: selectedTicketTier.name,
-          paymentOrder
+          paymentOrder,
+          eventPolicies: event.policies ? {
+            summary: event.getPolicySummary(),
+            isCompliant: event.policies.metadata?.isCompliant || false,
+            lastUpdated: event.policies.metadata?.lastUpdated
+          } : null
         }
       });
     });
@@ -546,7 +574,7 @@ export const getEnhancedEventRegistrationSummary = async (req, res) => {
     const { registrationId } = req.params;
     
     const registration = await EnhancedEventRegistration.findById(registrationId)
-      .populate('event', 'eventName startDate endDate location eventMode eventUrl description bannerImage');
+      .populate('event', 'eventName startDate endDate location eventMode eventUrl description bannerImage policies');
 
     if (!registration) {
       return res.status(404).json({ 
@@ -587,7 +615,13 @@ export const getEnhancedEventRegistrationSummary = async (req, res) => {
       currency: registration.currency,
       paymentStatus: registration.paymentStatus,
       registrationDate: registration.registrationDate,
-      confirmationSent: registration.confirmationSent
+      confirmationSent: registration.confirmationSent,
+      eventPolicies: event.policies ? {
+        summary: event.getPolicySummary(),
+        fullPolicies: event.policies,
+        isCompliant: event.policies.metadata?.isCompliant || false,
+        lastUpdated: event.policies.metadata?.lastUpdated
+      } : null
     };
 
     res.json({ 

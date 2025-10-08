@@ -62,7 +62,7 @@ const NegotiationModal: React.FC<NegotiationModalProps> = ({
       <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-2xl font-bold text-[#FF6B35]">$ {title}</h2>
+          <h2 className="text-2xl font-bold text-[#FF6B35]">₹ {title}</h2>
           <button
             onClick={handleClose}
             className="text-gray-400 hover:text-gray-600 transition-colors"

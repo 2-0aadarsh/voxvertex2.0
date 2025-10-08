@@ -191,7 +191,7 @@ export default function SpeakerDatabasePage() {
       const priceRange = {
         min: 3000,
         max: 10000,
-        currency: 'USD'
+        currency: 'INR'
       };
 
         return {

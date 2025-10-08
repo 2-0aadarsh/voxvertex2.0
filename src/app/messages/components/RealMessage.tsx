@@ -85,8 +85,8 @@ export function RealMessage({ message, conversationId }: RealMessageProps) {
                 <div className="space-y-2 text-xs text-black">
                   <p><strong>Event:</strong> {message.metadata?.eventId ? 'Event Details' : 'Custom Event'}</p>
                   <p><strong>Booking ID:</strong> {message.metadata?.bookingId || 'N/A'}</p>
-                  <p><strong>Amount:</strong> {message.metadata?.amount ? `$${message.metadata.amount}` : 'To be discussed'}</p>
-                  <p><strong>Currency:</strong> {message.metadata?.currency || 'USD'}</p>
+                  <p><strong>Amount:</strong> {message.metadata?.amount ? `₹${message.metadata.amount}` : 'To be discussed'}</p>
+                  <p><strong>Currency:</strong> {message.metadata?.currency || 'INR'}</p>
                 </div>
               </div>
               
@@ -176,7 +176,7 @@ export function RealMessage({ message, conversationId }: RealMessageProps) {
             }`}>
               <p className="font-semibold mb-2">💼 PROPOSAL DETAILS:</p>
               <div className="space-y-1">
-                <p><strong>Amount:</strong> ${message.metadata.amount} {message.metadata.currency || 'USD'}</p>
+                <p><strong>Amount:</strong> ₹{message.metadata.amount} {message.metadata.currency || 'INR'}</p>
                 {message.metadata.proposalType && (
                   <p><strong>Type:</strong> {message.metadata.proposalType}</p>
                 )}

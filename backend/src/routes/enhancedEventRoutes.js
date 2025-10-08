@@ -2,6 +2,8 @@ import express from 'express';
 import {
   createEnhancedEvent,
   getAllEnhancedEvents,
+  getUpcomingEnhancedEvents,
+  getPromotedEvents,
   getEnhancedEventById,
   updateEnhancedEvent,
   deleteEnhancedEvent,
@@ -24,6 +26,8 @@ const router = express.Router();
 // Public routes (no authentication required)
 router.get('/', getAllEnhancedEvents); // Get published events (public)
 router.get('/published', getAllEnhancedEvents); // Get published events (public)
+router.get('/upcoming', getUpcomingEnhancedEvents); // Get upcoming events with live tickets (public)
+router.get('/promoted', getPromotedEvents); // Get promoted events (public)
 
 
 // Apply authentication to all other routes

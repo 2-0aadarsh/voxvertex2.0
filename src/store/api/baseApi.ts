@@ -30,27 +30,34 @@ const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
   console.log('Full URL:', `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}${args.url}`);
   console.log('=====================');
   
-  const result = await baseQuery(args, api, extraOptions);
-  
-  console.log('=== BASE API RESPONSE ===');
-  console.log('Response status:', result.meta?.response?.status);
-  console.log('Response data:', result.data);
-  console.log('Response error:', result.error);
-  console.log('========================');
-
-  // If we get a 401, the session might have expired
-  if (result?.error && result.error.status === 401) {
-    console.log('Authentication failed - session may have expired');
-    console.log('Redirecting to login...');
+  try {
+    const result = await baseQuery(args, api, extraOptions);
     
-    // For cookie-based auth, we don't need to refresh tokens
-    // The backend handles token refresh automatically via cookies
-    // Just logout the user and let them re-authenticate
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (api as any).dispatch({ type: 'auth/logout' });
-  }
+    console.log('=== BASE API RESPONSE ===');
+    console.log('Response status:', result.meta?.response?.status);
+    console.log('Response data:', result.data);
+    console.log('Response error:', result.error);
+    console.log('========================');
+    
+    // If we get a 401, the session might have expired
+    if (result?.error && result.error.status === 401) {
+      console.log('Authentication failed - session may have expired');
+      console.log('Redirecting to login...');
+      
+      // For cookie-based auth, we don't need to refresh tokens
+      // The backend handles token refresh automatically via cookies
+      // Just logout the user and let them re-authenticate
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (api as any).dispatch({ type: 'auth/logout' });
+    }
 
-  return result;
+    return result;
+  } catch (error) {
+    console.log('=== BASE API ERROR ===');
+    console.log('Error:', error);
+    console.log('======================');
+    throw error;
+  }
 };
 
 // Create the base API
@@ -77,7 +84,8 @@ export const baseApi = createApi({
     'OrganizerBooking',
     'SavedSpeaker',
     'EnhancedEvent',
-    'Document'
+    'Document',
+    'Subscription'
   ],
   endpoints: () => ({}),
 });

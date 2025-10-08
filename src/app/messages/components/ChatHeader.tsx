@@ -1,6 +1,6 @@
 'use client';
 
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, Users, Clock } from 'lucide-react';
 import { Conversation } from '../types/messagingTypes';
 import { useAuth } from '@/store/hooks';
 import { useState } from 'react';
@@ -146,9 +146,9 @@ export function ChatHeader({ conversation }: ChatHeaderProps) {
       const result = await createNegotiation({
         conversationId: conversation._id,
         amount: amount,
-        currency: 'USD',
+        currency: 'INR',
         topic: conversation.context?.topic || 'Speaking Engagement',
-        message: `Proposing $${amount} for this engagement`,
+        message: `Proposing ₹${amount} for this engagement`,
         eventId: conversation.context?.eventId,
       }).unwrap();
 
@@ -170,30 +170,50 @@ export function ChatHeader({ conversation }: ChatHeaderProps) {
   };
 
   return (
-    <div className="p-4 border-b border-gray-200 bg-white">
-      <div className="flex items-center">
-        <MessageSquare className="w-5 h-5 text-[#FF6B35] mr-2" />
-        <div>
-          <span className="font-medium text-gray-900">Conversation & Booking Hub</span>
-          {otherParticipant && (
-            <p className="text-xs text-gray-600 mt-1">
-              {status === 'Pending' ? 'Booking request from' : 
-               status === 'Confirmed' ? 'Confirmed booking with' :
-               status === 'Declined' ? 'Declined booking with' :
-               'Chatting with'} {otherParticipant.user.firstName} {otherParticipant.user.lastName}
-              {topic && ` - ${topic}`}
-            </p>
-          )}
-        </div>
-        <div className="ml-auto flex items-center gap-2">
+    <div className="bg-white border-b border-gray-200 px-6 py-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center justify-center w-12 h-12 bg-orange-100 rounded-lg">
+            <MessageSquare className="w-6 h-6 text-orange-600" />
+          </div>
           
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">
+              Conversation & Booking Hub
+            </h2>
+            {otherParticipant && (
+              <div className="flex items-center space-x-4 mt-1">
+                <div className="flex items-center space-x-2">
+                  <Users className="w-4 h-4 text-gray-500" />
+                  <span className="text-sm text-gray-600">
+                    {status === 'Pending' ? 'Booking request from' : 
+                     status === 'Confirmed' ? 'Confirmed booking with' :
+                     status === 'Declined' ? 'Declined booking with' :
+                     'Chatting with'} {otherParticipant.user.firstName} {otherParticipant.user.lastName}
+                  </span>
+                </div>
+                
+                {topic && (
+                  <div className="flex items-center space-x-2">
+                    <Clock className="w-4 h-4 text-gray-500" />
+                    <span className="text-sm text-gray-500 truncate max-w-xs">
+                      {topic}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-3">
           {canNegotiate() && (
             <button 
               onClick={() => setIsNegotiationModalOpen(true)}
               disabled={isCreatingNegotiation}
-              className="cursor-pointer text-xs px-3 py-1 rounded-full bg-[#FF6B35] text-white hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
             >
-              {isCreatingNegotiation ? 'Negotiating...' : 'Negotiate'}
+              <span>{isCreatingNegotiation ? 'Negotiating...' : 'Start Negotiation'}</span>
             </button>
           )}
         </div>

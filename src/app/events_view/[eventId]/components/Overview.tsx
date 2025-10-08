@@ -8,6 +8,8 @@ import {
   DollarSign,
   X
 } from 'lucide-react';
+import { useUpdateEventMutation } from '@/store/slices/enhancedEventSlice';
+import type { EnhancedEvent } from '@/app/events_page/types/eventTypes';
 
 // Updated Event interface to match the enhanced structure
 interface Event {
@@ -62,6 +64,9 @@ const Overview: React.FC<OverviewProps> = ({ event, onEdit, onSave }) => {
     eventUrl: event.eventUrl || ''
   });
 
+  // Redux mutation hook for updating events
+  const [updateEvent, { isLoading: isUpdating, error: updateError }] = useUpdateEventMutation();
+
   // Sync form state with event prop changes
   useEffect(() => {
     setEditForm({
@@ -98,20 +103,40 @@ const Overview: React.FC<OverviewProps> = ({ event, onEdit, onSave }) => {
     });
   };
 
-  const handleSave = () => {
-    // Create updated event object with all required properties
-    const updatedEvent: Event = {
-      ...event, // Keep all existing properties
-      title: editForm.title,
-      description: editForm.description,
-      mode: editForm.mode,
-      location: editForm.location,
-      eventUrl: editForm.eventUrl
-    };
-    
-    // Call the onSave callback to update the parent component
-    onSave?.(updatedEvent);
-    setShowEditModal(false);
+  const handleSave = async () => {
+    try {
+      // Prepare the update data for the API
+      const updateData = {
+        _id: event.id,
+        eventName: editForm.title,
+        description: editForm.description,
+        eventMode: editForm.mode.toLowerCase() as 'offline' | 'online' | 'hybrid',
+        location: editForm.location,
+        eventUrl: editForm.eventUrl
+      };
+
+      // Call the API to update the event
+      const result = await updateEvent(updateData).unwrap();
+
+      if (result.success) {
+        // Create updated event object with all required properties
+        const updatedEvent: Event = {
+          ...event, // Keep all existing properties
+          title: editForm.title,
+          description: editForm.description,
+          mode: editForm.mode,
+          location: editForm.location,
+          eventUrl: editForm.eventUrl
+        };
+        
+        // Call the onSave callback to update the parent component
+        onSave?.(updatedEvent);
+        setShowEditModal(false);
+      }
+    } catch (error) {
+      console.error('Failed to update event:', error);
+      // Error handling is done by the mutation hook
+    }
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -202,7 +227,7 @@ const Overview: React.FC<OverviewProps> = ({ event, onEdit, onSave }) => {
                 
                 <div>
                   <label className="text-sm font-medium text-gray-600">Base Price</label>
-                  <p className="text-gray-900 mt-1 text-xs">${event.price}</p>
+                  <p className="text-gray-900 mt-1 text-xs">₹{event.price}</p>
                 </div>
               </div>
             </div>
@@ -218,7 +243,7 @@ const Overview: React.FC<OverviewProps> = ({ event, onEdit, onSave }) => {
                   <div className="flex justify-between items-center">
                     <div>
                       <h4 className="font-medium text-gray-900 text-xs">{ticket.type}</h4>
-                      <p className="text-[#FF6B35] font-semibold text-xs">${ticket.price}</p>
+                      <p className="text-[#FF6B35] font-semibold text-xs">₹{ticket.price}</p>
                     </div>
                     <div className="text-right">
                       <p className="font-medium text-gray-900 text-xs">{ticket.sold} / {ticket.total}</p>
@@ -291,6 +316,15 @@ const Overview: React.FC<OverviewProps> = ({ event, onEdit, onSave }) => {
 
               {/* Required Field Note */}
               <p className="text-xs text-gray-500 mb-6">* Indicates required</p>
+
+              {/* Error Message */}
+              {updateError && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-red-600 text-sm">
+                    Failed to update event. Please try again.
+                  </p>
+                </div>
+              )}
 
               <div className="space-y-6">
                 {/* Title Field */}
@@ -379,15 +413,20 @@ const Overview: React.FC<OverviewProps> = ({ event, onEdit, onSave }) => {
               <div className="flex justify-end space-x-4 mt-8">
                 <button
                   onClick={handleModalClose}
-                  className="px-6 py-2 border border-[#FF6B35] text-[#FF6B35] rounded-lg hover:bg-[#FF6B35]/5 transition-colors font-medium"
+                  disabled={isUpdating}
+                  className="px-6 py-2 border border-[#FF6B35] text-[#FF6B35] rounded-lg hover:bg-[#FF6B35]/5 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSave}
-                  className="px-6 py-2 bg-[#FF6B35] text-white rounded-lg hover:bg-[#FF6B35]/90 transition-colors font-medium"
+                  disabled={isUpdating}
+                  className="px-6 py-2 bg-[#FF6B35] text-white rounded-lg hover:bg-[#FF6B35]/90 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
                 >
-                  Save
+                  {isUpdating && (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  )}
+                  <span>{isUpdating ? 'Saving...' : 'Save'}</span>
                 </button>
               </div>
             </div>

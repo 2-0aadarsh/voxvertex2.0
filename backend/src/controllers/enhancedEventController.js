@@ -1,5 +1,4 @@
 import EnhancedEvent from '../models/enhancedEvent.js';
-import EnhancedUser from '../models/enhancedUser.js';
 import Booking from '../models/bookingSpeaker.js';
 import { uploadToCloudinary } from '../configs/cloudinary.config.js';
 
@@ -20,8 +19,51 @@ export const createEnhancedEvent = async (req, res) => {
       });
     }
 
+    // Process and validate policies if provided
+    if (eventData.policies) {
+      console.log("📋 Processing policies for event creation:", eventData.policies);
+      
+      // Initialize policy metadata
+      if (!eventData.policies.metadata) {
+        eventData.policies.metadata = {
+          version: "1.0",
+          lastUpdated: new Date(),
+          updatedBy: req.user._id,
+          isCompliant: true,
+          complianceNotes: "Initial policy configuration"
+        };
+      } else {
+        eventData.policies.metadata.lastUpdated = new Date();
+        eventData.policies.metadata.updatedBy = req.user._id;
+      }
+
+      // Validate policies using the model's validation method
+      const event = new EnhancedEvent(eventData);
+      const policyValidation = event.validatePolicies();
+      
+      if (!policyValidation.isCompliant) {
+        return res.status(400).json({
+          success: false,
+          message: 'Policy validation failed',
+          errors: policyValidation.errors,
+          policyValidation: {
+            isCompliant: policyValidation.isCompliant,
+            errors: policyValidation.errors,
+            notes: policyValidation.notes
+          }
+        });
+      }
+
+      // Update compliance status in metadata
+      eventData.policies.metadata.isCompliant = policyValidation.isCompliant;
+      eventData.policies.metadata.complianceNotes = policyValidation.notes.join('; ');
+    }
+
     const event = new EnhancedEvent(eventData);
     await event.save();
+
+    // Populate organizer data for response
+    await event.populate('organizer', 'firstName lastName email profileImageUrl');
 
     res.status(201).json({
       success: true,
@@ -30,6 +72,17 @@ export const createEnhancedEvent = async (req, res) => {
     });
   } catch (error) {
     console.error('Error creating enhanced event:', error);
+    
+    // Handle validation errors specifically
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: validationErrors
+      });
+    }
+
     res.status(500).json({
       success: false,
       message: 'Failed to create enhanced event',
@@ -99,6 +152,146 @@ export const getAllEnhancedEvents = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to retrieve enhanced events',
+      error: error.message
+    });
+  }
+};
+
+// Get upcoming enhanced events (live tickets, future dates)
+export const getUpcomingEnhancedEvents = async (req, res) => {
+  try {
+    const { 
+      page = 1, 
+      limit = 10,
+      sortBy = 'startDate',
+      sortOrder = 'asc',
+      eventMode,
+      search
+    } = req.query;
+
+    // Build query for upcoming events
+    const query = {
+      status: 'published', // Only published events
+      startDate: { $gt: new Date() }, // Future start date
+      'ticketTypes.quantity': { $gt: 0 } // Has available tickets
+    };
+    
+    // Filter by event mode
+    if (eventMode) {
+      query.eventMode = eventMode;
+    }
+
+    // Search functionality
+    if (search) {
+      query.$or = [
+        { eventName: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { location: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const sort = {};
+    sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
+    const skip = (page - 1) * limit;
+
+    const events = await EnhancedEvent.find(query)
+      .populate('organizer', 'firstName lastName email profileImageUrl')
+      .sort(sort)
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await EnhancedEvent.countDocuments(query);
+
+    res.status(200).json({
+      success: true,
+      message: 'Upcoming enhanced events retrieved successfully',
+      data: {
+        events,
+        pagination: {
+          currentPage: parseInt(page),
+          totalPages: Math.ceil(total / limit),
+          totalEvents: total,
+          hasNextPage: page * limit < total,
+          hasPrevPage: page > 1
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error getting upcoming enhanced events:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve upcoming enhanced events',
+      error: error.message
+    });
+  }
+};
+
+// Get promoted events (featured on home page)
+export const getPromotedEvents = async (req, res) => {
+  try {
+    const { 
+      page = 1, 
+      limit = 10,
+      sortBy = 'startDate',
+      sortOrder = 'asc',
+      eventMode,
+      search
+    } = req.query;
+
+    // Build query for promoted events
+    const query = {
+      status: 'published', // Only published events
+      'addons.featureOnHome': true, // Must be featured on home page
+      startDate: { $gt: new Date() } // Future start date
+    };
+    
+    // Filter by event mode
+    if (eventMode) {
+      query.eventMode = eventMode;
+    }
+
+    // Search functionality
+    if (search) {
+      query.$or = [
+        { eventName: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { location: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const sort = {};
+    sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
+    const skip = (page - 1) * limit;
+
+    const events = await EnhancedEvent.find(query)
+      .populate('organizer', 'firstName lastName email profileImageUrl')
+      .sort(sort)
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await EnhancedEvent.countDocuments(query);
+
+    res.status(200).json({
+      success: true,
+      message: 'Promoted events retrieved successfully',
+      data: {
+        events,
+        pagination: {
+          currentPage: parseInt(page),
+          totalPages: Math.ceil(total / limit),
+          totalEvents: total,
+          hasNextPage: page * limit < total,
+          hasPrevPage: page > 1
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error getting promoted events:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve promoted events',
       error: error.message
     });
   }
@@ -175,12 +368,41 @@ export const updateEnhancedEvent = async (req, res) => {
       });
     }
 
-    // Prevent updates to published events (except status changes)
-    if (event.status === 'published' && updateData.status !== 'cancelled') {
-      return res.status(400).json({
-        success: false,
-        message: 'Cannot update published event. Only status can be changed to cancelled'
-      });
+    // Allow updates to published events - no restrictions
+
+    // Process and validate policies if provided in update
+    if (updateData.policies) {
+      console.log("📋 Processing policies update for event:", id);
+      
+      // Ensure metadata exists for policy updates
+      if (!updateData.policies.metadata) {
+        updateData.policies.metadata = event.policies?.metadata || {};
+      }
+      
+      // Update policy metadata
+      updateData.policies.metadata.lastUpdated = new Date();
+      updateData.policies.metadata.updatedBy = req.user._id;
+
+      // Create temporary event object for validation
+      const tempEvent = new EnhancedEvent({ ...event.toObject(), ...updateData });
+      const policyValidation = tempEvent.validatePolicies();
+      
+      if (!policyValidation.isCompliant) {
+        return res.status(400).json({
+          success: false,
+          message: 'Policy validation failed',
+          errors: policyValidation.errors,
+          policyValidation: {
+            isCompliant: policyValidation.isCompliant,
+            errors: policyValidation.errors,
+            notes: policyValidation.notes
+          }
+        });
+      }
+
+      // Update compliance status in metadata
+      updateData.policies.metadata.isCompliant = policyValidation.isCompliant;
+      updateData.policies.metadata.complianceNotes = policyValidation.notes.join('; ');
     }
 
     const updatedEvent = await EnhancedEvent.findByIdAndUpdate(
@@ -196,6 +418,17 @@ export const updateEnhancedEvent = async (req, res) => {
     });
   } catch (error) {
     console.error('Error updating enhanced event:', error);
+    
+    // Handle validation errors specifically
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: validationErrors
+      });
+    }
+
     res.status(500).json({
       success: false,
       message: 'Failed to update enhanced event',

@@ -80,9 +80,9 @@ export const BookingActionButtons: React.FC<BookingActionButtonsProps> = ({
       const result = await createNegotiation({
         conversationId: conversationId,
         amount: amount,
-        currency: 'USD',
+        currency: 'INR',
         topic: 'Speaking Engagement',
-        message: `Counter-proposal: $${amount}`,
+        message: `Counter-proposal: ₹${amount}`,
       }).unwrap();
 
       console.log('✅ Negotiation created successfully:', result);

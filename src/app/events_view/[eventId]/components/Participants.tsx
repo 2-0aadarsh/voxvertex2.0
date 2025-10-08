@@ -1,7 +1,20 @@
 import React, { useState } from 'react';
 import { Mail, Calendar, X, ChevronDown } from 'lucide-react';
+import { useGetEventParticipantsQuery } from '../../../../store/slices/enhancedEventSlice';
 
-const Participants: React.FC = () => {
+interface ParticipantsProps {
+  eventId: string;
+}
+
+const Participants: React.FC<ParticipantsProps> = ({ eventId }) => {
+  // Fetch participants data
+  const { 
+    data: participantsData, 
+    isLoading: participantsLoading, 
+    error: participantsError,
+    refetch: refetchParticipants 
+  } = useGetEventParticipantsQuery(eventId);
+
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [messageForm, setMessageForm] = useState({
     template: 'Custom Message',
@@ -121,32 +134,10 @@ Until next time!
     }
   };
 
-  const participants = [
-    {
-      name: "John Doe",
-      ticketType: "Early Bird",
-      registrationDate: "Jan 15, 2024, 05:30 AM",
-      amountPaid: "$74.25"
-    },
-    {
-      name: "John Doe",
-      ticketType: "Early Bird",
-      registrationDate: "Jan 15, 2024, 05:30 AM",
-      amountPaid: "$74.25"
-    },
-    {
-      name: "John Doe",
-      ticketType: "Early Bird",
-      registrationDate: "Jan 15, 2024, 05:30 AM",
-      amountPaid: "$74.25"
-    },
-    {
-      name: "John Doe",
-      ticketType: "Early Bird",
-      registrationDate: "Jan 15, 2024, 05:30 AM",
-      amountPaid: "$74.25"
-    }
-  ];
+  // Get participants from API or empty array if loading/error
+  const participants = participantsData?.data?.participants || [];
+  const totalParticipants = participantsData?.data?.totalParticipants || 0;
+  const totalRegistrations = participantsData?.data?.totalRegistrations || 0;
 
   const handleComposeClick = () => {
     setShowMessageModal(true);
@@ -199,21 +190,22 @@ Until next time!
   };
 
   const handleScheduleMessage = () => {
-    // Calculate total recipients
+    // Calculate total recipients based on real data
     let totalRecipients = 0;
     if (selectedRecipients.includes('all-participants')) {
       if (selectedTicketTypes.length > 0) {
-        totalRecipients += selectedTicketTypes.reduce((sum, type) => {
-          if (type === 'early-bird') return sum + 1;
-          if (type === 'regular') return sum + 2;
-          return sum;
-        }, 0);
+        // Filter participants by selected ticket types
+        const filteredParticipants = participants.filter((participant: any) => 
+          selectedTicketTypes.includes(participant.ticketTier.toLowerCase().replace(' ', '-'))
+        );
+        totalRecipients += filteredParticipants.length;
       } else {
-        totalRecipients += 3;
+        totalRecipients += totalParticipants;
       }
     }
     if (selectedRecipients.includes('speakers')) {
-      totalRecipients += 2;
+      // Add speaker count (this would need to be fetched separately or included in event data)
+      totalRecipients += 0; // Placeholder - would need actual speaker count
     }
 
     // Create new scheduled message
@@ -237,38 +229,98 @@ Until next time!
         {/* Participants Card */}
         <div className="bg-white rounded-2xl border border-[#FF6B35] p-6">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-[#FF6B35] text-sm font-medium">
-              Participants (4)
-            </h2>
-            <button className="flex items-center gap-2 px-4 py-2 border border-[#FF6B35] text-[#FF6B35] rounded-lg text-xs hover:bg-orange-50 transition-colors">
+            <div className="flex items-center gap-3">
+              <h2 className="text-[#FF6B35] text-sm font-medium">
+                Participants ({totalParticipants})
+              </h2>
+              {participantsLoading && (
+                <div className="w-4 h-4 border-2 border-[#FF6B35] border-t-transparent rounded-full animate-spin"></div>
+              )}
+            </div>
+            <button 
+              onClick={() => refetchParticipants()}
+              className="flex items-center gap-2 px-4 py-2 border border-[#FF6B35] text-[#FF6B35] rounded-lg text-xs hover:bg-orange-50 transition-colors"
+              disabled={participantsLoading}
+            >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              Export List
+              {participantsLoading ? 'Refreshing...' : 'Refresh'}
             </button>
           </div>
 
-          <div className="bg-white rounded-lg border border-[#FF6B35]/20">
-            {/* Table Header */}
-            <div className="grid grid-cols-4 gap-4 p-4 bg-[#FF6B35]/10 rounded-t-lg">
-              <div className="text-[#FF6B35] text-sm font-medium">Name</div>
-              <div className="text-[#FF6B35] text-sm font-medium">Ticket Type</div>
-              <div className="text-[#FF6B35] text-sm font-medium">Registration Date</div>
-              <div className="text-[#FF6B35] text-sm font-medium">Amount Paid</div>
+          {participantsError ? (
+            <div className="text-center py-12">
+              <div className="text-red-500 text-sm mb-2">Failed to load participants</div>
+              <button 
+                onClick={() => refetchParticipants()}
+                className="text-[#FF6B35] text-xs underline hover:no-underline"
+              >
+                Try again
+              </button>
             </div>
+          ) : participantsLoading ? (
+            <div className="text-center py-12">
+              <div className="w-8 h-8 border-2 border-[#FF6B35] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-gray-500 text-sm">Loading participants...</p>
+            </div>
+          ) : participants.length === 0 ? (
+            <div className="text-center py-12">
+              <svg className="w-12 h-12 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              <p className="text-gray-400 text-sm mb-2">No participants yet</p>
+              <p className="text-gray-400 text-xs">Participants will appear here once they register for your event</p>
+            </div>
+          ) : (
+            <div className="bg-white rounded-lg border border-[#FF6B35]/20">
+              {/* Table Header */}
+              <div className="grid grid-cols-4 gap-4 p-4 bg-[#FF6B35]/10 rounded-t-lg">
+                <div className="text-[#FF6B35] text-sm font-medium">Name</div>
+                <div className="text-[#FF6B35] text-sm font-medium">Ticket Type</div>
+                <div className="text-[#FF6B35] text-sm font-medium">Registration Date</div>
+                <div className="text-[#FF6B35] text-sm font-medium">Status</div>
+              </div>
 
-            {/* Table Rows */}
-            <div>
-              {participants.map((participant, index) => (
-                <div key={index} className="grid grid-cols-4 gap-4 p-4 border-b border-[#FF6B35]/20 last:border-b-0">
-                  <div className="text-xs text-gray-700">{participant.name}</div>
-                  <div className="text-xs text-gray-700">{participant.ticketType}</div>
-                  <div className="text-xs text-gray-700">{participant.registrationDate}</div>
-                  <div className="text-xs text-gray-700">{participant.amountPaid}</div>
-                </div>
-              ))}
+              {/* Table Rows */}
+              <div>
+                {participants.map((participant: any, index: number) => (
+                  <div key={`${participant.registrationId}-${index}`} className="grid grid-cols-4 gap-4 p-4 border-b border-[#FF6B35]/20 last:border-b-0">
+                    <div className="text-xs text-gray-700">
+                      <div className="font-medium">{participant.name}</div>
+                      <div className="text-gray-500">{participant.email}</div>
+                    </div>
+                    <div className="text-xs text-gray-700">
+                      <div className="font-medium">{participant.ticketTier}</div>
+                      {participant.isPrimaryRegistrant && (
+                        <span className="inline-block px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full mt-1">
+                          Primary
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs text-gray-700">
+                      {new Date(participant.registrationDate).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </div>
+                    <div className="text-xs text-gray-700">
+                      <span className={`inline-block px-2 py-1 rounded-full text-xs ${
+                        participant.isRegisteredUser 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {participant.isRegisteredUser ? 'Registered User' : 'Guest'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Participant Communication Card */}
@@ -530,7 +582,7 @@ Until next time!
                         className="w-4 h-4 text-[#FF6B35] focus:ring-[#FF6B35] focus:ring-2 rounded"
                       />
                       <label htmlFor="all-participants" className="ml-3 text-xs text-gray-900 font-medium">
-                        All Participants (3)
+                        All Participants ({totalParticipants})
                       </label>
                     </div>
 
@@ -604,21 +656,21 @@ Until next time!
                         // Count participants
                         if (selectedRecipients.includes('all-participants')) {
                           if (selectedTicketTypes.length > 0) {
-                            // Count based on selected ticket types
-                            total += selectedTicketTypes.reduce((sum, type) => {
-                              if (type === 'early-bird') return sum + 1;
-                              if (type === 'regular') return sum + 2;
-                              return sum;
-                            }, 0);
+                            // Filter participants by selected ticket types
+                            const filteredParticipants = participants.filter((participant: any) => 
+                              selectedTicketTypes.includes(participant.ticketTier.toLowerCase().replace(' ', '-'))
+                            );
+                            total += filteredParticipants.length;
                           } else {
                             // All participants if no specific ticket types selected
-                            total += 3;
+                            total += totalParticipants;
                           }
                         }
                         
                         // Add speakers
                         if (selectedRecipients.includes('speakers')) {
-                          total += 2;
+                          // Placeholder - would need actual speaker count
+                          total += 0;
                         }
                         
                         return total;

@@ -5,7 +5,7 @@ import React, { useState } from "react";
 import Image from "next/image";
 import {
   Calendar,
-  DollarSign,
+  BadgeIndianRupee,
   Clock,
   Calendar as CalendarIcon,
   User,
@@ -78,9 +78,9 @@ export default function SpeakerCard({
           <span className="text-[10px] text-gray-600">{speaker.date}</span>
         </div>
         <div className="flex items-center space-x-2">
-          <DollarSign size={12} className="text-gray-400" />
+          <BadgeIndianRupee size={12} className="text-gray-400" />
           <span className="text-xs text-green-600">
-            ${speaker.price.toLocaleString()}
+            ₹{speaker.price.toLocaleString()}
           </span>
         </div>
       </div>

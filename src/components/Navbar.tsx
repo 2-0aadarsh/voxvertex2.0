@@ -12,6 +12,7 @@ import {
   AlertTriangle,
   HelpCircle,
   Settings,
+  Filter,
 } from "lucide-react";
 import { IoIosArrowDown } from "react-icons/io";
 import Logo from "./Logo";
@@ -244,7 +245,18 @@ const Navbar: React.FC<NavbarProps> = ({
                   placeholder="Search Speaker"
                   value={searchQuery}
                   onChange={handleSearchChange}
-                  className="w-full pl-10 pr-10 py-2.5 border border-blue-400 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-blue-600 text-sm bg-white"
+                  className="w-full pl-10 pr-10 py-2.5 border border-[#FF6B35]/70 rounded-full focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35] focus:outline-none focus:ring-offset-0 text-sm bg-white"
+                  style={{
+                    boxShadow: 'none',
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.boxShadow = '0 0 0 2px rgba(255, 107, 53, 0.5)';
+                    e.target.style.borderColor = '#FF6B35';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.boxShadow = 'none';
+                    e.target.style.borderColor = 'rgba(255, 107, 53, 0.7)';
+                  }}
                 />
                 <button 
                   type="submit"

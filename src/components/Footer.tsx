@@ -45,13 +45,13 @@ const Footer: React.FC = () => {
                 <h3 className="text-lg font-semibold text-white">
                   Subscribe Our Newsletter
                 </h3>
-                <div className="relative max-w-md">
+                <div className="relative max-w-md ">
                   <input
                     type="email"
                     placeholder="Enter your email"
-                    className="w-full px-6 py-4 pr-32 text-gray-900 text-base bg-white rounded-lg border border-gray-300 outline-none placeholder-gray-500 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all duration-300"
+                    className="w-full px-6 py-3 pr-32 text-gray-900 text-base bg-white rounded-full  border border-gray-300 outline-none placeholder-gray-500 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all duration-300"
                   />
-                  <button className="absolute right-2 top-2 bottom-2 px-6 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-md shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2">
+                  <button className="absolute right-2 top-2 bottom-2 px-6 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-full  shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2">
                     Submit <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>

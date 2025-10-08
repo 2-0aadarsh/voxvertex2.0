@@ -398,7 +398,7 @@ export default function SpeakersStep({ formData, onFormDataUpdate }: SpeakersSte
                               <p className="text-xs text-orange-700 font-medium">Previously booked for:</p>
                               <p className="text-xs text-orange-600">{speaker.bookingDetails.eventName}</p>
                               <p className="text-xs text-orange-500">
-                                ${speaker.bookingDetails.amount?.toLocaleString() || '0'} • {new Date(speaker.bookingDetails.date).toLocaleDateString()}
+                                ₹{speaker.bookingDetails.amount?.toLocaleString() || '0'} • {new Date(speaker.bookingDetails.date).toLocaleDateString()}
                               </p>
                             </div>
 

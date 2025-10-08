@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, MapPin, Calendar, Clock, Users, Video, Building } from "lucide-react";
-import { useGetPublishedEventsQuery } from "@/store/slices/enhancedEventSlice";
+import { useGetUpcomingEventsQuery } from "@/store/slices/enhancedEventSlice";
 
 // --- Helper Functions ---
 const formatDate = (dateString: string) =>
@@ -12,10 +12,7 @@ const formatDate = (dateString: string) =>
 const formatTime = (dateString: string) =>
   new Date(dateString).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
 
-const isEventUpcoming = (startDate: string) => {
-  const today = new Date(); today.setHours(0,0,0,0);
-  return new Date(startDate) >= today;
-};
+// Removed isEventUpcoming function since backend now handles this filtering
 
 const getMinPriceTicket = (ticketTypes: any[]) => {
   if (!ticketTypes || !ticketTypes.length) return null;
@@ -54,19 +51,24 @@ export default function ParticipantEvents() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedType, setSelectedType] = useState("all");
   const [selectedCategory, setSelectedCategory] = useState("upcoming");
-  const { data: eventsResponse, isLoading, error } = useGetPublishedEventsQuery({
-    page: 1, limit: 50, sortBy: 'startDate', sortOrder: 'asc'
+  
+  // Use the new upcoming events API
+  const { data: eventsResponse, isLoading, error } = useGetUpcomingEventsQuery({
+    page: 1, 
+    limit: 50, 
+    sortBy: 'startDate', 
+    sortOrder: 'asc',
+    search: searchTerm || undefined // Pass search term to backend
   });
 
-  const upcomingEvents = eventsResponse?.data?.events?.filter(event => isEventUpcoming(event.startDate)) || [];
+  // Backend already filters for upcoming events, so we just need to apply local filters
+  const upcomingEvents = eventsResponse?.data?.events || [];
   const filteredEvents = upcomingEvents.filter((event: any) => {
-    const matchesSearch = event.eventName.toLowerCase().includes(searchTerm.toLowerCase())
-      || event.description.toLowerCase().includes(searchTerm.toLowerCase());
     const minPrice = getMinPriceTicket(event.ticketTypes);
     const eventType = minPrice && minPrice >= 200 ? "vip" : "standard";
     const matchesType = selectedType === "all" || eventType === selectedType;
     const matchesCategory = selectedCategory === "all" || selectedCategory === "upcoming";
-    return matchesSearch && matchesType && matchesCategory;
+    return matchesType && matchesCategory;
   });
 
   const getLocationIcon = (mode: string) => {
@@ -111,7 +113,7 @@ export default function ParticipantEvents() {
                 placeholder="Search events..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-base"
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35] bg-white text-base"
               />
             </div>
           </div>
@@ -120,7 +122,7 @@ export default function ParticipantEvents() {
             <select
               value={selectedType}
               onChange={e => setSelectedType(e.target.value)}
-              className="border border-gray-300 rounded-lg py-2.5 px-3 text-gray-700 focus:ring-2 focus:ring-blue-500 bg-white min-w-[120px] text-base"
+              className="border border-gray-300 rounded-lg py-2.5 px-3 text-gray-700 focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35] bg-white min-w-[120px] text-base"
             >
               {filters.types.map(type => <option key={type.id} value={type.id}>{type.label}</option>)}
             </select>
@@ -128,7 +130,7 @@ export default function ParticipantEvents() {
             <select
               value={selectedCategory}
               onChange={e => setSelectedCategory(e.target.value)}
-              className="border border-gray-300 rounded-lg py-2.5 px-3 text-gray-700 focus:ring-2 focus:ring-blue-500 bg-white min-w-[140px] text-base"
+              className="border border-gray-300 rounded-lg py-2.5 px-3 text-gray-700 focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35] bg-white min-w-[140px] text-base"
             >
               {filters.categories.map(category => <option key={category.id} value={category.id}>{category.label}</option>)}
             </select>
@@ -245,7 +247,7 @@ export default function ParticipantEvents() {
                       <div className="flex justify-center mt-auto">
                         <button 
                           onClick={() => router.push(`/participant/events/${event._id}`)}
-                          className="text-lg font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg px-8 py-3 transition-colors w-full"
+                          className="text-lg font-semibold text-white bg-[#FF6B35] hover:bg-[#FF6B35]/90 rounded-lg px-8 py-3 transition-colors w-full"
                         >
                           View Details
                         </button>

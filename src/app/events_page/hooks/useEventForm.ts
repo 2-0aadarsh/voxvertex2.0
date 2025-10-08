@@ -14,6 +14,7 @@ import {
   updateTicketing,
   updateSpeakers,
   updateAddons,
+  updatePolicies,
   updateStatus,
   setLoading,
   setError,
@@ -35,10 +36,10 @@ import {
   validateStep4,
   validateStep5,
   validateStep6,
+  validateStep7,
   validateAllSteps,
   useCreateEventMutation,
   useUpdateEventMutation,
-  useValidateEventMutation,
   useUploadBannerImageMutation,
   type EventFormData,
   type EventStep,
@@ -62,7 +63,6 @@ export const useEventForm = () => {
   // API mutations
   const [createEvent, { isLoading: isCreating }] = useCreateEventMutation();
   const [updateEvent, { isLoading: isUpdating }] = useUpdateEventMutation();
-  const [validateEvent] = useValidateEventMutation();
   const [uploadBannerImage, { isLoading: isUploading }] = useUploadBannerImageMutation();
   
   // Step navigation
@@ -103,6 +103,10 @@ export const useEventForm = () => {
     dispatch(updateAddons(data));
   }, [dispatch]);
   
+  const updateStep6 = useCallback((data: Parameters<typeof updatePolicies>[0]) => {
+    dispatch(updatePolicies(data));
+  }, [dispatch]);
+  
   const updateEventStatus = useCallback((status: 'draft' | 'published') => {
     dispatch(updateStatus(status));
   }, [dispatch]);
@@ -122,6 +126,8 @@ export const useEventForm = () => {
         return validateStep5(formData);
       case 6:
         return validateStep6(formData);
+      case 7:
+        return validateStep7(formData);
       default:
         return { isValid: false, errors: {} };
     }
@@ -176,6 +182,7 @@ export const useEventForm = () => {
       })),
       speakers: formData.speakers,
       addons: formData.addons,
+      policies: formData.policies,
       status: formData.status
     };
   }, [formData]);
@@ -294,7 +301,7 @@ export const useEventForm = () => {
   }, [validateCurrentStep]);
   
   const canProceedToNext = useMemo(() => {
-    return isStepValid && currentStep < 6;
+    return isStepValid && currentStep < 7;
   }, [isStepValid, currentStep]);
   
   const canGoToPrevious = useMemo(() => {
@@ -332,6 +339,7 @@ export const useEventForm = () => {
     updateStep3,
     updateStep4,
     updateStep5,
+    updateStep6,
     updateEventStatus,
     
     // Validation

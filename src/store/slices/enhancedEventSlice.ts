@@ -18,7 +18,7 @@ import type {
 } from '../../app/events_page/types/eventTypes';
 
 // Define ApiResponse type locally
-type ApiResponse<T = any> = {
+type ApiResponse<T = unknown> = {
   success: boolean;
   message: string;
   data?: T;
@@ -59,7 +59,49 @@ const initialFormData: EventFormData = {
     socialMediaPromotion: false
   },
   
-  // Step 6: Final
+  // Step 6: Policies & Terms - all fields start empty
+  policies: {
+    participantRefund: {
+      allowRefunds: false,
+      refundDeadline: '',
+      refundPercentage: '',
+      processingFee: '',
+      processingTime: '',
+      allowEmergencyRefunds: false,
+      emergencyConditions: '',
+      refundConditions: []
+    },
+    speakerCancellation: {
+      allowCancellation: false,
+      cancellationDeadline: '',
+      penaltyPercentage: '',
+      requireReplacement: false,
+      forceMajeureClause: false,
+      paymentTerms: '',
+      speakerConditions: []
+    },
+    eventCancellation: {
+      allowCancellation: false,
+      fullRefundDeadline: '',
+      partialRefundDeadline: '',
+      partialRefundPercentage: '',
+      administrativeFee: '',
+      refundMethod: '',
+      processingTime: ''
+    },
+    eventPostponement: {
+      allowPostponement: false,
+      noticeRequired: '',
+      maxPostponementDuration: '',
+      ticketsValidForNewDate: false,
+      offerRefundOnPostponement: false,
+      refundPercentageOnPostponement: '',
+      postponementConditions: []
+    },
+    generalTerms: ''
+  },
+  
+  // Step 7: Final
   status: 'draft'
 };
 
@@ -84,7 +126,7 @@ const enhancedEventSlice = createSlice({
     },
     
     nextStep: (state) => {
-      if (state.currentStep < 6) {
+      if (state.currentStep < 7) {
         state.currentStep = (state.currentStep + 1) as EventStep;
       }
     },
@@ -124,6 +166,10 @@ const enhancedEventSlice = createSlice({
     },
     
     updateAddons: (state, action: PayloadAction<Partial<Pick<EventFormData, 'addons'>>>) => {
+      state.formData = { ...state.formData, ...action.payload };
+    },
+    
+    updatePolicies: (state, action: PayloadAction<Partial<Pick<EventFormData, 'policies'>>>) => {
       state.formData = { ...state.formData, ...action.payload };
     },
     
@@ -192,6 +238,7 @@ const enhancedEventSlice = createSlice({
         ticketTypes: event.ticketTypes,
         speakers: event.speakers,
         addons: event.addons,
+        policies: event.policies,
         status: event.status
       };
       state.currentStep = 1;
@@ -273,6 +320,46 @@ export const enhancedEventApi = baseApi.injectEndpoints({
     >({
       query: (params = {}) => ({
         url: '/enhanced-events/published',
+        params,
+      }),
+      providesTags: ['EnhancedEvent'],
+      keepUnusedDataFor: 300, // Cache for 5 minutes
+    }),
+    
+    // Get upcoming events (public) - live tickets, future dates
+    getUpcomingEvents: builder.query<
+      EventListResponse,
+      {
+        page?: number;
+        limit?: number;
+        search?: string;
+        eventMode?: 'offline' | 'online' | 'hybrid';
+        sortBy?: 'startDate' | 'eventName' | 'createdAt';
+        sortOrder?: 'asc' | 'desc';
+      }
+    >({
+      query: (params = {}) => ({
+        url: '/enhanced-events/upcoming',
+        params,
+      }),
+      providesTags: ['EnhancedEvent'],
+      keepUnusedDataFor: 300, // Cache for 5 minutes
+    }),
+
+    // Get promoted events (public) - featured on home page
+    getPromotedEvents: builder.query<
+      EventListResponse,
+      {
+        page?: number;
+        limit?: number;
+        search?: string;
+        eventMode?: 'offline' | 'online' | 'hybrid';
+        sortBy?: 'startDate' | 'eventName' | 'createdAt';
+        sortOrder?: 'asc' | 'desc';
+      }
+    >({
+      query: (params = {}) => ({
+        url: '/enhanced-events/promoted',
         params,
       }),
       providesTags: ['EnhancedEvent'],
@@ -417,6 +504,19 @@ export const enhancedEventApi = baseApi.injectEndpoints({
       }),
       providesTags: ['EnhancedEvent'],
     }),
+
+    // Get enhanced event participants (for organizers)
+    getEventParticipants: builder.query<
+      { success: boolean; data: { participants: unknown[]; totalParticipants: number; totalRegistrations: number } },
+      string
+    >({
+      query: (eventId) => ({
+        url: `/enhanced-events/register/${eventId}/participants`,
+        method: 'GET',
+      }),
+      providesTags: (result, error, eventId) => [{ type: 'EnhancedEvent', id: eventId }],
+      keepUnusedDataFor: 300, // Cache for 5 minutes
+    }),
   }),
 });
 
@@ -431,6 +531,7 @@ export const {
   updateTicketing,
   updateSpeakers,
   updateAddons,
+  updatePolicies,
   updateStatus,
   setLoading,
   setError,
@@ -448,6 +549,8 @@ export const {
   useGetUserEventsQuery,
   useGetEventByIdQuery,
   useGetPublishedEventsQuery,
+  useGetUpcomingEventsQuery,
+  useGetPromotedEventsQuery,
   useDeleteEventMutation,
   useValidateEventMutation,
   useUploadBannerImageMutation,
@@ -459,6 +562,7 @@ export const {
   useVerifyEnhancedEventPaymentMutation,
   useGetEnhancedEventRegistrationSummaryQuery,
   useGetUserEnhancedEventRegistrationsQuery,
+  useGetEventParticipantsQuery,
 } = enhancedEventApi;
 
 // Selectors
@@ -581,7 +685,7 @@ export const validateStep4 = (formData: EventFormData): EventValidation => {
   };
 };
 
-export const validateStep5 = (formData: EventFormData): EventValidation => {
+export const validateStep5 = (_formData: EventFormData): EventValidation => {
   // Step 5 (Addons) is optional, so it's always valid
   return {
     isValid: true,
@@ -590,6 +694,45 @@ export const validateStep5 = (formData: EventFormData): EventValidation => {
 };
 
 export const validateStep6 = (formData: EventFormData): EventValidation => {
+  const errors: Record<string, string> = {};
+  
+  // Validate policies
+  if (!formData.policies) {
+    errors.policies = 'Policies are required';
+  } else {
+    // Validate participant refund policy
+    if (!formData.policies.participantRefund) {
+      errors['policies.participantRefund'] = 'Participant refund policy is required';
+    }
+    
+    // Validate speaker cancellation policy
+    if (!formData.policies.speakerCancellation) {
+      errors['policies.speakerCancellation'] = 'Speaker cancellation policy is required';
+    }
+    
+    // Validate event cancellation policy
+    if (!formData.policies.eventCancellation) {
+      errors['policies.eventCancellation'] = 'Event cancellation policy is required';
+    }
+    
+    // Validate event postponement policy
+    if (!formData.policies.eventPostponement) {
+      errors['policies.eventPostponement'] = 'Event postponement policy is required';
+    }
+    
+    // Validate general terms
+    if (!formData.policies.generalTerms || typeof formData.policies.generalTerms !== 'string' || !formData.policies.generalTerms.trim()) {
+      errors['policies.generalTerms'] = 'General terms and conditions are required';
+    }
+  }
+  
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors
+  };
+};
+
+export const validateStep7 = (formData: EventFormData): EventValidation => {
   const errors: Record<string, string> = {};
   
   if (!formData.status) {
@@ -609,7 +752,8 @@ export const validateAllSteps = (formData: EventFormData) => {
     step3: validateStep3(formData),
     step4: validateStep4(formData),
     step5: validateStep5(formData),
-    step6: validateStep6(formData)
+    step6: validateStep6(formData),
+    step7: validateStep7(formData)
   };
 };
 

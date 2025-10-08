@@ -1,7 +1,7 @@
 import "dotenv/config"
 
 import transporter from '../configs/nodemailer.config.js';
-import { contactUsEmailTemplate, emailTemplate, passwordResetEmailTemplate, passwordResetLinkTemplate, passwordResetOTPTemplate, passwordChangedTemplate } from '../utils/emails/emailTemplate.js';
+import { contactUsEmailTemplate, emailTemplate, passwordResetEmailTemplate, passwordResetLinkTemplate, passwordResetOTPTemplate, passwordChangedTemplate, eventRegistrationConfirmationTemplate } from '../utils/emails/emailTemplate.js';
 
 const sendEmailVerification = async (to, subject, htmlContent) => {
   try {
@@ -136,4 +136,35 @@ const sendPasswordChangedConfirmation = async (to, subject, emailContent) => {
   }
 };
 
-export { sendEmailVerification, sendForgetPassword, sendContactUsMail, sendPasswordResetOTP, sendPasswordChangedConfirmation };
+const sendEventRegistrationConfirmation = async (to, subject, eventData, ticketData, userData) => {
+  try {
+    console.log('📧 Sending event registration confirmation email to:', to);
+    console.log('📧 Event data received:', JSON.stringify(eventData, null, 2));
+    console.log('📧 Ticket data received:', JSON.stringify(ticketData, null, 2));
+    console.log('📧 User data received:', JSON.stringify(userData, null, 2));
+    
+    // Generate HTML using template
+    const emailHtml = eventRegistrationConfirmationTemplate(eventData, ticketData, userData);
+    console.log('📧 Email HTML generated, length:', emailHtml.length);
+
+    const mailOptions = {
+      from: 'VoxVertex <noreply@voxvertex.com>',
+      to,
+      subject,
+      html: emailHtml,
+    };
+
+    console.log('📤 Mail options prepared:', { to, subject, from: mailOptions.from });
+    
+    const info = await transporter.sendMail(mailOptions);
+    console.log('✅ Event registration confirmation email sent successfully:', info.messageId);
+    return info;
+  } catch (error) {
+    console.error('❌ Error sending event registration confirmation email:', error);
+    console.error('❌ Error details:', error.message);
+    console.error('❌ Error stack:', error.stack);
+    throw error;
+  }
+};
+
+export { sendEmailVerification, sendForgetPassword, sendContactUsMail, sendPasswordResetOTP, sendPasswordChangedConfirmation, sendEventRegistrationConfirmation };

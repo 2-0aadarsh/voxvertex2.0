@@ -341,8 +341,8 @@ const Step4: React.FC<Step4Props> = ({
                 <span className="text-sm font-medium text-gray-700">Offer Amount:</span>
                 <span className="text-sm font-medium text-[#FF6B35]">
                   {formData.offerAmount 
-                    ? `${formData.currency || '$'}${formData.offerAmount.toLocaleString()}`
-                    : '$5,000'
+                    ? `${formData.currency || '₹'}${formData.offerAmount.toLocaleString()}`
+                    : '₹5,000'
                   }
                 </span>
               </div>
