@@ -19,6 +19,7 @@ import {
   useDeletePaymentMethodMutation,
 } from "../../../store/api/paymentApi"; // adjust path if your file lives elsewhere
 import { useAuth } from "@/store/hooks";
+import { useGetCurrentUserQuery } from "@/store/slices/authSlice";
 
 export default function PaymentMethods() {
   // get userId (adjust if you have auth state)
@@ -29,10 +30,27 @@ export default function PaymentMethods() {
   // };
 
   // const userId = getCookie("userId") || "";
-  const { user, id, logout } = useAuth();
-  console.log("user frpm payment is", user);
-  console.log("id frpm payment is", id);
-  const userId = id;
+  const { user, id, logout, isAuthenticated, role } = useAuth();
+  const { data: currentUserData } = useGetCurrentUserQuery();
+
+  // Use currentUserData as fallback if useAuth doesn't have the data
+  const effectiveUser = user || currentUserData?.user;
+  const effectiveId = id || currentUserData?.user?._id;
+
+  console.log("PaymentMethods - Auth state:", {
+    user: effectiveUser
+      ? `${effectiveUser.firstName} ${effectiveUser.lastName}`
+      : null,
+    id: effectiveId,
+    isAuthenticated,
+    role,
+    hasUser: !!effectiveUser,
+    hasId: !!effectiveId,
+    useAuthUser: !!user,
+    useAuthId: !!id,
+    currentUserData: !!currentUserData?.user,
+  });
+  const userId = effectiveId;
   // RTK Query hooks
   const {
     data: paymentMethods = [],
@@ -293,17 +311,43 @@ export default function PaymentMethods() {
     } catch (err) {
       console.error("Failed to add bank account", err);
       alert(
-        err?.data?.message || "Failed to add bank account. Please try again."
+        (err as any)?.data?.message ||
+          "Failed to add bank account. Please try again."
       );
     }
   };
 
-  if (!id) {
+  // Show loading state while user data is being fetched
+  if (!effectiveId && !effectiveUser) {
     return (
       <div className="p-6">
-        <p className="text-sm text-gray-600">
-          User not found. Please login or pass the userId to this component.
-        </p>
+        <div className="flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+          <span className="ml-2 text-sm text-gray-600">
+            Loading user data...
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  // Only show error if we have user but no ID (this shouldn't happen normally)
+  if (!effectiveId && effectiveUser) {
+    console.error("PaymentMethods: User object exists but no ID found", {
+      effectiveUser,
+      effectiveId,
+    });
+    return (
+      <div className="p-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <AlertCircle className="h-5 w-5 text-red-400 mr-2" />
+            <p className="text-sm text-red-600">
+              Unable to load payment methods. Please refresh the page or contact
+              support.
+            </p>
+          </div>
+        </div>
       </div>
     );
   }

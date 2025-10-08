@@ -1,6 +1,6 @@
 "use client";
 
-import {
+import { 
   Calendar,
   CreditCard,
   CheckCircle,
@@ -31,8 +31,8 @@ import {
   useGetSubscriptionStatusQuery,
   useCancelSubscriptionMutation,
   useChangeSubscriptionPlanMutation,
-} from "../../../store/api/paymentApi";
-import { useAuth } from "@/store/hooks";
+ } from "../../../store/api/paymentApi";
+ import { useAuth } from "@/store/hooks";
 
 interface Plan {
   id: string;
@@ -54,7 +54,7 @@ interface PaymentOption {
 }
 
 export default function Subscription() {
-  const { user } = useAuth(); // get the logged-in user
+   const { user } = useAuth(); // get the logged-in user
   const userId = user?._id;
 
   // const plans: Plan[] = [
@@ -125,8 +125,8 @@ export default function Subscription() {
     isLoading: paymentsLoading,
     isError: paymentsError,
   } = useGetPaymentMethodsQuery(userId!, {
-    skip: !userId,
-  });
+  skip: !userId,
+});
 
   const [addPaymentMethod, { isLoading: isAdding }] =
     useAddPaymentMethodMutation();
@@ -146,11 +146,11 @@ export default function Subscription() {
     skip: !userId,
   });
 
-  if (plansLoading || paymentsLoading) return <div>Loading...</div>;
-  if (plansError || paymentsError) return <div>Error loading data</div>;
+ if (plansLoading || paymentsLoading) return <div>Loading...</div>;
+if (plansError || paymentsError) return <div>Error loading data</div>;
 
   console.log("userId:", userId); // must print the actual id
-  console.log("paymentMethods:", paymentMethods); // will now show array or undefined
+console.log("paymentMethods:", paymentMethods); // will now show array or undefined
   console.log("plansData:", plansData); // Debug plans data structure
   console.log("plansData.plans:", plansData?.plans); // Debug plans array
   console.log("plansData.plans length:", plansData?.plans?.length); // Debug plans count
@@ -165,19 +165,19 @@ export default function Subscription() {
   ); // Debug plan details
 
   // Map API response to UI-friendly structure
-  const plans: Plan[] =
+const plans: Plan[] =
     plansData?.plans?.map((plan: SubscriptionPlan) => ({
-      id: plan._id,
+    id: plan._id,
       title: plan.name || "Unnamed Plan",
       subtitle: plan.billingPeriod || "Monthly",
       price: `$${(plan.price || 0).toFixed(2)}/mo`,
-      total:
+    total:
         plan.originalPrice && plan.originalPrice !== plan.price
           ? `$${(plan.originalPrice || 0).toFixed(2)} total`
-          : undefined,
-      savePercent: plan.discountText || undefined,
+        : undefined,
+    savePercent: plan.discountText || undefined,
       badge: plan.billingCycle === "6months" ? "Most Popular" : undefined, // Example rule
-    })) || [];
+  })) || [];
 
   const handleStartTrial = async () => {
     if (!userId) return alert("User not found");
@@ -257,8 +257,8 @@ export default function Subscription() {
       }).unwrap();
       console.log("Subscription result:", result);
 
-      setShowModal(false);
-      setShowTrialStatus(true);
+    setShowModal(false);
+    setShowTrialStatus(true);
     } catch (err: any) {
       console.error(err);
       const errorMessage =
@@ -411,7 +411,7 @@ export default function Subscription() {
       }
     }
   };
-
+  
   // const paymentOptions: PaymentOption[] = [
   //   {
   //     id: '4242',
@@ -426,7 +426,7 @@ export default function Subscription() {
   //     label: ''
   //   }
   // ];
-
+  
   const paymentOptions: PaymentOption[] =
     paymentMethods?.map((method) => ({
       id: method._id,
@@ -808,7 +808,7 @@ export default function Subscription() {
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
                   Subscription Details
                 </h3>
-
+                
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600">Billing Period:</span>
@@ -816,7 +816,7 @@ export default function Subscription() {
                       {getBillingPeriodText()}
                     </span>
                   </div>
-
+                  
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600">Auto Renewal:</span>
                     <div className="flex items-center gap-2">
@@ -834,7 +834,7 @@ export default function Subscription() {
                       <span className="font-medium text-gray-900">Enabled</span>
                     </div>
                   </div>
-
+                  
                   {getDiscountText() && (
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600">Discount:</span>
@@ -865,7 +865,7 @@ export default function Subscription() {
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
                   Plan Features
                 </h3>
-
+                
                 <div className="grid grid-cols-2 gap-y-3 gap-x-6">
                   <div className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-green-500" />
@@ -902,7 +902,7 @@ export default function Subscription() {
                     </span>
                   </div>
                 </div>
-
+                
                 <div className="mt-4">
                   <span className="text-sm text-gray-600">
                     +2 more features
@@ -912,13 +912,13 @@ export default function Subscription() {
             </div>
 
             <div className="flex gap-3 mt-8 pt-6 border-t border-gray-100">
-              <button
+              <button 
                 onClick={() => setShowModal(true)}
                 className="px-6 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
               >
                 Change Plan
               </button>
-              <button
+              <button 
                 onClick={() => {
                   setShowTrialStatus(false);
                   setSelectedPlan("1month");
@@ -937,14 +937,14 @@ export default function Subscription() {
             <div className="w-12 h-12 bg-[#FF6B35] rounded-full flex items-center justify-center mx-auto mb-4">
               <Crown className="w-6 h-6 text-white" />
             </div>
-
+            
             <h2 className="text-lg font-semibold text-gray-900 mb-2">
               Upgrade to Pro
             </h2>
             <p className="text-sm text-gray-600 mb-6">
               Unlock powerful features to grow your events business
             </p>
-
+            
             <div className="flex items-center justify-center gap-4 mb-4">
               <span className="inline-flex items-center gap-1 text-sm text-green-600 bg-green-50 px-2 py-1 rounded">
                 <CheckCircle className="w-4 h-4" />
@@ -955,13 +955,13 @@ export default function Subscription() {
                 7-Day Free Trial
               </span>
             </div>
-
+            
             <div className="flex items-center justify-center gap-2 mb-2">
               <span className="text-lg text-gray-400 line-through">$19.99</span>
               <span className="text-lg font-bold text-[#FF6B35]">$9.99</span>
               <span className="text-sm text-gray-600">/month</span>
             </div>
-
+            
             <p className="text-sm text-green-600 font-medium">
               Save 50% with our launch offer
             </p>
@@ -1002,15 +1002,15 @@ export default function Subscription() {
                 <p className="text-sm text-gray-700">Advanced Reporting</p>
               </div>
             </div>
-
+            
             <div className="max-w-sm mx-auto">
-              <button
+              <button 
                 onClick={() => setShowModal(true)}
                 className="w-full bg-[#FF6B35] text-white py-3 px-4 rounded-lg font-medium hover:bg-[#FF6B35]/90 transition-colors mb-3"
               >
                 Start Free Trial
               </button>
-
+              
               <p className="text-sm text-gray-500 text-center">
                 No credit card required for trial. Cancel anytime.
               </p>
@@ -1033,7 +1033,7 @@ export default function Subscription() {
                   starts immediately.
                 </p>
               </div>
-              <button
+              <button 
                 onClick={() => setShowModal(false)}
                 className="text-gray-400 hover:text-gray-600 p-1"
               >
@@ -1048,24 +1048,24 @@ export default function Subscription() {
                   Choose Billing Period
                 </h3>
                 <div className="space-y-4">
-                  {plans.map((plan: Plan) => (
-                    <div
-                      key={plan.id}
-                      onClick={() => setSelectedPlan(plan.id)}
-                      className={`relative p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                        selectedPlan === plan.id
+                {plans.map((plan: Plan) => (
+                  <div 
+                    key={plan.id}
+                    onClick={() => setSelectedPlan(plan.id)}
+                    className={`relative p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                      selectedPlan === plan.id 
                           ? "border-[#FF6B35] bg-orange-50"
                           : "border-gray-200 hover:border-gray-300"
-                      }`}
-                    >
-                      {plan.badge && (
+                    }`}
+                  >
+                    {plan.badge && (
                         <span className="absolute -top-2 left-4 bg-[#FF6B35] text-white text-xs px-2 py-1 rounded-full">
-                          {plan.badge}
-                        </span>
-                      )}
-
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
+                        {plan.badge}
+                      </span>
+                    )}
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
                           <div
                             className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
                               selectedPlan === plan.id
@@ -1073,42 +1073,42 @@ export default function Subscription() {
                                 : "border-gray-300"
                             }`}
                           >
-                            {selectedPlan === plan.id && (
-                              <div className="w-2 h-2 bg-[#FF6B35] rounded-full" />
-                            )}
-                          </div>
-                          <div>
+                          {selectedPlan === plan.id && (
+                            <div className="w-2 h-2 bg-[#FF6B35] rounded-full" />
+                          )}
+                        </div>
+                        <div>
                             <p className="font-medium text-gray-900">
                               {plan.title}
                             </p>
                             <p className="text-sm text-gray-600">
                               {plan.subtitle}
                             </p>
-                            {plan.savePercent && (
+                          {plan.savePercent && (
                               <p className="text-sm text-green-600 font-medium">
                                 {plan.savePercent}
                               </p>
-                            )}
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-lg font-bold text-[#FF6B35]">
-                            {plan.price}
-                          </p>
-                          {plan.total && (
-                            <p className="text-sm text-gray-600">
-                              {plan.total}
-                            </p>
-                          )}
-                          {plan.savings && (
-                            <p className="text-sm text-green-600 font-medium">
-                              {plan.savings}
-                            </p>
                           )}
                         </div>
                       </div>
+                      <div className="text-right">
+                          <p className="text-lg font-bold text-[#FF6B35]">
+                            {plan.price}
+                          </p>
+                        {plan.total && (
+                            <p className="text-sm text-gray-600">
+                              {plan.total}
+                            </p>
+                        )}
+                        {plan.savings && (
+                            <p className="text-sm text-green-600 font-medium">
+                              {plan.savings}
+                            </p>
+                        )}
+                      </div>
                     </div>
-                  ))}
+                  </div>
+                ))}
                 </div>
               </div>
 
@@ -1158,34 +1158,34 @@ export default function Subscription() {
                 {/* Payment Method Selection */}
                 {activePaymentTab === "saved" && (
                   <div className="border border-gray-300 rounded-lg p-3">
-                    <button
-                      onClick={() => setShowPaymentOptions(!showPaymentOptions)}
+                <button 
+                  onClick={() => setShowPaymentOptions(!showPaymentOptions)}
                       className="w-full flex items-center justify-between"
-                    >
-                      <span className="text-sm text-gray-600">
+                >
+                  <span className="text-sm text-gray-600">
                         {selectedPayment
                           ? paymentOptions.find(
                               (opt) => opt.id === selectedPayment
                             )?.number
                           : "Select a payment method"}
-                      </span>
+                  </span>
                       <ChevronDown
                         className={`w-4 h-4 text-gray-400 transition-transform ${
                           showPaymentOptions ? "rotate-180" : ""
                         }`}
                       />
-                    </button>
+                </button>
 
                     {showPaymentOptions && paymentOptions.length > 0 && (
-                      <div className="mt-2 border border-gray-200 rounded-lg overflow-hidden">
-                        {paymentOptions.map((option: PaymentOption) => (
-                          <button
-                            key={option.id}
-                            onClick={() => {
-                              setSelectedPayment(option.id);
-                              setShowPaymentOptions(false);
-                            }}
-                            className={`w-full p-3 flex items-center gap-3 text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0 ${
+                  <div className="mt-2 border border-gray-200 rounded-lg overflow-hidden">
+                    {paymentOptions.map((option: PaymentOption) => (
+                      <button
+                        key={option.id}
+                        onClick={() => {
+                          setSelectedPayment(option.id);
+                          setShowPaymentOptions(false);
+                        }}
+                        className={`w-full p-3 flex items-center gap-3 text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0 ${
                               selectedPayment === option.id
                                 ? "bg-orange-50"
                                 : ""
@@ -1198,15 +1198,15 @@ export default function Subscription() {
                             <span className="text-xs font-medium bg-gray-100 px-2 py-1 rounded">
                               {option.type}
                             </span>
-                            {option.label && (
+                        {option.label && (
                               <span className="text-xs text-gray-500">
                                 {option.label}
                               </span>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
 
                     {paymentOptions.length === 0 && (
                       <div className="text-center py-4">
@@ -1216,7 +1216,7 @@ export default function Subscription() {
                         <p className="text-xs text-gray-400 mt-1">
                           Add a payment method in the Payment Methods tab
                         </p>
-                      </div>
+              </div>
                     )}
                   </div>
                 )}
@@ -1487,13 +1487,13 @@ export default function Subscription() {
 
               {/* Action Buttons */}
               <div className="flex gap-3">
-                <button
+                <button 
                   onClick={() => setShowModal(false)}
                   className="flex-1 px-6 py-3 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                 >
                   Cancel
                 </button>
-                <button
+                <button 
                   onClick={handleStartTrial}
                   disabled={isSubscribing}
                   className="flex-1 px-6 py-3 bg-[#FF6B35] text-white rounded-lg text-sm font-medium hover:bg-[#FF6B35]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"

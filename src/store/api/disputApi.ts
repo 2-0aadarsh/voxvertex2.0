@@ -54,7 +54,7 @@ export const disputeApi = createApi({
 
     // Events endpoints (added here too)
     getEvents: builder.query<{ success: boolean; message: string; data: { events: any[]; pagination: any } }, void>({
-      query: () => '/enhanced-events/user/me',
+      query: () => '/enhanced-events/published',
       providesTags: ['Events'],
     }),
     getEventById: builder.query<any, string>({

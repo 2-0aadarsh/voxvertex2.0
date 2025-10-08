@@ -20,6 +20,7 @@ import storage from 'redux-persist/lib/storage';
 import { baseApi } from './api/baseApi';
 import { disputeApi } from '../store/api/disputApi'; 
 import { paymentApi } from "./api/paymentApi";
+import { speakerBookingsApi } from './api/speakerBookingsApi';
 
 // Import other slices
 import authReducer from './slices/authSlice';
@@ -53,6 +54,7 @@ const persistConfig = {
   blacklist: [
     'api',
     'disputeApi',
+    'speakerBookingsApi',
     'posts',
     'feed',
     'workExperience',
@@ -103,6 +105,7 @@ const rootReducer = combineReducers({
   [baseApi.reducerPath]: baseApi.reducer,
   [disputeApi.reducerPath]: disputeApi.reducer, 
   [paymentApi.reducerPath]: paymentApi.reducer,
+  [speakerBookingsApi.reducerPath]: speakerBookingsApi.reducer,
   auth: persistReducer(authPersistConfig, authReducer),
   profile: profileReducer,
   posts: postsReducer,
@@ -144,7 +147,7 @@ export const store = configureStore({
       serializableStateInvariantCheck: {
         warnAfter: 128,
       },
-    }).concat(paymentApi.middleware, baseApi.middleware, disputeApi.middleware).concat(ignoreFileObjectsMiddleware),
+    }).concat(paymentApi.middleware, baseApi.middleware, disputeApi.middleware, speakerBookingsApi.middleware).concat(ignoreFileObjectsMiddleware),
     // }).concat(paymentApi.middleware, baseApi.middleware, disputeApi.middleware),
     // }).concat(baseApi.middleware).concat(disputeApi.middleware).concat(ignoreFileObjectsMiddleware), // Add both APIs middleware
   devTools: process.env.NODE_ENV !== 'production',

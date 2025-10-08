@@ -50,6 +50,103 @@ export const getAllSpeakerProfiles = async (req, res) => {
 };
 
 // Get organizer's bookings grouped by status
+// Get speaker's bookings grouped by status
+export const getSpeakerBookings = async (req, res) => {
+  try {
+    const speakerId = req.user._id;
+    const { status, page = 1, limit = 10 } = req.query;
+
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+
+    // Build query for speaker's bookings
+    const query = { speaker: speakerId };
+    if (status) {
+      query.status = status;
+    }
+
+    // Fetch bookings with organizer details
+    const bookings = await Booking.find(query)
+      .populate('organizer', 'firstName lastName email profileImageUrl companyName')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum)
+      .lean();
+
+    // Group bookings by status
+    const groupedBookings = {
+      pending: [],
+      accepted: [],
+      declined: []
+    };
+
+    bookings.forEach(booking => {
+      const bookingData = {
+        _id: booking._id,
+        bookingId: booking.bookingId,
+        organizer: booking.organizer,
+        eventName: booking.eventDetails?.name,
+        eventType: booking.eventDetails?.type,
+        location: booking.eventDetails?.location,
+        date: booking.date,
+        timeSlot: booking.timeSlot,
+        status: booking.status,
+        compensationAndArrangements: booking.compensationAndArrangements,
+        specialRequests: booking.eventDetails?.specialRequirement,
+        personalMessage: booking.eventDetails?.personalMessage,
+        createdAt: booking.createdAt,
+        acceptedAt: booking.acceptedAt,
+        declinedAt: booking.declinedAt,
+        conversationId: booking.conversationId
+      };
+
+      switch (booking.status) {
+        case 'pending':
+          groupedBookings.pending.push(bookingData);
+          break;
+        case 'accepted':
+          groupedBookings.accepted.push(bookingData);
+          break;
+        case 'declined':
+          groupedBookings.declined.push(bookingData);
+          break;
+      }
+    });
+
+    // Get counts for each status
+    const counts = {
+      pending: await Booking.countDocuments({ speaker: speakerId, status: 'pending' }),
+      accepted: await Booking.countDocuments({ speaker: speakerId, status: 'accepted' }),
+      declined: await Booking.countDocuments({ speaker: speakerId, status: 'declined' }),
+      total: await Booking.countDocuments({ speaker: speakerId })
+    };
+
+    console.log(`📊 Speaker ${speakerId} bookings:`, counts);
+
+    res.json({
+      success: true,
+      data: {
+        bookings: groupedBookings,
+        counts,
+        pagination: {
+          current: pageNum,
+          pages: Math.ceil(counts.total / limitNum),
+          total: counts.total
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Get speaker bookings error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+};
+
 export const getOrganizerBookings = async (req, res) => {
   try {
     const organizerId = req.user._id;

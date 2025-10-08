@@ -5,7 +5,8 @@ import {
   createSpeakerBooking,
   acceptBooking,
   declineBooking,
-  getOrganizerBookings
+  getOrganizerBookings,
+  getSpeakerBookings
 } from "../controllers/bookSpeakerController.js";
 
 const router = express.Router();
@@ -43,6 +44,14 @@ router.get(
   authenticateJWT,
   authorizeRoles("Organizer"), // ✅ only organizers can view their bookings
   getOrganizerBookings
+);
+
+// Get speaker's bookings grouped by status
+router.get(
+  "/speaker-bookings",
+  authenticateJWT,
+  authorizeRoles("Speaker"), // ✅ only speakers can view their bookings
+  getSpeakerBookings
 );
 
 export default router;  // ✅ THIS FIXES THE ERROR
