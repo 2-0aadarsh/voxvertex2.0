@@ -37,7 +37,8 @@ const Footer: React.FC = () => {
               </div>
 
               <p className="text-white text-sm leading-relaxed mb-8">
-                Empowering connections between guest lecturers and event organizers to create transformative events.
+                Empowering connections between guest lecturers and event
+                organizers to create transformative events.
               </p>
 
               {/* Newsletter Subscription */}
@@ -60,65 +61,73 @@ const Footer: React.FC = () => {
 
             {/* Navigation Column */}
             <div className="col-span-1">
-              <h3 className="text-lg font-semibold mb-6 text-white border-b border-white pb-2">NAVIGATION</h3>
+              <h3 className="text-lg font-semibold mb-6 text-white border-b border-white pb-2">
+                NAVIGATION
+              </h3>
               <ul className="space-y-3">
                 {[
                   { href: "/home", label: "Home" },
-                  { href: "/events_page", label: "Events" },
+                  { href: "/events_dashboard", label: "Events" },
                   { href: "#", label: "Blogs" },
                   { href: "/about", label: "About" },
                   { href: "/pricing", label: "Pricing" },
-                  { href: "#", label: "Contact" }
+                  { href: "#", label: "Contact" },
                 ].map((item) => (
                   <li key={item.label}>
-                    <Link 
-                      href={item.href} 
+                    <Link
+                      href={item.href}
                       className="text-white hover:text-gray-200 text-sm transition-colors duration-300 hover:translate-x-1 transform block"
                     >
                       {item.label}
-                  </Link>
-                </li>
+                    </Link>
+                  </li>
                 ))}
               </ul>
             </div>
 
             {/* Support Column */}
             <div className="col-span-1">
-              <h3 className="text-lg font-semibold mb-6 text-white border-b border-white pb-2">SUPPORT</h3>
+              <h3 className="text-lg font-semibold mb-6 text-white border-b border-white pb-2">
+                SUPPORT
+              </h3>
               <ul className="space-y-3">
                 {[
-                  { href: "#", label: "FAQs" },
+                  { href: "/faq", label: "FAQs" },
                   { href: "#", label: "Help Center" },
                   { href: "/terms", label: "Terms & Conditions" },
-                  { href: "/privacy_policy", label: "Privacy Policy" }
+                  { href: "/privacy_policy", label: "Privacy Policy" },
                 ].map((item) => (
                   <li key={item.label}>
-                    <Link 
-                      href={item.href} 
+                    <Link
+                      href={item.href}
                       className="text-white hover:text-gray-200 text-sm transition-colors duration-300 hover:translate-x-1 transform block"
                     >
                       {item.label}
-                  </Link>
-                </li>
+                    </Link>
+                  </li>
                 ))}
               </ul>
             </div>
 
             {/* Get in Touch Column */}
             <div className="col-span-1">
-              <h3 className="text-lg font-semibold mb-6 text-white border-b border-white pb-2">GET IN TOUCH</h3>
+              <h3 className="text-lg font-semibold mb-6 text-white border-b border-white pb-2">
+                GET IN TOUCH
+              </h3>
               <div className="space-y-4">
                 <div className="flex items-start gap-3 group">
-                   <Mail className="w-5 h-5 text-white flex-shrink-0 mt-0.5 group-hover:scale-110 transition-transform duration-300" />
+                  <Mail className="w-5 h-5 text-white flex-shrink-0 mt-0.5 group-hover:scale-110 transition-transform duration-300" />
                   <span className="text-white text-sm group-hover:text-white transition-colors duration-300">
                     info@voxvertex.com
                   </span>
                 </div>
                 <div className="flex items-start gap-3 group">
-                   <MapPin className="w-5 h-5 text-white flex-shrink-0 mt-0.5 group-hover:scale-110 transition-transform duration-300" />
+                  <MapPin className="w-5 h-5 text-white flex-shrink-0 mt-0.5 group-hover:scale-110 transition-transform duration-300" />
                   <span className="text-white text-sm leading-relaxed group-hover:text-white transition-colors duration-300">
-                    C-182, IInd Floor,<br />
-                    Swarn Jayanti Puram,<br />
+                    C-182, IInd Floor,
+                    <br />
+                    Swarn Jayanti Puram,
+                    <br />
                     Ghaziabad (201013)
                   </span>
                 </div>
@@ -127,17 +136,19 @@ const Footer: React.FC = () => {
 
             {/* Follow Us Column */}
             <div className="col-span-1">
-              <h3 className="text-lg font-semibold mb-6 text-white border-b border-white pb-2">FOLLOW US</h3>
+              <h3 className="text-lg font-semibold mb-6 text-white border-b border-white pb-2">
+                FOLLOW US
+              </h3>
               <div className="flex gap-4">
                 {[
-                  { icon: Instagram, href: "#" },
-                  { icon: Linkedin, href: "#" },
-                  { icon: Twitter, href: "#" }
+                  { icon: Instagram, href: "https://www.instagram.com/vox_vertex/" },
+                  { icon: Linkedin, href: "https://www.linkedin.com/company/voxvertex/" },
+                  { icon: Twitter, href: "https://x.com/voxvertex" },
                 ].map((social, index) => (
-                  <Link 
+                  <Link
                     key={index}
-                    href={social.href} 
-                     className="group w-12 h-12 bg-white/20 hover:bg-white rounded-lg flex items-center justify-center transition-all duration-300 hover:scale-110 hover:shadow-lg"
+                    href={social.href}
+                    className="group w-12 h-12 bg-white/20 hover:bg-white rounded-lg flex items-center justify-center transition-all duration-300 hover:scale-110 hover:shadow-lg"
                   >
                     <social.icon className="w-5 h-5 text-white group-hover:text-black transition-colors duration-300" />
                   </Link>
@@ -167,7 +178,8 @@ const Footer: React.FC = () => {
                 </div>
 
                 <p className="text-white text-sm leading-relaxed">
-                  Empowering connections between guest lecturers and event organizers to create transformative events.
+                  Empowering connections between guest lecturers and event
+                  organizers to create transformative events.
                 </p>
 
                 {/* Newsletter Subscription */}
@@ -192,23 +204,25 @@ const Footer: React.FC = () => {
               <div className="grid grid-cols-3 gap-4">
                 {/* Navigation Column */}
                 <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-white border-b border-white pb-2">NAVIGATION</h3>
+                  <h3 className="text-sm font-semibold text-white border-b border-white pb-2">
+                    NAVIGATION
+                  </h3>
                   <ul className="space-y-2">
                     {[
                       { href: "/home", label: "Home" },
-                      { href: "/events_page", label: "Events" },
+                      { href: "/events_dashboard", label: "Events" },
                       { href: "#", label: "Blogs" },
                       { href: "/about", label: "About" },
                       { href: "/pricing", label: "Pricing" },
-                      { href: "#", label: "Contact" }
+                      { href: "#", label: "Contact" },
                     ].map((item) => (
                       <li key={item.label}>
-                        <Link 
-                          href={item.href} 
+                        <Link
+                          href={item.href}
                           className="text-white hover:text-gray-200 text-xs transition-colors duration-300 block truncate"
                         >
                           {item.label}
-                </Link>
+                        </Link>
                       </li>
                     ))}
                   </ul>
@@ -216,21 +230,23 @@ const Footer: React.FC = () => {
 
                 {/* Support Column */}
                 <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-white border-b border-white pb-2">SUPPORT</h3>
+                  <h3 className="text-sm font-semibold text-white border-b border-white pb-2">
+                    SUPPORT
+                  </h3>
                   <ul className="space-y-2">
                     {[
-                      { href: "#", label: "FAQs" },
+                      { href: "/faq", label: "FAQs" },
                       { href: "#", label: "Help Center" },
                       { href: "/terms", label: "Terms & Conditions" },
-                      { href: "/privacy_policy", label: "Privacy Policy" }
+                      { href: "/privacy_policy", label: "Privacy Policy" },
                     ].map((item) => (
                       <li key={item.label}>
-                        <Link 
-                          href={item.href} 
+                        <Link
+                          href={item.href}
                           className="text-white hover:text-gray-200 text-xs transition-colors duration-300 block truncate"
                         >
                           {item.label}
-                </Link>
+                        </Link>
                       </li>
                     ))}
                   </ul>
@@ -238,18 +254,21 @@ const Footer: React.FC = () => {
 
                 {/* Get in Touch Column */}
                 <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-white border-b border-white pb-2">GET IN TOUCH</h3>
+                  <h3 className="text-sm font-semibold text-white border-b border-white pb-2">
+                    GET IN TOUCH
+                  </h3>
                   <div className="space-y-2">
                     <div className="flex items-start gap-2">
-                       <Mail className="w-3 h-3 text-white flex-shrink-0 mt-0.5" />
+                      <Mail className="w-3 h-3 text-white flex-shrink-0 mt-0.5" />
                       <span className="text-white text-xs break-words">
                         info@voxvertex.com
                       </span>
                     </div>
                     <div className="flex items-start gap-2">
-                       <MapPin className="w-3 h-3 text-white flex-shrink-0 mt-0.5" />
+                      <MapPin className="w-3 h-3 text-white flex-shrink-0 mt-0.5" />
                       <span className="text-white text-xs leading-tight">
-                        C-182, IInd Floor, Swarn Jayanti Puram, Ghaziabad (201013)
+                        C-182, IInd Floor, Swarn Jayanti Puram, Ghaziabad
+                        (201013)
                       </span>
                     </div>
                   </div>
@@ -259,20 +278,22 @@ const Footer: React.FC = () => {
 
             {/* Follow Us Section */}
             <div className="pt-6">
-              <h3 className="text-sm font-semibold mb-4 text-white">FOLLOW US</h3>
+              <h3 className="text-sm font-semibold mb-4 text-white">
+                FOLLOW US
+              </h3>
               <div className="flex gap-3">
                 {[
-                  { icon: Instagram, href: "#" },
-                  { icon: Linkedin, href: "#" },
-                  { icon: Twitter, href: "#" }
+                  { icon: Instagram, href: "https://www.instagram.com/vox_vertex/" },
+                  { icon: Linkedin, href: "https://www.linkedin.com/company/voxvertex/" },
+                  { icon: Twitter, href: "https://x.com/voxvertex" },
                 ].map((social, index) => (
-                  <Link 
+                  <Link
                     key={index}
-                    href={social.href} 
-                     className="group w-10 h-10 bg-white/20 hover:bg-white rounded-lg flex items-center justify-center transition-all duration-300 hover:scale-110"
+                    href={social.href}
+                    className="group w-10 h-10 bg-white/20 hover:bg-white rounded-lg flex items-center justify-center transition-all duration-300 hover:scale-110"
                   >
                     <social.icon className="w-4 h-4 text-white group-hover:text-black transition-colors duration-300" />
-                </Link>
+                  </Link>
                 ))}
               </div>
             </div>

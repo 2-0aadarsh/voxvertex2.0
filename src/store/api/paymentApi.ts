@@ -36,11 +36,22 @@ export interface PaymentMethod {
 export interface SubscriptionPlan {
   _id: string;
   name: string;
-  planType: string;
-  pricePerMonth: number;
-  totalAmount: number;
+  planType?: string;
+  price: number;
+  pricePerMonth?: number; // For backward compatibility
+  totalAmount?: number;
   billingPeriod: string;
-  discountText: string;
+  discountText?: string;
+  isActive?: boolean;
+  billingCycle?: string;
+  features?: string[];
+  originalPrice?: number;
+  discountPercentage?: number;
+}
+
+export interface PlansResponse {
+  success: boolean;
+  plans: SubscriptionPlan[];
 }
 
 
@@ -100,6 +111,23 @@ addFunds: builder.mutation<
   invalidatesTags: ["Wallet", "Transactions"],
 }),
 
+// Withdraw Funds
+withdrawFunds: builder.mutation<
+  any,
+  {
+    userId: string;
+    amount: number;
+    bankAccountId: string;
+  }
+>({
+  query: (body) => ({
+    url: `/payments/withdraw`,
+    method: "POST",
+    body,
+  }),
+  invalidatesTags: ["Wallet", "Transactions"],
+}),
+
 
     // Payment Methods
     getPaymentMethods: builder.query<PaymentMethod[], string>({
@@ -147,8 +175,8 @@ createRazorpayOrder: builder.mutation<
 
 
     // Subscriptions
-    getPlans: builder.query<SubscriptionPlan[], void>({
-      query: () => `/subscriptions/`,
+    getPlans: builder.query<PlansResponse, void>({
+      query: () => `/subscriptions/plans`,
       providesTags: ["Subscriptions"],
     }),
     subscribePlan: builder.mutation<
@@ -162,6 +190,26 @@ createRazorpayOrder: builder.mutation<
       }),
       invalidatesTags: ["Wallet", "Transactions", "Subscriptions"],
     }),
+    getSubscriptionStatus: builder.query<any, string>({
+      query: (userId) => `/subscriptions/status/${userId}`,
+      providesTags: ["Subscriptions"],
+    }),
+    cancelSubscription: builder.mutation<any, { userId: string }>({
+      query: (body) => ({
+        url: `/subscriptions/cancel`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Subscriptions"],
+    }),
+    changeSubscriptionPlan: builder.mutation<any, { userId: string; newPlanId: string }>({
+      query: (body) => ({
+        url: `/subscriptions/change-plan`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Subscriptions"],
+    }),
   }),
 });
 
@@ -169,11 +217,15 @@ export const {
   useGetBalanceQuery,
   useGetTransactionsQuery,
   useAddFundsMutation,
+  useWithdrawFundsMutation,
   useGetPaymentMethodsQuery,
   useAddPaymentMethodMutation,
   useUpdatePaymentMethodMutation,
   useDeletePaymentMethodMutation,
   useGetPlansQuery,
   useSubscribePlanMutation,
+  useGetSubscriptionStatusQuery,
+  useCancelSubscriptionMutation,
+  useChangeSubscriptionPlanMutation,
   useCreateRazorpayOrderMutation,
 } = paymentApi;

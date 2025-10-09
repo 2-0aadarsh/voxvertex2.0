@@ -68,6 +68,7 @@ export default function MessagesPage() {
 
   // Get conversations from RTK Query data
   const conversations = conversationsData?.conversations || [];
+  console.log('conversations:', conversations);
   
   // Get the active conversation data
   const activeConversation = activeConversationId 

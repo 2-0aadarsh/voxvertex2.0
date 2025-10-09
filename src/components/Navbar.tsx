@@ -52,17 +52,12 @@ const Navbar: React.FC<NavbarProps> = ({
   // Handle logout functionality (same as Sidebar)
   const handleLogout = async () => {
     try {
-      console.log("🚪 Logging out user...");
-
       // Call logout from Redux store (this will clear tokens and cookies)
       await logout();
-
-      console.log("✅ Logout successful, redirecting to homepage...");
 
       // Redirect to homepage for all user roles
       router.push("/");
     } catch (error) {
-      console.error("❌ Logout error:", error);
       // Even if logout fails, redirect to homepage
       router.push("/");
     }
@@ -72,7 +67,6 @@ const Navbar: React.FC<NavbarProps> = ({
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      console.log("🔍 Searching for:", searchQuery.trim());
       // Redirect to speakers page with search query
       router.push(`/speakers?search=${encodeURIComponent(searchQuery.trim())}`);
     }
@@ -85,21 +79,11 @@ const Navbar: React.FC<NavbarProps> = ({
 
   // Helper function to get profile image URL
   const getProfileImage = (profileImage: unknown) => {
-    console.log('🔍 Navbar Profile Image Debug:', {
-      profileImage,
-      type: typeof profileImage,
-      hasData: (profileImage && typeof profileImage === 'object' && 'data' in profileImage) ? 'yes' : 'no',
-      hasContentType: (profileImage && typeof profileImage === 'object' && 'contentType' in profileImage) ? 'yes' : 'no',
-      hasUrl: (profileImage && typeof profileImage === 'object' && 'url' in profileImage) ? 'yes' : 'no',
-      hasGetProfileImageUrl: !!getProfileImageUrl
-    });
-    
     if (!profileImage) return null;
     
     // If getProfileImageUrl function is provided, use it
     if (getProfileImageUrl) {
       const result = getProfileImageUrl(profileImage as string | null | undefined);
-      console.log('✅ Using getProfileImageUrl function, result:', result);
       return result;
     }
     
@@ -113,7 +97,6 @@ const Navbar: React.FC<NavbarProps> = ({
     if (typeof profileImage === 'object' && profileImage !== null && 'data' in profileImage && 'contentType' in profileImage) {
       const profileImageObj = profileImage as { data: { toString: (encoding: string) => string }; contentType: string };
       const dataUrl = `data:${profileImageObj.contentType};base64,${profileImageObj.data.toString('base64')}`;
-      console.log('✅ Created data URL from Buffer');
       return dataUrl;
     }
     
@@ -124,7 +107,6 @@ const Navbar: React.FC<NavbarProps> = ({
       return `https://res.cloudinary.com/demo/image/fetch/${profileImageObj.url}`;
     }
     
-    console.log('❌ No valid profile image format found');
     return null;
   };
 
@@ -386,14 +368,6 @@ const Navbar: React.FC<NavbarProps> = ({
                       onClick={() => {
                         // Get user role from user object or currentUserData
                         const userRole = user?.role || currentUserData?.user?.role;
-                        
-                        console.log("🔍 Navbar Dashboard Debug:", {
-                          user,
-                          currentUserData,
-                          userRole,
-                          userRoleFromUser: user?.role,
-                          userRoleFromCurrentUser: currentUserData?.user?.role
-                        });
                         
                         // Use same logic as login page
                         switch (userRole) {

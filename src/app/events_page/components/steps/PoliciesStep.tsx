@@ -7,10 +7,7 @@ interface Policy {
     allowRefunds: boolean;
     refundDeadline: number | ''; // days before event
     refundPercentage: number | '';
-    processingFee: number | '';
-    processingTime: string;
-    allowEmergencyRefunds: boolean;
-    emergencyConditions: string;
+    processingTime: string; // Fixed at 48 hours
     refundConditions: string[];
   };
   
@@ -18,9 +15,8 @@ interface Policy {
   speakerCancellation: {
     allowCancellation: boolean;
     cancellationDeadline: number | ''; // days before event
-    penaltyPercentage: number | '';
+    partialRefundPercentage: number | '';
     requireReplacement: boolean;
-    forceMajeureClause: boolean;
     paymentTerms: string;
     speakerConditions: string[];
   };
@@ -29,11 +25,10 @@ interface Policy {
   eventCancellation: {
     allowCancellation: boolean;
     fullRefundDeadline: number | ''; // days before event
-    partialRefundDeadline: number | ''; // days before event
     partialRefundPercentage: number | '';
-    administrativeFee: number | '';
     refundMethod: string;
     processingTime: string;
+    cancellationConditions: string;
   };
   
   // Event Postponement Policy
@@ -41,8 +36,10 @@ interface Policy {
     allowPostponement: boolean;
     noticeRequired: number | ''; // days
     maxPostponementDuration: number | ''; // days
+    partialRefundRequestDeadline: number | ''; // days
     ticketsValidForNewDate: boolean;
     offerRefundOnPostponement: boolean;
+    allowSpeakersToCancelOnPostponement: boolean;
     refundPercentageOnPostponement: number | '';
     postponementConditions: string[];
   };
@@ -67,36 +64,33 @@ export default function PoliciesStep({ formData, onFormDataUpdate }: PoliciesSte
       allowRefunds: false,
       refundDeadline: '',
       refundPercentage: '',
-      processingFee: '',
-      processingTime: '',
-      allowEmergencyRefunds: false,
-      emergencyConditions: '',
+      processingTime: '48 hours',
       refundConditions: []
     },
     speakerCancellation: {
       allowCancellation: false,
       cancellationDeadline: '',
-      penaltyPercentage: '',
+      partialRefundPercentage: '',
       requireReplacement: false,
-      forceMajeureClause: false,
       paymentTerms: '',
       speakerConditions: []
     },
     eventCancellation: {
       allowCancellation: false,
       fullRefundDeadline: '',
-      partialRefundDeadline: '',
       partialRefundPercentage: '',
-      administrativeFee: '',
       refundMethod: '',
-      processingTime: ''
+      processingTime: '48 hours',
+      cancellationConditions: 'Refunds processed to original payment method within 48 hours'
     },
     eventPostponement: {
       allowPostponement: false,
       noticeRequired: '',
       maxPostponementDuration: '',
+      partialRefundRequestDeadline: '',
       ticketsValidForNewDate: false,
       offerRefundOnPostponement: false,
+      allowSpeakersToCancelOnPostponement: false,
       refundPercentageOnPostponement: '',
       postponementConditions: []
     },
@@ -303,22 +297,6 @@ export default function PoliciesStep({ formData, onFormDataUpdate }: PoliciesSte
                       </label>
                     </div>
 
-                    <div className="relative">
-                      <input
-                        type="number"
-                        value={policies.participantRefund.processingFee === '' ? '' : policies.participantRefund.processingFee}
-                        onChange={(e) => {
-                          const val = e.target.value === '' ? '' : parseInt(e.target.value, 10) || '';
-                          updatePolicy('participantRefund', 'processingFee', val);
-                        }}
-                        className="w-full px-3 py-2 border border-[#FF6B35] rounded-lg bg-white focus:ring-2 focus:ring-[#FF6B35] text-gray-900"
-                        placeholder="Enter processing fee"
-                        disabled={!policies.participantRefund.allowRefunds}
-                      />
-                      <label className="absolute -top-2 left-3 bg-orange-50 px-1 text-xs font-medium text-[#FF6B35]">
-                        Processing fee (₹)
-                      </label>
-                    </div>
 
                     <div className="space-y-3">
                       <label className="block text-sm font-medium text-[#FF6B35]">Refund conditions (one per line)</label>
@@ -361,47 +339,23 @@ export default function PoliciesStep({ formData, onFormDataUpdate }: PoliciesSte
                   </div>
 
                   <div className="space-y-6">
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={policies.participantRefund.processingTime}
-                        onChange={(e) => updatePolicy('participantRefund', 'processingTime', e.target.value)}
-                        className="w-full px-3 py-2 border border-[#FF6B35] rounded-lg bg-white focus:ring-2 focus:ring-[#FF6B35] text-gray-900"
-                        placeholder="e.g., 3-5 business days"
-                        disabled={!policies.participantRefund.allowRefunds}
-                      />
-                      <label className="absolute -top-2 left-3 bg-orange-50 px-1 text-xs font-medium text-[#FF6B35]">
-                        Processing time
-                      </label>
+                    {/* Automated Processing Info Box */}
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-6">
+                      <div className="flex items-start space-x-3">
+                        <div className="flex-shrink-0">
+                          <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                            <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                          </div>
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-semibold text-blue-800 mb-1">Automated Processing:</h4>
+                          <p className="text-sm text-blue-700">
+                            All refunds are processed automatically within 48 hours to the original payment method. No processing fees apply.
+                          </p>
+                        </div>
+                    </div>
                     </div>
 
-                    <div className="flex items-center space-x-3">
-                      <input
-                        type="checkbox"
-                        id="allowEmergencyRefunds"
-                        checked={policies.participantRefund.allowEmergencyRefunds}
-                        onChange={(e) => updatePolicy('participantRefund', 'allowEmergencyRefunds', e.target.checked)}
-                        className="w-4 h-4 text-[#FF6B35] border-gray-300 rounded focus:ring-[#FF6B35]"
-                        disabled={!policies.participantRefund.allowRefunds}
-                      />
-                      <label htmlFor="allowEmergencyRefunds" className="text-sm font-medium text-gray-900">
-                        Allow emergency refunds
-                      </label>
-                    </div>
-
-                    <div className="relative">
-                      <textarea
-                        value={policies.participantRefund.emergencyConditions}
-                        onChange={(e) => updatePolicy('participantRefund', 'emergencyConditions', e.target.value)}
-                        rows={3}
-                        className="w-full px-3 py-2 border border-[#FF6B35] rounded-lg bg-white focus:ring-2 focus:ring-[#FF6B35] text-gray-900 resize-none"
-                        placeholder="Describe conditions for emergency refunds..."
-                        disabled={!policies.participantRefund.allowEmergencyRefunds}
-                      />
-                      <label className="absolute -top-2 left-3 bg-orange-50 px-1 text-xs font-medium text-[#FF6B35]">
-                        Emergency conditions
-                      </label>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -447,22 +401,6 @@ export default function PoliciesStep({ formData, onFormDataUpdate }: PoliciesSte
                       </label>
                     </div>
 
-                    <div className="relative">
-                      <input
-                        type="number"
-                        value={policies.speakerCancellation.penaltyPercentage === '' ? '' : policies.speakerCancellation.penaltyPercentage}
-                        onChange={(e) => {
-                          const val = e.target.value === '' ? '' : parseInt(e.target.value, 10) || '';
-                          updatePolicy('speakerCancellation', 'penaltyPercentage', val);
-                        }}
-                        className="w-full px-3 py-2 border border-[#FF6B35] rounded-lg bg-white focus:ring-2 focus:ring-[#FF6B35] text-gray-900"
-                        placeholder="Enter penalty percentage"
-                        disabled={!policies.speakerCancellation.allowCancellation}
-                      />
-                      <label className="absolute -top-2 left-3 bg-orange-50 px-1 text-xs font-medium text-[#FF6B35]">
-                        Penalty percentage (%)
-                      </label>
-                    </div>
 
                     <div className="space-y-3">
                       <label className="block text-sm font-medium text-[#FF6B35]">Speaker conditions (one per line)</label>
@@ -518,34 +456,6 @@ export default function PoliciesStep({ formData, onFormDataUpdate }: PoliciesSte
                         Require replacement speaker
                       </label>
                     </div>
-
-                    <div className="flex items-center space-x-3">
-                      <input
-                        type="checkbox"
-                        id="forceMajeureClause"
-                        checked={policies.speakerCancellation.forceMajeureClause}
-                        onChange={(e) => updatePolicy('speakerCancellation', 'forceMajeureClause', e.target.checked)}
-                        className="w-4 h-4 text-[#FF6B35] border-gray-300 rounded focus:ring-[#FF6B35]"
-                        disabled={!policies.speakerCancellation.allowCancellation}
-                      />
-                      <label htmlFor="forceMajeureClause" className="text-sm font-medium text-gray-900">
-                        Force majeure clause
-                      </label>
-                    </div>
-
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={policies.speakerCancellation.paymentTerms}
-                        onChange={(e) => updatePolicy('speakerCancellation', 'paymentTerms', e.target.value)}
-                        className="w-full px-3 py-2 border border-[#FF6B35] rounded-lg bg-white focus:ring-2 focus:ring-[#FF6B35] text-gray-900"
-                        placeholder="e.g., Payment withheld until after event completion"
-                        disabled={!policies.speakerCancellation.allowCancellation}
-                      />
-                      <label className="absolute -top-2 left-3 bg-orange-50 px-1 text-xs font-medium text-[#FF6B35]">
-                        Payment terms
-                      </label>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -594,23 +504,6 @@ export default function PoliciesStep({ formData, onFormDataUpdate }: PoliciesSte
                     <div className="relative">
                       <input
                         type="number"
-                        value={policies.eventCancellation.partialRefundDeadline === '' ? '' : policies.eventCancellation.partialRefundDeadline}
-                        onChange={(e) => {
-                          const val = e.target.value === '' ? '' : parseInt(e.target.value, 10) || '';
-                          updatePolicy('eventCancellation', 'partialRefundDeadline', val);
-                        }}
-                        className="w-full px-3 py-2 border border-[#FF6B35] rounded-lg bg-white focus:ring-2 focus:ring-[#FF6B35] text-gray-900"
-                        placeholder="Enter days before event"
-                        disabled={!policies.eventCancellation.allowCancellation}
-                      />
-                      <label className="absolute -top-2 left-3 bg-orange-50 px-1 text-xs font-medium text-[#FF6B35]">
-                        Partial refund deadline (days before)
-                      </label>
-                    </div>
-
-                    <div className="relative">
-                      <input
-                        type="number"
                         value={policies.eventCancellation.partialRefundPercentage === '' ? '' : policies.eventCancellation.partialRefundPercentage}
                         onChange={(e) => {
                           const val = e.target.value === '' ? '' : parseInt(e.target.value, 10) || '';
@@ -622,23 +515,6 @@ export default function PoliciesStep({ formData, onFormDataUpdate }: PoliciesSte
                       />
                       <label className="absolute -top-2 left-3 bg-orange-50 px-1 text-xs font-medium text-[#FF6B35]">
                         Partial refund percentage (%)
-                      </label>
-                    </div>
-
-                    <div className="relative">
-                      <input
-                        type="number"
-                        value={policies.eventCancellation.administrativeFee === '' ? '' : policies.eventCancellation.administrativeFee}
-                        onChange={(e) => {
-                          const val = e.target.value === '' ? '' : parseInt(e.target.value, 10) || '';
-                          updatePolicy('eventCancellation', 'administrativeFee', val);
-                        }}
-                        className="w-full px-3 py-2 border border-[#FF6B35] rounded-lg bg-white focus:ring-2 focus:ring-[#FF6B35] text-gray-900"
-                        placeholder="Enter administrative fee"
-                        disabled={!policies.eventCancellation.allowCancellation}
-                      />
-                      <label className="absolute -top-2 left-3 bg-orange-50 px-1 text-xs font-medium text-[#FF6B35]">
-                        Administrative fee (₹)
                       </label>
                     </div>
                   </div>
@@ -653,27 +529,42 @@ export default function PoliciesStep({ formData, onFormDataUpdate }: PoliciesSte
                       >
                         <option value="">Select refund method</option>
                         <option value="Original Payment Method">Original Payment Method</option>
+                        <option value="Event Credit">Event Credit</option>
                         <option value="Bank Transfer">Bank Transfer</option>
-                        <option value="Check">Check</option>
-                        <option value="Store Credit">Store Credit</option>
                       </select>
                       <label className="absolute -top-2 left-3 bg-orange-50 px-1 text-xs font-medium text-[#FF6B35]">
                         Refund method
                       </label>
                     </div>
 
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={policies.eventCancellation.processingTime}
-                        onChange={(e) => updatePolicy('eventCancellation', 'processingTime', e.target.value)}
-                        className="w-full px-3 py-2 border border-[#FF6B35] rounded-lg bg-white focus:ring-2 focus:ring-[#FF6B35] text-gray-900"
-                        placeholder="e.g., 5-7 business days"
+                    {/* Automated Processing Info Box */}
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 mt-6">
+                      <div className="flex items-start space-x-3">
+                        <div className="flex-shrink-0">
+                          <div className="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center">
+                            <div className="w-2 h-2 bg-red-600 rounded-full"></div>
+                          </div>
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-semibold text-red-800 mb-1">Automated Processing:</h4>
+                          <p className="text-sm text-red-700">
+                            All refunds are processed automatically within 48 hours. No administrative fees or processing fees apply.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Cancellation Conditions */}
+                    <div className="space-y-3 mt-6">
+                      <label className="block text-sm font-medium text-[#FF6B35]">Cancellation conditions (one per line)</label>
+                      <textarea
+                        value={policies.eventCancellation.cancellationConditions || 'Refunds processed to original payment method within 48 hours'}
+                        onChange={(e) => updatePolicy('eventCancellation', 'cancellationConditions', e.target.value)}
+                        rows={3}
+                        className="w-full px-3 py-2 border border-[#FF6B35] rounded-lg bg-white focus:ring-2 focus:ring-[#FF6B35] text-gray-900 resize-none"
+                        placeholder="Enter cancellation conditions..."
                         disabled={!policies.eventCancellation.allowCancellation}
                       />
-                      <label className="absolute -top-2 left-3 bg-orange-50 px-1 text-xs font-medium text-[#FF6B35]">
-                        Processing time
-                      </label>
                     </div>
                   </div>
                 </div>
@@ -735,6 +626,26 @@ export default function PoliciesStep({ formData, onFormDataUpdate }: PoliciesSte
                       <label className="absolute -top-2 left-3 bg-orange-50 px-1 text-xs font-medium text-[#FF6B35]">
                         Max postponement duration (days)
                       </label>
+                    </div>
+
+                    <div className="relative">
+                      <input
+                        type="number"
+                        value={policies.eventPostponement.partialRefundRequestDeadline === '' ? '' : policies.eventPostponement.partialRefundRequestDeadline}
+                        onChange={(e) => {
+                          const val = e.target.value === '' ? '' : parseInt(e.target.value, 10) || '';
+                          updatePolicy('eventPostponement', 'partialRefundRequestDeadline', val);
+                        }}
+                        className="w-full px-3 py-2 border border-[#FF6B35] rounded-lg bg-white focus:ring-2 focus:ring-[#FF6B35] text-gray-900"
+                        placeholder="Enter participant refund request deadline"
+                        disabled={!policies.eventPostponement.allowPostponement}
+                      />
+                      <label className="absolute -top-2 left-3 bg-orange-50 px-1 text-xs font-medium text-[#FF6B35]">
+                        Participant refund request deadline (days)
+                      </label>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Participants must request refund within this timeframe after postponement announcement
+                      </p>
                     </div>
 
                     <div className="space-y-3">
@@ -806,6 +717,20 @@ export default function PoliciesStep({ formData, onFormDataUpdate }: PoliciesSte
                       </label>
                     </div>
 
+                    <div className="flex items-center space-x-3">
+                      <input
+                        type="checkbox"
+                        id="allowSpeakersToCancelOnPostponement"
+                        checked={policies.eventPostponement.allowSpeakersToCancelOnPostponement}
+                        onChange={(e) => updatePolicy('eventPostponement', 'allowSpeakersToCancelOnPostponement', e.target.checked)}
+                        className="w-4 h-4 text-[#FF6B35] border-gray-300 rounded focus:ring-[#FF6B35]"
+                        disabled={!policies.eventPostponement.allowPostponement}
+                      />
+                      <label htmlFor="allowSpeakersToCancelOnPostponement" className="text-sm font-medium text-gray-900">
+                        Allow speakers to cancel on postponement
+                      </label>
+                    </div>
+
                     <div className="relative">
                       <input
                         type="number"
@@ -821,6 +746,14 @@ export default function PoliciesStep({ formData, onFormDataUpdate }: PoliciesSte
                       <label className="absolute -top-2 left-3 bg-orange-50 px-1 text-xs font-medium text-[#FF6B35]">
                         Refund percentage on postponement (%)
                       </label>
+                    </div>
+
+                    {/* Postponement Policy Summary Box */}
+                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mt-6">
+                      <h4 className="text-sm font-bold text-orange-800 mb-2">Postponement Policy:</h4>
+                      <p className="text-sm text-orange-700">
+                        Participants can request refunds within {policies.eventPostponement.partialRefundRequestDeadline || 'X'} days of postponement announcement or accept the new date. Speakers can also choose to cancel or accept the new date.
+                      </p>
                     </div>
                   </div>
                 </div>

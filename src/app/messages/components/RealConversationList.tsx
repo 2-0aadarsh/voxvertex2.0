@@ -27,8 +27,8 @@ export function RealConversationList({
   // Get unread counts for all conversations at the top level
   const allUnreadCounts = useAppSelector((state) => state.messaging.unreadCounts);
   
-  // Get current user ID from Redux store
-  const currentUserId = useAppSelector((state) => state.auth.user?._id);
+  // No longer needed - using backend's otherParticipants field instead
+  // const currentUserId = useAppSelector((state) => state.auth.user?._id);
 
   const formatTimeAgo = (date: Date) => {
     const now = new Date();
@@ -42,19 +42,17 @@ export function RealConversationList({
   };
 
   const getConversationTitle = (conversation: ConversationType) => {
-    // Get other participants (not current user) - ensure string comparison
-    const otherParticipants = conversation.participants.filter(p => 
-      p.user._id.toString() !== currentUserId?.toString()
-    );
+    // Use pre-filtered otherParticipants from backend
+    const otherParticipants = conversation.otherParticipants || [];
     
     // For direct conversations, just show the other person's name
     if (otherParticipants.length === 1) {
-      return `${otherParticipants[0].user.firstName} ${otherParticipants[0].user.lastName}`;
+      return `${otherParticipants[0].firstName} ${otherParticipants[0].lastName}`;
     }
     
     // For group conversations (rare case)
     if (otherParticipants.length > 1) {
-      return `${otherParticipants[0].user.firstName} and ${otherParticipants.length - 1} others`;
+      return `${otherParticipants[0].firstName} and ${otherParticipants.length - 1} others`;
     }
     
     return 'Conversation';
@@ -224,16 +222,15 @@ export function RealConversationList({
                   <div className="flex-shrink-0">
                     <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center relative">
                       {(() => {
-                        const otherParticipants = conversation.participants.filter(p => 
-                          p.user._id.toString() !== currentUserId?.toString()
-                        );
+                        // Use pre-filtered otherParticipants from backend
+                        const otherParticipants = conversation.otherParticipants || [];
                         const otherParticipant = otherParticipants[0];
                         
-                        if (otherParticipant?.user.profileImageUrl) {
+                        if (otherParticipant?.profileImageUrl) {
                           return (
                             <img 
-                              src={otherParticipant.user.profileImageUrl}
-                              alt={`${otherParticipant.user.firstName} ${otherParticipant.user.lastName}`}
+                              src={otherParticipant.profileImageUrl}
+                              alt={`${otherParticipant.firstName} ${otherParticipant.lastName}`}
                               className="w-full h-full object-cover"
                               onError={(e) => {
                                 const target = e.target as HTMLImageElement;
@@ -245,7 +242,7 @@ export function RealConversationList({
                         
                         return (
                           <span className="text-white font-semibold text-sm">
-                            {`${otherParticipant?.user.firstName?.[0] || ''}${otherParticipant?.user.lastName?.[0] || ''}`.toUpperCase()}
+                            {`${otherParticipant?.firstName?.[0] || ''}${otherParticipant?.lastName?.[0] || ''}`.toUpperCase()}
                           </span>
                         );
                       })()}

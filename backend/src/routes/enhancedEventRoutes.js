@@ -16,7 +16,9 @@ import {
   validateEvent,
   getEventSpeakers,
   getEventStats,
-  uploadBannerImage
+  uploadBannerImage,
+  postponeEvent,
+  getPostponementOptions
 } from '../controllers/enhancedEventController.js';
 import { imageUpload } from '../middleware/upload.js';
 import { authenticateJWT, authorizeRoles } from "../middleware/jwtAuth.js";
@@ -53,6 +55,10 @@ router.delete('/drafts/:id', authorizeRoles("Organizer"), deleteEventDraft);
 // Event Data Routes
 router.get('/:id/speakers', authorizeRoles("Organizer"), getEventSpeakers);
 router.get('/:id/stats', authorizeRoles("Organizer"), getEventStats);
+
+// Event Postponement Routes
+router.post('/:id/postpone', authorizeRoles("Organizer"), postponeEvent);
+router.get('/:id/postpone/options', authorizeRoles("Organizer"), getPostponementOptions);
 
 // Banner Image Upload Route
 router.post('/upload/banner', authorizeRoles("Organizer"), imageUpload.single('bannerImage'), uploadBannerImage);

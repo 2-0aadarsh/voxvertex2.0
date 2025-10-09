@@ -61,19 +61,15 @@ export interface ParticipantRefundPolicy {
   allowRefunds: boolean;
   refundDeadline: number | ''; // days before event
   refundPercentage: number | '';
-  processingFee: number | '';
-  processingTime: string;
-  allowEmergencyRefunds: boolean;
-  emergencyConditions: string;
+  processingTime: string; // Fixed at 48 hours
   refundConditions: string[];
 }
 
 export interface SpeakerCancellationPolicy {
   allowCancellation: boolean;
   cancellationDeadline: number | ''; // days before event
-  penaltyPercentage: number | '';
+  partialRefundPercentage: number | '';
   requireReplacement: boolean;
-  forceMajeureClause: boolean;
   paymentTerms: string;
   speakerConditions: string[];
 }
@@ -81,19 +77,20 @@ export interface SpeakerCancellationPolicy {
 export interface EventCancellationPolicy {
   allowCancellation: boolean;
   fullRefundDeadline: number | ''; // days before event
-  partialRefundDeadline: number | ''; // days before event
   partialRefundPercentage: number | '';
-  administrativeFee: number | '';
   refundMethod: string;
-  processingTime: string;
+  processingTime: string; // Fixed at 48 hours
+  cancellationConditions: string;
 }
 
 export interface EventPostponementPolicy {
   allowPostponement: boolean;
   noticeRequired: number | ''; // days
   maxPostponementDuration: number | ''; // days
+  partialRefundRequestDeadline: number | ''; // days
   ticketsValidForNewDate: boolean;
   offerRefundOnPostponement: boolean;
+  allowSpeakersToCancelOnPostponement: boolean;
   refundPercentageOnPostponement: number | '';
   postponementConditions: string[];
 }
@@ -114,7 +111,14 @@ export interface EventFormData {
   eventMode: 'offline' | 'online' | 'hybrid';
   format: string;
   location: string;
-  eventUrl: string;
+  
+  // Online Event Platform fields
+  meetingPlatform?: string;
+  meetingLink?: string;
+  meetingId?: string;
+  passcode?: string;
+  dialInNumbers?: string;
+  participantInstructions?: string;
   
   // Step 2: Branding & Content
   description: string;
@@ -196,7 +200,15 @@ export interface CreateEventRequest {
   eventMode: 'offline' | 'online' | 'hybrid';
   format: string;
   location?: string;
-  eventUrl?: string;
+  
+  // Online Event Platform fields
+  meetingPlatform?: string;
+  meetingLink?: string;
+  meetingId?: string;
+  passcode?: string;
+  dialInNumbers?: string;
+  participantInstructions?: string;
+  
   description: string;
   bannerImage?: string;
   tags: string[];

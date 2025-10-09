@@ -3,14 +3,16 @@ import {
   createSubscription, 
   getAllPlans, 
   assignSubscriptionToUser,
-  createPaymentValidationOrder,
   verifyPaymentAndStartTrial,
   startTrialSubscription,
   upgradeSubscription,
   createSubscriptionPaymentOrder,
   verifySubscriptionPayment,
   getSubscriptionStatus,
-  cancelSubscription
+  cancelSubscription,
+  subscribeToPlan,
+  changeSubscriptionPlan,
+  razorpayWebhook
 } from '../controllers/subscriptionController.js';
 
 const router = express.Router();
@@ -22,7 +24,6 @@ router.get('/plans', getAllPlans);
 router.post('/plans', createSubscription);
 
 // ✨ NEW: Payment Validation Flow (₹1 Authorization) - RECOMMENDED
-router.post('/validate-payment', createPaymentValidationOrder);      // Step 1: Create ₹1 order
 router.post('/verify-and-start-trial', verifyPaymentAndStartTrial);  // Step 2: Verify & start trial
 
 // Legacy: Start trial without validation (deprecated - use validate-payment flow)
@@ -43,8 +44,17 @@ router.get('/status/:userId', getSubscriptionStatus);
 // Cancel subscription
 router.post('/cancel', cancelSubscription);
 
+// Change subscription plan
+router.post('/change-plan', changeSubscriptionPlan);
+
+// Subscribe to plan
+router.post('/subscribe', subscribeToPlan);
+
 // Legacy route for backward compatibility
 router.post('/assign', assignSubscriptionToUser);
+
+// Razorpay webhook
+router.post('/webhook', razorpayWebhook);
 
 // Legacy route for backward compatibility
 router.get('/', getAllPlans);

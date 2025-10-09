@@ -49,14 +49,6 @@ export default function EventManagementPage() {
 
   // Helper function to get profile image URL
   const getProfileImageUrl = (profileImage: any) => {
-    console.log('🔍 Home Profile Image Debug:', {
-      profileImage,
-      type: typeof profileImage,
-      hasData: profileImage?.data ? 'yes' : 'no',
-      hasContentType: profileImage?.contentType ? 'yes' : 'no',
-      hasUrl: profileImage?.url ? 'yes' : 'no'
-    });
-    
     if (!profileImage) return null;
     
     // Handle string URLs
@@ -68,7 +60,6 @@ export default function EventManagementPage() {
     // Handle object with data and contentType (Buffer)
     if (typeof profileImage === 'object' && profileImage.data && profileImage.contentType) {
       const dataUrl = `data:${profileImage.contentType};base64,${profileImage.data.toString('base64')}`;
-      console.log('✅ Created data URL from Buffer');
       return dataUrl;
     }
     
@@ -78,7 +69,6 @@ export default function EventManagementPage() {
       return `https://res.cloudinary.com/demo/image/fetch/${profileImage.url}`;
     }
     
-    console.log('❌ No valid profile image format found');
     return null;
   };
   
@@ -103,67 +93,10 @@ export default function EventManagementPage() {
   const { data: debugData, error: debugError } = useDebugPostsQuery();
   const { data: userLikesData, error: userLikesError } = useTestUserLikesQuery();
 
-  // Comprehensive debug logging
-  useEffect(() => {
-    console.log('=== FRONTEND FEED DEBUG ===');
-    console.log('Feed Data (raw):', feedData);
-    console.log('Feed Posts (extracted):', feedPosts);
-    console.log('Feed Posts Length:', feedPosts.length);
-    console.log('Feed Pagination:', pagination);
-    console.log('Feed Loading:', feedLoading);
-    console.log('Feed Error:', feedError);
-    if (feedError) {
-      console.error('Detailed Feed Error:', feedError);
-    }
-    console.log('--- POSTS DEBUG ---');
-    console.log('Total Posts Loaded:', feedPosts.length);
-    
-    // Debug like status for each post
-    if (feedPosts.length > 0) {
-      console.log('--- LIKE STATUS DEBUG ---');
-      feedPosts.forEach((post, index) => {
-        console.log(`Post ${index + 1}:`, {
-          id: post._id,
-          caption: post.caption?.substring(0, 30) + '...',
-          isLiked: post.isLiked,
-          likesCount: post.likesCount,
-          user: post.user?.firstName + ' ' + post.user?.lastName
-        });
-      });
-    }
-    
-    console.log('--- AUTH DEBUG ---');
-    console.log('Current User:', user);
-    console.log('Current User Data:', currentUserData);
-    console.log('Is Authenticated:', isAuthenticated);
-    
-    console.log('--- DATABASE DEBUG ---');
-    console.log('Debug Posts Data:', debugData);
-    console.log('Debug Posts Error:', debugError);
-    if (debugData?.data) {
-      console.log('Total Posts in DB:', debugData.data.totalPosts);
-      console.log('Active Public Posts:', debugData.data.activePublicPosts);
-      console.log('User Excluded Posts:', debugData.data.userExcludedPosts);
-      console.log('Current User ID:', debugData.data.currentUserId);
-      console.log('Sample Posts:', debugData.data.samplePosts);
-    }
-    
-    console.log('--- USER LIKES DEBUG ---');
-    console.log('User Likes Data:', userLikesData);
-    console.log('User Likes Error:', userLikesError);
-    if (userLikesData?.data) {
-      console.log('User ID:', userLikesData.data.userId);
-      console.log('Liked Posts:', userLikesData.data.likedPosts);
-      console.log('Is Authenticated:', userLikesData.data.isAuthenticated);
-    }
-    
-    console.log('===========================');
-  }, [feedData, feedLoading, feedError, feedPosts, pagination, testData, testError, dbTestData, dbTestError, debugData, debugError, userLikesData, userLikesError, user, currentUserData, isAuthenticated]);
 
   // Listen for new post creation events
   useEffect(() => {
     const handleNewPost = (event: CustomEvent) => {
-      console.log('🎉 Received newPostCreated event:', event.detail);
       // Refetch the feed when a new post is created
       refetchFeed();
     };
@@ -182,12 +115,9 @@ export default function EventManagementPage() {
   // Helper function to handle like toggle with optimistic updates
   const handleLikeToggle = useCallback(async (postId: string) => {
     try {
-      console.log('🚀 Toggling like for post:', postId);
-      
       // Find the current post to get its current like state
       const currentPost = feedPosts.find(post => post._id === postId);
       if (!currentPost) {
-        console.error('❌ Post not found for like toggle');
         return;
       }
       
@@ -197,14 +127,6 @@ export default function EventManagementPage() {
         : currentPost.likesCount + 1;
       const optimisticIsLiked = !currentPost.isLiked;
       
-      console.log('🔄 Applying optimistic like update:', {
-        postId,
-        currentLikes: currentPost.likesCount,
-        optimisticLikes: optimisticLikeCount,
-        currentIsLiked: currentPost.isLiked,
-        optimisticIsLiked
-      });
-      
       // Update the cache optimistically
       dispatch(
         feedApi.util.updateQueryData('getFeedPosts', { page: 1, limit: 100 }, (draft) => {
@@ -213,19 +135,15 @@ export default function EventManagementPage() {
             if (postIndex !== -1) {
               draft.data.posts[postIndex].isLiked = optimisticIsLiked;
               draft.data.posts[postIndex].likesCount = optimisticLikeCount;
-              console.log('✅ Optimistic like update applied to cache');
             }
           }
         })
       );
       
       // Make the API call
-      const result = await toggleLike(postId).unwrap();
-      console.log('✅ Like toggled successfully:', result);
+      await toggleLike(postId).unwrap();
       
     } catch (error) {
-      console.error('❌ Failed to toggle like:', error);
-      
       // Revert optimistic update on error
       const currentPost = feedPosts.find(post => post._id === postId);
       if (currentPost) {
@@ -237,7 +155,6 @@ export default function EventManagementPage() {
                 // Revert to original state
                 draft.data.posts[postIndex].isLiked = currentPost.isLiked;
                 draft.data.posts[postIndex].likesCount = currentPost.likesCount;
-                console.log('🔄 Reverted optimistic like update due to error');
               }
             }
           })
@@ -267,12 +184,9 @@ export default function EventManagementPage() {
     }
 
     try {
-      console.log('🚀 Submitting comment:', { postId, comment: commentText.trim() });
-      
       // Find the current post to get its current comment count
       const currentPost = feedPosts.find(post => post._id === postId);
       if (!currentPost) {
-        console.error('❌ Post not found for comment submission');
         return;
       }
       
@@ -301,13 +215,6 @@ export default function EventManagementPage() {
       // Optimistic update - immediately update the UI
       const optimisticCommentCount = currentPost.commentsCount + 1;
       
-      console.log('🔄 Applying optimistic comment update:', {
-        postId,
-        currentComments: currentPost.commentsCount,
-        optimisticComments: optimisticCommentCount,
-        newComment: optimisticComment
-      });
-      
       // Update the cache optimistically
       dispatch(
         feedApi.util.updateQueryData('getFeedPosts', { page: 1, limit: 100 }, (draft) => {
@@ -320,7 +227,6 @@ export default function EventManagementPage() {
               }
               draft.data.posts[postIndex].comments.unshift(optimisticComment as any);
               draft.data.posts[postIndex].commentsCount = optimisticCommentCount;
-              console.log('✅ Optimistic comment update applied to cache');
             }
           }
         })
@@ -336,11 +242,7 @@ export default function EventManagementPage() {
         content: commentText.trim()
       }).unwrap();
       
-      console.log('✅ Comment submitted successfully!');
-      
     } catch (error) {
-      console.error('❌ Failed to submit comment:', error);
-      
       // Revert optimistic update on error
       const currentPost = feedPosts.find(post => post._id === postId);
       if (currentPost) {
@@ -356,7 +258,6 @@ export default function EventManagementPage() {
                   );
                 }
                 draft.data.posts[postIndex].commentsCount = currentPost.commentsCount;
-                console.log('🔄 Reverted optimistic comment update due to error');
               }
             }
           })
@@ -759,17 +660,6 @@ export default function EventManagementPage() {
                           </div>
                         ) : (
                           feedPosts.map((post) => {
-                            console.log('🔍 Post Debug:', {
-                              postId: post._id,
-                              user: post.user,
-                              userProfileImage: post.userProfileImage,
-                              userProfileImageUrl: post.user?.profileImage,
-                              userName: post.userName,
-                              media: post.media,
-                              mediaCount: post.media?.length || 0,
-                              mediaTypes: post.media?.map(m => m.type) || []
-                            });
-                            
                             // Get real comments from the post data
                             const postComments = post.comments || [];
                             
@@ -785,7 +675,6 @@ export default function EventManagementPage() {
                                       alt={authorName}
                                       className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover"
                                       onError={(e) => {
-                                        console.error('Profile image failed to load:', profileImageUrl);
                                         e.currentTarget.style.display = 'none';
                                         const nextElement = e.currentTarget.nextElementSibling as HTMLElement;
                                         if (nextElement) {
@@ -862,16 +751,6 @@ export default function EventManagementPage() {
                                           >
                                           <div className="space-y-2 pr-4 sm:pr-8">
                                             {(viewingAllComments.has(post._id) ? postComments : postComments.slice(0, 3)).map((comment: { userName?: string; content: string; createdAt: string; userProfileImage?: any; userProfileImageUrl?: string; user?: any }, index: number) => {
-                                              // Debug comment data
-                                              console.log('🔍 Comment Debug:', {
-                                                commentId: (comment as any)._id || index,
-                                                userName: comment.userName,
-                                                userProfileImage: comment.userProfileImage,
-                                                userProfileImageUrl: comment.userProfileImageUrl,
-                                                user: comment.user,
-                                                userProfileImageFromUser: comment.user?.profileImage
-                                              });
-                                              
                                               // Get profile image from multiple sources: userProfileImageUrl (new), userProfileImage (old), or user.profileImageUrl (populated)
                                               const profileImageUrl = getProfileImageUrl(comment.userProfileImageUrl || comment.userProfileImage || comment.user?.profileImageUrl || comment.user?.profileImage);
                                               const displayName = comment.userName || `${comment.user?.firstName} ${comment.user?.lastName}`;

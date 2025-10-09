@@ -4,7 +4,7 @@ import { CiSettings, CiUser } from "react-icons/ci";
 import { IoCalendarOutline } from "react-icons/io5";
 import { LuMessageCircleMore } from "react-icons/lu";
 import { MdLogout, MdOutlineDashboard } from "react-icons/md";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, Bell } from "lucide-react";
 import { VscCreditCard } from "react-icons/vsc";
 import { FaMoneyBillTrendUp } from "react-icons/fa6";
 import { BiSupport } from "react-icons/bi";
@@ -84,6 +84,7 @@ const Sidebar = ({ userRole = "newuser" }) => {
   // Helper function to get events redirect based on user role
   const getEventsRedirect = () => {
     const role = getUserRole();
+    console.log("role from sidebar page", role);
     let redirectPath;
 
     switch (role) {
@@ -127,7 +128,7 @@ const Sidebar = ({ userRole = "newuser" }) => {
   const baseNavigationItems = [
     {
       icon: <CiUser />,
-      label: "Dashboard",
+      label: "Profile",
       href: getProfileRedirect(),
       active:
         currentPath === getProfileRedirect() ||
@@ -164,21 +165,32 @@ const Sidebar = ({ userRole = "newuser" }) => {
     },
   ];
 
-  // Add Bookings only for organizers and speakers (not participants)
-  const navigationItems =
-    getUserRole() === "participant"
-      ? baseNavigationItems
-      : [
-          ...baseNavigationItems.slice(0, 2), // Dashboard and Messages
-          {
-            icon: <IoCalendarOutline />,
-            label: "Bookings",
-            href: "/booking",
-            active:
-              currentPath === "/booking" || currentPath.startsWith("/booking"),
-          },
-          ...baseNavigationItems.slice(2), // Events, Payments, Dispute
-        ];
+  // Build navigation with role-based items
+  const isParticipant = getUserRole() === "participant";
+  const participantNotificationsItem = {
+    icon: <Bell />,
+    label: "Notifications",
+    href: "/participant/notifications",
+    active: currentPath === "/participant/notifications",
+  };
+
+  const navigationItems = isParticipant
+    ? [
+        ...baseNavigationItems.slice(0, 2), // Dashboard and Messages
+        participantNotificationsItem,
+        ...baseNavigationItems.slice(2), // Events, Payments, Dispute
+      ]
+    : [
+        ...baseNavigationItems.slice(0, 2), // Dashboard and Messages
+        {
+          icon: <IoCalendarOutline />,
+          label: "Bookings",
+          href: "/booking",
+          active:
+            currentPath === "/booking" || currentPath.startsWith("/booking"),
+        },
+        ...baseNavigationItems.slice(2), // Events, Payments, Dispute
+      ];
 
   const bottomItems = [
     {

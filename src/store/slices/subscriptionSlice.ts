@@ -234,9 +234,13 @@ export const subscriptionApi = baseApi.injectEndpoints({
       invalidatesTags: ['Subscription', 'User'],
     }),
     
-    // Get subscription status
+    // Get subscription status for user
     getSubscriptionStatus: builder.query<
-      { success: boolean; subscription: SubscriptionStatus | null; message?: string },
+      { 
+        success: boolean; 
+        subscription: SubscriptionStatus | null;
+        message: string;
+      },
       string
     >({
       query: (userId) => `/subscriptions/status/${userId}`,

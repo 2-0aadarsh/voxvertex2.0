@@ -1,88 +1,91 @@
 const emailTemplate = (otp) => `
-        <!DOCTYPE html>
-        <html>
-
-        <head>
-            <title>Email Verification</title>
-            <style>
-                body {
-                    font-family: Arial, sans-serif;
-                    background-color: #f4f4f4;
-                    margin: 0;
-                    padding: 0;
-                }
-
-                .email-container {
-                    max-width: 600px;
-                    margin: 40px auto;
-                    background: #ffffff;
-                    border-radius: 8px;
-                    overflow: hidden;
-                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-                }
-
-                .header {
-                    background-color: #4caf50;
-                    color: #ffffff;
-                    text-align: center;
-                    padding: 20px;
-                    font-size: 24px;
-                }
-
-                .content {
-                    padding: 20px;
-                    color: #333333;
-                    line-height: 1.6;
-                }
-
-                .content p {
-                    margin: 0 0 20px;
-                }
-
-                .otp-box {
-                    display: block; /*Makes the box take up the full width*/
-                    width: 85%; /* Full width */
-                    text-align: center; /* Centers the text */
-                    background-color: #4caf50;
-                    color: #ffffff;
-                    padding: 12px 25px;
-                    border-radius: 4px; 
-                    font-size: 25px;
-                    font-weight: bold;
-                    margin-bottom: 20px;
-                }
-
-                .footer {
-                    background-color: #f4f4f4;
-                    color: #888888;
-                    text-align: center;
-                    padding: 10px 20px;
-                    font-size: 12px;
-                }
-            </style>
-        </head>
-
-        <body>
-            <div class="email-container">
-                <div class="header">
-                    Verify Your Email
-                </div>
-                <div class="content">
-                    <p>Hi [User],</p>
-                    <p>Thank you for signing up! Use the OTP below to verify your email address:</p>
-                    <div class="otp-box">
-                        ${otp} <!-- Insert dynamic OTP here -->
-                    </div>
-                    <p>If you didn't request this, please ignore this email.</p>
-                    <p>Best regards,<br>The [Your App Name] Team</p>
-                </div>
-                <div class="footer">
-                    © 2024 pingpong. All rights reserved.
-                </div>
-            </div>
-        </body>
-
-        </html>`;
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Email Verification</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+    }
+    .email-container {
+      max-width: 600px;
+      margin: 40px auto;
+      background: #ffffff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    .header {
+      background: linear-gradient(135deg, #ff6b35, #f7931e);
+      color: #ffffff;
+      text-align: center;
+      padding: 20px;
+      font-size: 24px;
+    }
+    .content {
+      padding: 30px;
+      color: #333333;
+      line-height: 1.6;
+    }
+    .content p {
+      margin: 0 0 20px;
+    }
+    .otp-box {
+      display: block;
+      width: 85%;
+      text-align: center;
+      background-color: #ff6b35;
+      color: #ffffff;
+      padding: 20px;
+      border-radius: 8px;
+      font-size: 32px;
+      font-weight: bold;
+      margin: 20px auto;
+      letter-spacing: 5px;
+    }
+    .security-tip {
+      background: #fff3cd;
+      border: 1px solid #ffeaa7;
+      padding: 15px;
+      border-radius: 5px;
+      margin: 20px 0;
+    }
+    .footer {
+      background: #333;
+      color: #ffffff;
+      text-align: center;
+      padding: 20px;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="email-container">
+    <div class="header">
+      Voxvertex
+    </div>
+    <div class="content">
+      <h2 style="color: #333; margin-bottom: 20px;">Email Verification</h2>
+      <p>Hi [User],</p>
+      <p>Thank you for signing up! Use the OTP below to verify your email address:</p>
+      <div class="otp-box">
+        ${otp}
+      </div>
+      <p>This OTP will expire in 15 minutes.</p>
+      <p>If you didn't request this, please ignore this email.</p>
+      <div class="security-tip">
+        <p style="color: #856404; margin: 0; font-size: 14px;"><strong>Security Tip:</strong> Never share this OTP with anyone. VoxVertex will never ask for your OTP.</p>
+      </div>
+    </div>
+    <div class="footer">
+      <p style="margin: 0;">Copyright © 2024 Voxvertex Solutions. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>`;
 
 const passwordResetEmailTemplate = (resetLink) => `
 <!DOCTYPE html>
@@ -311,7 +314,7 @@ const passwordResetLinkTemplate = (resetLink) => `
 <body>
   <div class="email-container">
     <div class="header">
-      VoxVertex
+      Voxvertex
     </div>
     <div class="content">
       <h2 style="color: #333; margin-bottom: 20px;">Password Reset Request</h2>
@@ -323,11 +326,11 @@ const passwordResetLinkTemplate = (resetLink) => `
       <p>This link will expire in 15 minutes.</p>
       <p>If you didn't request this password reset, please ignore this email.</p>
       <div class="security-tip">
-        <p style="color: #856404; margin: 0; font-size: 14px;"><strong>Security Tip:</strong> Never share this link with anyone. VoxVertex will never ask for your password reset link.</p>
+        <p style="color: #856404; margin: 0; font-size: 14px;"><strong>Security Tip:</strong> Never share this link with anyone. Voxvertex will never ask for your password reset link.</p>
       </div>
     </div>
     <div class="footer">
-      <p style="margin: 0;">© 2024 VoxVertex. All rights reserved.</p>
+      <p style="margin: 0;">© 2024 Voxvertex. All rights reserved.</p>
     </div>
   </div>
 </body>
@@ -400,7 +403,7 @@ const passwordResetOTPTemplate = (otp) => `
 <body>
   <div class="email-container">
     <div class="header">
-      VoxVertex
+      Voxvertex
     </div>
     <div class="content">
       <h2 style="color: #333; margin-bottom: 20px;">Password Reset Request</h2>
@@ -412,11 +415,11 @@ const passwordResetOTPTemplate = (otp) => `
       <p>This OTP will expire in 15 minutes.</p>
       <p>If you didn't request this password reset, please ignore this email.</p>
       <div class="security-tip">
-        <p style="color: #856404; margin: 0; font-size: 14px;"><strong>Security Tip:</strong> Never share this OTP with anyone. VoxVertex will never ask for your OTP.</p>
+        <p style="color: #856404; margin: 0; font-size: 14px;"><strong>Security Tip:</strong> Never share this OTP with anyone. Voxvertex will never ask for your OTP.</p>
       </div>
     </div>
     <div class="footer">
-      <p style="margin: 0;">© 2024 VoxVertex. All rights reserved.</p>
+      <p style="margin: 0;">© 2024 Voxvertex. All rights reserved.</p>
     </div>
   </div>
 </body>
@@ -473,7 +476,7 @@ const passwordChangedTemplate = () => `
 <body>
   <div class="email-container">
     <div class="header">
-      VoxVertex
+      Voxvertex
     </div>
     <div class="content">
       <h2 style="color: #333; margin-bottom: 20px;">Password Changed Successfully</h2>
@@ -485,7 +488,7 @@ const passwordChangedTemplate = () => `
       <p>You can now log in with your new password.</p>
     </div>
     <div class="footer">
-      <p style="margin: 0;">© 2024 VoxVertex. All rights reserved.</p>
+      <p style="margin: 0;">© 2024 Voxvertex. All rights reserved.</p>
     </div>
   </div>
 </body>
@@ -895,7 +898,7 @@ const eventRegistrationConfirmationTemplate = (eventData, ticketData, userData) 
     <div class="header">
       <div class="logo">
         <div class="logo-icon">V</div>
-        <div class="brand-name">VoxVertex</div>
+        <div class="brand-name">Voxvertex</div>
       </div>
       <div class="brand-subtitle">Complete Event Management Platform</div>
     </div>
@@ -955,10 +958,10 @@ const eventRegistrationConfirmationTemplate = (eventData, ticketData, userData) 
       <div class="cta-section">
         <div class="cta-title">Access Your Event Dashboard</div>
         <div class="cta-description">
-          Use VoxVertex's complete event management platform to view the agenda, connect with speakers and other attendees, and manage your event experience.
+          Use Voxvertex's complete event management platform to view the agenda, connect with speakers and other attendees, and manage your event experience.
         </div>
         <a href="https://voxvertex.com/dashboard" class="cta-button">
-          Open VoxVertex Platform
+          Open Voxvertex Platform
         </a>
       </div>
 
@@ -1005,7 +1008,7 @@ const eventRegistrationConfirmationTemplate = (eventData, ticketData, userData) 
     <div class="footer">
       <div class="footer-brand">
         <div class="footer-logo">V</div>
-        <span class="footer-brand-name">VoxVertex</span>
+        <span class="footer-brand-name">Voxvertex</span>
       </div>
       <div class="footer-description">
         Complete event management platform connecting organizers, speakers, and audience worldwide.
@@ -1018,7 +1021,7 @@ const eventRegistrationConfirmationTemplate = (eventData, ticketData, userData) 
         <a href="#" class="footer-link">Unsubscribe</a>
       </div>
       <div class="copyright">
-        © 2025 VoxVertex. All rights reserved.
+        © 2025 Voxvertex. All rights reserved.
       </div>
     </div>
   </div>

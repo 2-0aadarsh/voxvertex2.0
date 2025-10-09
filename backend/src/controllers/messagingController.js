@@ -140,8 +140,26 @@ export const getUserConversations = async (req, res) => {
           conversation: conversation._id
         });
 
+        // Filter out current user from participants to get "other participants"
+        const otherParticipants = conversation.participants.filter(p => 
+          p.user._id.toString() !== currentUserId.toString()
+        );
+
         return {
           ...conversation.toObject(),
+          // Add filtered participants (people the user is talking TO)
+          otherParticipants: otherParticipants.map(p => ({
+            _id: p.user._id,
+            firstName: p.user.firstName,
+            lastName: p.user.lastName,
+            role: p.role,
+            profileImageUrl: p.user.profileImageUrl
+          })),
+          // Add current user context for frontend reference
+          currentUser: {
+            _id: currentUserId,
+            role: req.user.role
+          },
           unreadCount: messageStatus?.unreadCount || 0,
           lastReadAt: messageStatus?.lastReadAt
         };

@@ -107,6 +107,8 @@ export interface AdminNote {
 export interface Conversation {
   _id: string;
   participants: ConversationParticipant[];
+  otherParticipants?: OtherParticipant[]; // Pre-filtered participants (people you're talking TO)
+  currentUser?: CurrentUserContext; // Current user context from backend
   type: ConversationType;
   context?: ConversationContext;
   status: ConversationStatus;
@@ -128,6 +130,19 @@ export interface ConversationParticipant {
   joinedAt: Date;
   lastReadAt: Date;
   isActive: boolean;
+}
+
+export interface OtherParticipant {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  role: 'speaker' | 'organizer' | 'participant';
+  profileImageUrl?: string;
+}
+
+export interface CurrentUserContext {
+  _id: string;
+  role: 'speaker' | 'organizer' | 'participant';
 }
 
 export interface ConversationContext {

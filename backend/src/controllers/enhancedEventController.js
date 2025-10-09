@@ -1,6 +1,7 @@
 import EnhancedEvent from '../models/enhancedEvent.js';
 import Booking from '../models/bookingSpeaker.js';
 import { uploadToCloudinary } from '../configs/cloudinary.config.js';
+import postponementValidationService from '../services/postponementValidationService.js';
 
 // Create a new enhanced event
 export const createEnhancedEvent = async (req, res) => {
@@ -10,6 +11,18 @@ export const createEnhancedEvent = async (req, res) => {
       organizer: req.user._id
     };
     console.log("Event Data in createEnhancedEvent:", eventData);
+    
+    // Log new online platform fields if present
+    if (eventData.eventMode === 'online' || eventData.eventMode === 'hybrid') {
+      console.log("🌐 Online/Hybrid Event Platform Details:", {
+        meetingPlatform: eventData.meetingPlatform,
+        meetingLink: eventData.meetingLink,
+        meetingId: eventData.meetingId,
+        passcode: eventData.passcode ? '[PROVIDED]' : '[NOT PROVIDED]',
+        dialInNumbers: eventData.dialInNumbers ? '[PROVIDED]' : '[NOT PROVIDED]',
+        participantInstructions: eventData.participantInstructions ? '[PROVIDED]' : '[NOT PROVIDED]'
+      });
+    }
 
     // Validate required fields for basic event creation
     if (!eventData.eventName || !eventData.startDate || !eventData.endDate) {
@@ -19,9 +32,61 @@ export const createEnhancedEvent = async (req, res) => {
       });
     }
 
+    // Validate online/hybrid event platform requirements
+    if (eventData.eventMode === 'online' || eventData.eventMode === 'hybrid') {
+      if (!eventData.meetingPlatform) {
+        return res.status(400).json({
+          success: false,
+          message: 'Meeting platform is required for online/hybrid events'
+        });
+      }
+      if (!eventData.meetingLink) {
+        return res.status(400).json({
+          success: false,
+          message: 'Meeting link is required for online/hybrid events'
+        });
+      }
+      
+      // Validate Zoom-specific requirements
+      if (eventData.meetingPlatform === 'Zoom') {
+        if (!eventData.meetingId) {
+          return res.status(400).json({
+            success: false,
+            message: 'Meeting ID is required when Zoom is selected as platform'
+          });
+        }
+        if (!eventData.passcode) {
+          return res.status(400).json({
+            success: false,
+            message: 'Passcode is required when Zoom is selected as platform'
+          });
+        }
+      }
+    }
+
     // Process and validate policies if provided
     if (eventData.policies) {
       console.log("📋 Processing policies for event creation:", eventData.policies);
+      
+      // Log policy changes for debugging
+      if (eventData.policies.participantRefund) {
+        console.log("💰 Participant Refund Policy:", {
+          allowRefunds: eventData.policies.participantRefund.allowRefunds,
+          refundDeadline: eventData.policies.participantRefund.refundDeadline,
+          refundPercentage: eventData.policies.participantRefund.refundPercentage,
+          processingTime: eventData.policies.participantRefund.processingTime
+        });
+      }
+      
+      if (eventData.policies.eventCancellation) {
+        console.log("❌ Event Cancellation Policy:", {
+          allowCancellation: eventData.policies.eventCancellation.allowCancellation,
+          fullRefundDeadline: eventData.policies.eventCancellation.fullRefundDeadline,
+          partialRefundPercentage: eventData.policies.eventCancellation.partialRefundPercentage,
+          refundMethod: eventData.policies.eventCancellation.refundMethod,
+          processingTime: eventData.policies.eventCancellation.processingTime
+        });
+      }
       
       // Initialize policy metadata
       if (!eventData.policies.metadata) {
@@ -186,7 +251,9 @@ export const getUpcomingEnhancedEvents = async (req, res) => {
       query.$or = [
         { eventName: { $regex: search, $options: 'i' } },
         { description: { $regex: search, $options: 'i' } },
-        { location: { $regex: search, $options: 'i' } }
+        { location: { $regex: search, $options: 'i' } },
+        { meetingPlatform: { $regex: search, $options: 'i' } },
+        { meetingLink: { $regex: search, $options: 'i' } }
       ];
     }
 
@@ -256,7 +323,9 @@ export const getPromotedEvents = async (req, res) => {
       query.$or = [
         { eventName: { $regex: search, $options: 'i' } },
         { description: { $regex: search, $options: 'i' } },
-        { location: { $regex: search, $options: 'i' } }
+        { location: { $regex: search, $options: 'i' } },
+        { meetingPlatform: { $regex: search, $options: 'i' } },
+        { meetingLink: { $regex: search, $options: 'i' } }
       ];
     }
 
@@ -351,6 +420,8 @@ export const updateEnhancedEvent = async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
+    
+    console.log("🔄 Updating event:", id, "with data:", updateData);
 
     const event = await EnhancedEvent.findById(id);
     if (!event) {
@@ -368,7 +439,49 @@ export const updateEnhancedEvent = async (req, res) => {
       });
     }
 
-    // Allow updates to published events - no restrictions
+    // Validate online/hybrid event platform requirements if being updated
+    if (updateData.eventMode === 'online' || updateData.eventMode === 'hybrid' || 
+        (event.eventMode === 'online' && updateData.meetingPlatform) || 
+        (event.eventMode === 'hybrid' && updateData.meetingPlatform)) {
+      
+      const currentEventMode = updateData.eventMode || event.eventMode;
+      
+      if (currentEventMode === 'online' || currentEventMode === 'hybrid') {
+        const meetingPlatform = updateData.meetingPlatform || event.meetingPlatform;
+        const meetingLink = updateData.meetingLink || event.meetingLink;
+        const meetingId = updateData.meetingId || event.meetingId;
+        const passcode = updateData.passcode || event.passcode;
+        
+        if (!meetingPlatform) {
+          return res.status(400).json({
+            success: false,
+            message: 'Meeting platform is required for online/hybrid events'
+          });
+        }
+        if (!meetingLink) {
+          return res.status(400).json({
+            success: false,
+            message: 'Meeting link is required for online/hybrid events'
+          });
+        }
+        
+        // Validate Zoom-specific requirements
+        if (meetingPlatform === 'Zoom') {
+          if (!meetingId) {
+            return res.status(400).json({
+              success: false,
+              message: 'Meeting ID is required when Zoom is selected as platform'
+            });
+          }
+          if (!passcode) {
+            return res.status(400).json({
+              success: false,
+              message: 'Passcode is required when Zoom is selected as platform'
+            });
+          }
+        }
+      }
+    }
 
     // Process and validate policies if provided in update
     if (updateData.policies) {
@@ -925,6 +1038,194 @@ export const uploadBannerImage = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to upload banner image',
+      error: error.message
+    });
+  }
+};
+
+// Get postponement options for an event
+export const getPostponementOptions = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const event = await EnhancedEvent.findById(id);
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: 'Event not found'
+      });
+    }
+
+    // Check if user is the organizer
+    if (event.organizer.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Only the organizer can view postponement options'
+      });
+    }
+
+    // Get postponement options from validation service
+    const postponementOptions = postponementValidationService.getPostponementOptions(event);
+
+    if (!postponementOptions) {
+      return res.status(400).json({
+        success: false,
+        message: 'Postponement is not allowed for this event'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Postponement options retrieved successfully',
+      data: postponementOptions
+    });
+  } catch (error) {
+    console.error('Error getting postponement options:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve postponement options',
+      error: error.message
+    });
+  }
+};
+
+// Postpone an event
+export const postponeEvent = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const postponementData = req.body;
+
+    console.log('🔄 Postponing event:', id, 'with data:', postponementData);
+
+    const event = await EnhancedEvent.findById(id);
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: 'Event not found'
+      });
+    }
+
+    // Check if user is the organizer
+    if (event.organizer.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Only the organizer can postpone this event'
+      });
+    }
+
+    // Validate postponement using the validation service
+    const validationResult = postponementValidationService.validatePostponement(event, postponementData);
+
+    if (!validationResult.canPostpone) {
+      return res.status(400).json({
+        success: false,
+        message: 'Postponement validation failed',
+        errors: validationResult.errors,
+        warnings: validationResult.warnings,
+        validation: validationResult
+      });
+    }
+
+    // Create postponement history entry
+    const postponementEntry = {
+      postponedAt: new Date(),
+      postponedBy: req.user._id,
+      reason: postponementData.reason,
+      newDates: postponementData.newDates || null,
+      newLocation: postponementData.newLocation || null,
+      newMeetingDetails: postponementData.newMeetingDetails || null,
+      refundOffered: postponementData.refundOffered || false,
+      refundPercentage: postponementData.refundPercentage || 0,
+      notificationsSent: {
+        participants: false,
+        speakers: false,
+        sentAt: null
+      }
+    };
+
+    // Save original event data if not already saved
+    if (!event.postponement.originalEventData.startDate) {
+      event.postponement.originalEventData = {
+        startDate: event.startDate,
+        endDate: event.endDate,
+        location: event.location,
+        meetingPlatform: event.meetingPlatform,
+        meetingLink: event.meetingLink,
+        meetingId: event.meetingId,
+        passcode: event.passcode,
+        dialInNumbers: event.dialInNumbers,
+        participantInstructions: event.participantInstructions
+      };
+    }
+
+    // Add postponement to history
+    event.postponement.postponementHistory.push(postponementEntry);
+    event.postponement.isPostponed = true;
+
+    // Update event with new data if provided
+    if (postponementData.newDates) {
+      event.startDate = new Date(postponementData.newDates.startDate);
+      event.endDate = new Date(postponementData.newDates.endDate);
+    }
+
+    // Update location only for offline/hybrid events
+    if (postponementData.newLocation && (event.eventMode === 'offline' || event.eventMode === 'hybrid')) {
+      event.location = postponementData.newLocation;
+    }
+
+    // Update meeting details only for online/hybrid events
+    if (postponementData.newMeetingDetails && (event.eventMode === 'online' || event.eventMode === 'hybrid')) {
+      event.meetingPlatform = postponementData.newMeetingDetails.meetingPlatform;
+      event.meetingLink = postponementData.newMeetingDetails.meetingLink;
+      event.meetingId = postponementData.newMeetingDetails.meetingId;
+      event.passcode = postponementData.newMeetingDetails.passcode;
+      event.dialInNumbers = postponementData.newMeetingDetails.dialInNumbers;
+      event.participantInstructions = postponementData.newMeetingDetails.participantInstructions;
+    }
+
+    // Update status to postponed
+    event.status = 'postponed';
+
+    // Save the updated event
+    await event.save();
+
+    console.log('✅ Event postponed successfully:', {
+      eventId: id,
+      postponedAt: postponementEntry.postponedAt,
+      reason: postponementEntry.reason,
+      newDates: postponementEntry.newDates
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Event postponed successfully',
+      data: {
+        eventId: id,
+        postponedAt: postponementEntry.postponedAt,
+        reason: postponementEntry.reason,
+        newDates: postponementEntry.newDates,
+        newLocation: postponementEntry.newLocation,
+        refundOffered: postponementEntry.refundOffered,
+        refundPercentage: postponementEntry.refundPercentage,
+        warnings: validationResult.warnings
+      }
+    });
+  } catch (error) {
+    console.error('Error postponing event:', error);
+    
+    // Handle validation errors specifically
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: validationErrors
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Failed to postpone event',
       error: error.message
     });
   }

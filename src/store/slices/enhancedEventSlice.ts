@@ -517,6 +517,79 @@ export const enhancedEventApi = baseApi.injectEndpoints({
       providesTags: (result, error, eventId) => [{ type: 'EnhancedEvent', id: eventId }],
       keepUnusedDataFor: 300, // Cache for 5 minutes
     }),
+
+    // ============================================================================
+    // EVENT POSTPONEMENT ENDPOINTS
+    // ============================================================================
+
+    // Get postponement options for an event
+    getPostponementOptions: builder.query<
+      ApiResponse<{
+        canPostpone: boolean;
+        noticeRequired: number;
+        maxPostponementDuration: number;
+        offerRefundOnPostponement: boolean;
+        maxRefundPercentage: number;
+        allowSpeakersToCancel: boolean;
+        ticketsValidForNewDate: boolean;
+        postponementConditions: string[];
+        daysUntilEvent: number;
+      }>,
+      string
+    >({
+      query: (eventId) => ({
+        url: `/enhanced-events/${eventId}/postpone/options`,
+        method: 'GET',
+      }),
+      providesTags: (result, error, eventId) => [{ type: 'EnhancedEvent', id: eventId }],
+      keepUnusedDataFor: 60, // Cache for 1 minute (short cache for dynamic data)
+    }),
+
+    // Postpone an event
+    postponeEvent: builder.mutation<
+      ApiResponse<{
+        eventId: string;
+        postponedAt: string;
+        reason: string;
+        newDates: {
+          startDate: string;
+          endDate: string;
+        };
+        newLocation: string | null;
+        refundOffered: boolean;
+        refundPercentage: number;
+        warnings: string[];
+      }>,
+      {
+        eventId: string;
+        reason: string;
+        newDates?: {
+          startDate: string;
+          endDate: string;
+        };
+        newLocation?: string;
+        newMeetingDetails?: {
+          meetingPlatform: string;
+          meetingLink: string;
+          meetingId?: string;
+          passcode?: string;
+          dialInNumbers?: string;
+          participantInstructions?: string;
+        };
+        refundOffered?: boolean;
+        refundPercentage?: number;
+      }
+    >({
+      query: ({ eventId, ...postponementData }) => ({
+        url: `/enhanced-events/${eventId}/postpone`,
+        method: 'POST',
+        body: postponementData,
+      }),
+      invalidatesTags: (result, error, { eventId }) => [
+        { type: 'EnhancedEvent', id: eventId },
+        { type: 'EnhancedEvent', id: 'LIST' }
+      ],
+    }),
   }),
 });
 
@@ -563,6 +636,9 @@ export const {
   useGetEnhancedEventRegistrationSummaryQuery,
   useGetUserEnhancedEventRegistrationsQuery,
   useGetEventParticipantsQuery,
+  // Event Postponement hooks
+  useGetPostponementOptionsQuery,
+  usePostponeEventMutation,
 } = enhancedEventApi;
 
 // Selectors
@@ -593,16 +669,29 @@ export const validateStep1 = (formData: EventFormData): EventValidation => {
     }
   }
   
-  // Validate location/URL based on event mode
-  if (formData.eventMode === 'offline' && !formData.location?.trim()) {
-    errors.location = 'Location is required for offline events';
+  // Validate location based on event mode
+  if ((formData.eventMode === 'offline' || formData.eventMode === 'hybrid') && !formData.location?.trim()) {
+    errors.location = 'Location is required for offline/hybrid events';
   }
-  if (formData.eventMode === 'online' && !formData.eventUrl?.trim()) {
-    errors.eventUrl = 'Event URL is required for online events';
-  }
-  if (formData.eventMode === 'hybrid') {
-    if (!formData.location?.trim()) errors.location = 'Location is required for hybrid events';
-    if (!formData.eventUrl?.trim()) errors.eventUrl = 'Event URL is required for hybrid events';
+  
+  // Validate Online Event Platform fields for online/hybrid events
+  if (formData.eventMode === 'online' || formData.eventMode === 'hybrid') {
+    if (!formData.meetingPlatform?.trim()) {
+      errors.meetingPlatform = 'Meeting platform is required for online/hybrid events';
+    }
+    if (!formData.meetingLink?.trim()) {
+      errors.meetingLink = 'Meeting link is required for online/hybrid events';
+    }
+    
+    // Validate Meeting ID and Passcode for Zoom
+    if (formData.meetingPlatform === 'Zoom') {
+      if (!formData.meetingId?.trim()) {
+        errors.meetingId = 'Meeting ID is required for Zoom meetings';
+      }
+      if (!formData.passcode?.trim()) {
+        errors.passcode = 'Passcode/Password is required for Zoom meetings';
+      }
+    }
   }
   
   return {

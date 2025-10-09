@@ -1,79 +1,129 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { motion } from "framer-motion"
-import { CheckCircle, RefreshCw } from "lucide-react"
-import ErrorMessage from "../common/ErrorMessage"
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { CheckCircle, RefreshCw } from "lucide-react";
+import ErrorMessage from "../common/ErrorMessage";
 
 interface StepOtpProps {
-  email: string
-  onVerifySuccess: () => void
+  email: string;
+  onVerifySuccess: () => void;
 }
 
 export default function StepOtp({ email, onVerifySuccess }: StepOtpProps) {
-  const [otp, setOtp] = useState(["", "", "", "", "", ""])
-  const [isVerifying, setIsVerifying] = useState(false)
-  const [error, setError] = useState("")
-  const [success, setSuccess] = useState(false)
-  const [resendLoading, setResendLoading] = useState(false)
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
 
   const handleChange = (value: string, index: number) => {
-    if (!/^\d?$/.test(value)) return
-    const newOtp = [...otp]
-    newOtp[index] = value
-    setOtp(newOtp)
+    if (!/^\d?$/.test(value)) return;
+    const newOtp = [...otp];
+    newOtp[index] = value;
+    setOtp(newOtp);
 
     // auto focus next
     if (value && index < otp.length - 1) {
-      const nextInput = document.getElementById(`otp-${index + 1}`)
-      nextInput?.focus()
+      const nextInput = document.getElementById(`otp-${index + 1}`);
+      nextInput?.focus();
     }
-  }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent, index: number) => {
+    if (e.key === "Backspace") {
+      if (!otp[index] && index > 0) {
+        // If current field is empty, move to previous field
+        const prevInput = document.getElementById(`otp-${index - 1}`);
+        prevInput?.focus();
+      } else if (otp[index]) {
+        // If current field has value, clear it
+        const newOtp = [...otp];
+        newOtp[index] = "";
+        setOtp(newOtp);
+      }
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData("text");
+
+    // Remove any non-digit characters and limit to 6 digits
+    const digits = pastedData.replace(/\D/g, "").slice(0, 6);
+
+    if (digits.length > 0) {
+      const newOtp = [...otp];
+
+      // Fill the OTP fields with pasted digits
+      for (let i = 0; i < digits.length && i < otp.length; i++) {
+        newOtp[i] = digits[i];
+      }
+
+      setOtp(newOtp);
+
+      // Focus on the next empty field or the last field
+      const nextEmptyIndex = Math.min(digits.length, otp.length - 1);
+      const nextInput = document.getElementById(`otp-${nextEmptyIndex}`);
+      nextInput?.focus();
+    }
+  };
 
   const handleVerify = async () => {
-    setIsVerifying(true)
-    setError("")
+    setIsVerifying(true);
+    setError("");
     try {
-      const response = await fetch("http://localhost:3001/api/auth/verify-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, otp: otp.join("") }),
-      })
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.message || "Invalid OTP")
+      const response = await fetch(
+        "http://localhost:3001/api/auth/verify-otp",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, otp: otp.join("") }),
+        }
+      );
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Invalid OTP");
 
-      setSuccess(true)
-      setTimeout(() => onVerifySuccess(), 1000) // move to next step
+      setSuccess(true);
+      setTimeout(() => onVerifySuccess(), 1000); // move to next step
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Verification failed")
+      setError(err instanceof Error ? err.message : "Verification failed");
     } finally {
-      setIsVerifying(false)
+      setIsVerifying(false);
     }
-  }
+  };
 
   const handleResend = async () => {
-    setResendLoading(true)
-    setError("")
+    setResendLoading(true);
+    setError("");
     try {
-      const response = await fetch("http://localhost:3001/api/auth/resend-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      })
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.message || "Could not resend verification code")
+      const response = await fetch(
+        "http://localhost:3001/api/auth/resend-otp",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        }
+      );
+      const data = await response.json();
+      if (!response.ok)
+        throw new Error(data.message || "Could not resend verification code");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Resend failed")
+      setError(err instanceof Error ? err.message : "Resend failed");
     } finally {
-      setResendLoading(false)
+      setResendLoading(false);
     }
-  }
+  };
 
   return (
     <div className="space-y-4">
       <div className="text-center">
-        <h2 className="text-base font-semibold text-gray-800">Verify your email</h2>
-        <p className="text-sm text-gray-600">We sent a 6-digit OTP to <span className="font-medium">{email}</span></p>
+        <h2 className="text-base font-semibold text-gray-800">
+          Verify your email
+        </h2>
+        <p className="text-sm text-gray-600">
+          We sent a 6-digit OTP to <span className="font-medium">{email}</span>
+        </p>
       </div>
 
       {error && <ErrorMessage message={error} />}
@@ -87,6 +137,8 @@ export default function StepOtp({ email, onVerifySuccess }: StepOtpProps) {
             maxLength={1}
             value={digit}
             onChange={(e) => handleChange(e.target.value, idx)}
+            onKeyDown={(e) => handleKeyDown(e, idx)}
+            onPaste={handlePaste}
             className="w-10 h-12 text-center text-lg border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
           />
         ))}
@@ -98,7 +150,10 @@ export default function StepOtp({ email, onVerifySuccess }: StepOtpProps) {
           disabled={resendLoading}
           className="flex items-center gap-2 text-xs text-gray-600 hover:text-gray-800"
         >
-          <RefreshCw className={`w-4 h-4 ${resendLoading ? "animate-spin" : ""}`} /> Resend OTP
+          <RefreshCw
+            className={`w-4 h-4 ${resendLoading ? "animate-spin" : ""}`}
+          />{" "}
+          Resend OTP
         </button>
         <button
           onClick={handleVerify}
@@ -119,5 +174,5 @@ export default function StepOtp({ email, onVerifySuccess }: StepOtpProps) {
         </motion.div>
       )}
     </div>
-  )
+  );
 }

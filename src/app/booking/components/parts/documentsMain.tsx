@@ -814,7 +814,7 @@ export default function DocumentsMain() {
                                     {booking.speaker.lastName}
                                   </p>
                                   <p className="text-sm text-gray-600">
-                                    {booking.speaker.email} •{" "}
+                                    {(booking.speaker as any).email} •{" "}
                                     {booking.eventDetails?.name || "Event"}
                                   </p>
                                 </div>
@@ -852,8 +852,8 @@ export default function DocumentsMain() {
                             </p>
                             <p className="text-sm text-gray-600">
                               {selectedOrganizer.email} •{" "}
-                              {selectedOrganizer.recentBooking?.eventDetails
-                                ?.name || "Event"}
+                              {(selectedOrganizer as any).recentBooking
+                                ?.eventDetails?.name || "Event"}
                             </p>
                           </div>
                         </div>
@@ -896,8 +896,8 @@ export default function DocumentsMain() {
                                   </p>
                                   <p className="text-sm text-gray-600">
                                     {organizer.email} •{" "}
-                                    {organizer.recentBooking?.eventDetails
-                                      ?.name || "Event"}
+                                    {(organizer as any).recentBooking
+                                      ?.eventDetails?.name || "Event"}
                                   </p>
                                 </div>
                               </div>
@@ -937,7 +937,7 @@ export default function DocumentsMain() {
                   } else if (isSpeaker && selectedOrganizer) {
                     handleAssign(
                       selectedOrganizer._id,
-                      selectedOrganizer.recentBooking?.bookingId
+                      (selectedOrganizer as any).recentBooking?.bookingId
                     );
                   }
                 }}

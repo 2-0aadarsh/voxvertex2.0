@@ -180,18 +180,68 @@ const enhancedEventSchema = new mongoose.Schema({
       message: "Location is required for offline or hybrid events"
     }
   },
-  eventUrl: {
+  // Online Event Platform Details
+  meetingPlatform: {
     type: String,
     trim: true,
     validate: {
       validator: function (v) {
-        if (this.eventMode === 'online' || this.eventMode === 'hybrid') {
-          return v && v.trim().length > 0;
+        if ((this.eventMode === 'online' || this.eventMode === 'hybrid') && (!v || v.trim().length === 0)) {
+          return false;
         }
         return true;
       },
-      message: "Event URL is required for online or hybrid events"
+      message: 'Meeting platform is required for online or hybrid events'
     }
+  },
+  meetingLink: {
+    type: String,
+    trim: true,
+    validate: {
+      validator: function (v) {
+        if ((this.eventMode === 'online' || this.eventMode === 'hybrid') && (!v || v.trim().length === 0)) {
+          return false;
+        }
+        return true;
+      },
+      message: 'Meeting link is required for online or hybrid events'
+    }
+  },
+  meetingId: {
+    type: String,
+    trim: true,
+    validate: {
+      validator: function (v) {
+        if (this.meetingPlatform === 'Zoom' && (!v || v.trim().length === 0)) {
+          return false;
+        }
+        return true;
+      },
+      message: 'Meeting ID is required when Zoom is selected as platform'
+    }
+  },
+  passcode: {
+    type: String,
+    trim: true,
+    validate: {
+      validator: function (v) {
+        if (this.meetingPlatform === 'Zoom' && (!v || v.trim().length === 0)) {
+          return false;
+        }
+        return true;
+      },
+      message: 'Passcode is required when Zoom is selected as platform'
+    }
+  },
+  dialInNumbers: {
+    type: String,
+    trim: true,
+    maxlength: [1000, 'Dial-in numbers cannot exceed 1000 characters']
+  },
+  participantInstructions: {
+    type: String,
+    trim: true,
+    maxlength: [2000, 'Participant instructions cannot exceed 2000 characters']
   },
 
   // Branding & Content
@@ -274,15 +324,10 @@ const enhancedEventSchema = new mongoose.Schema({
           message: "Refund percentage is required when refunds are allowed"
         }
       },
-      processingFee: {
-        type: Number,
-        min: [0, "Processing fee cannot be negative"],
-        default: 0
-      },
       processingTime: {
         type: String,
         trim: true,
-        maxlength: [200, "Processing time description cannot exceed 200 characters"],
+        default: "48 hours",
         validate: {
           validator: function(v) {
             if (this.policies?.participantRefund?.allowRefunds && (!v || v.trim().length === 0)) {
@@ -291,24 +336,6 @@ const enhancedEventSchema = new mongoose.Schema({
             return true;
           },
           message: "Processing time is required when refunds are allowed"
-        }
-      },
-      allowEmergencyRefunds: {
-        type: Boolean,
-        default: false
-      },
-      emergencyConditions: {
-        type: String,
-        trim: true,
-        maxlength: [1000, "Emergency conditions cannot exceed 1000 characters"],
-        validate: {
-          validator: function(v) {
-            if (this.policies?.participantRefund?.allowEmergencyRefunds && (!v || v.trim().length === 0)) {
-              return false;
-            }
-            return true;
-          },
-          message: "Emergency conditions are required when emergency refunds are allowed"
         }
       },
       refundConditions: [{
@@ -340,10 +367,10 @@ const enhancedEventSchema = new mongoose.Schema({
           message: "Cancellation deadline is required when cancellations are allowed"
         }
       },
-      penaltyPercentage: {
+      partialRefundPercentage: {
         type: Number,
-        min: [0, "Penalty percentage cannot be negative"],
-        max: [100, "Penalty percentage cannot exceed 100%"],
+        min: [0, "Partial refund percentage cannot be negative"],
+        max: [100, "Partial refund percentage cannot exceed 100%"],
         validate: {
           validator: function(v) {
             if (this.policies?.speakerCancellation?.allowCancellation && v === undefined) {
@@ -351,30 +378,17 @@ const enhancedEventSchema = new mongoose.Schema({
             }
             return true;
           },
-          message: "Penalty percentage is required when cancellations are allowed"
+          message: "Partial refund percentage is required when cancellations are allowed"
         }
       },
       requireReplacement: {
         type: Boolean,
         default: false
       },
-      forceMajeureClause: {
-        type: Boolean,
-        default: false
-      },
       paymentTerms: {
         type: String,
         trim: true,
-        maxlength: [1000, "Payment terms cannot exceed 1000 characters"],
-        validate: {
-          validator: function(v) {
-            if (this.policies?.speakerCancellation?.allowCancellation && (!v || v.trim().length === 0)) {
-              return false;
-            }
-            return true;
-          },
-          message: "Payment terms are required when cancellations are allowed"
-        }
+        maxlength: [1000, "Payment terms cannot exceed 1000 characters"]
       },
       speakerConditions: [{
         type: String,
@@ -405,20 +419,6 @@ const enhancedEventSchema = new mongoose.Schema({
           message: "Full refund deadline is required when cancellations are allowed"
         }
       },
-      partialRefundDeadline: {
-        type: Number,
-        min: [0, "Partial refund deadline cannot be negative"],
-        max: [365, "Partial refund deadline cannot exceed 365 days"],
-        validate: {
-          validator: function(v) {
-            if (this.policies?.eventCancellation?.allowCancellation && v === undefined) {
-              return false;
-            }
-            return true;
-          },
-          message: "Partial refund deadline is required when cancellations are allowed"
-        }
-      },
       partialRefundPercentage: {
         type: Number,
         min: [0, "Partial refund percentage cannot be negative"],
@@ -432,11 +432,6 @@ const enhancedEventSchema = new mongoose.Schema({
           },
           message: "Partial refund percentage is required when cancellations are allowed"
         }
-      },
-      administrativeFee: {
-        type: Number,
-        min: [0, "Administrative fee cannot be negative"],
-        default: 0
       },
       refundMethod: {
         type: String,
@@ -455,7 +450,7 @@ const enhancedEventSchema = new mongoose.Schema({
       processingTime: {
         type: String,
         trim: true,
-        maxlength: [200, "Processing time cannot exceed 200 characters"],
+        default: "48 hours",
         validate: {
           validator: function(v) {
             if (this.policies?.eventCancellation?.allowCancellation && (!v || v.trim().length === 0)) {
@@ -465,6 +460,11 @@ const enhancedEventSchema = new mongoose.Schema({
           },
           message: "Processing time is required when cancellations are allowed"
         }
+      },
+      cancellationConditions: {
+        type: String,
+        trim: true,
+        maxlength: [1000, "Cancellation conditions cannot exceed 1000 characters"]
       }
     },
 
@@ -503,11 +503,29 @@ const enhancedEventSchema = new mongoose.Schema({
           message: "Max postponement duration is required when postponements are allowed"
         }
       },
+      partialRefundRequestDeadline: {
+        type: Number,
+        min: [0, "Partial refund request deadline cannot be negative"],
+        max: [365, "Partial refund request deadline cannot exceed 365 days"],
+        validate: {
+          validator: function(v) {
+            if (this.policies?.eventPostponement?.allowPostponement && v === undefined) {
+              return false;
+            }
+            return true;
+          },
+          message: "Partial refund request deadline is required when postponements are allowed"
+        }
+      },
       ticketsValidForNewDate: {
         type: Boolean,
         default: false
       },
       offerRefundOnPostponement: {
+        type: Boolean,
+        default: false
+      },
+      allowSpeakersToCancelOnPostponement: {
         type: Boolean,
         default: false
       },
@@ -582,7 +600,7 @@ const enhancedEventSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['draft', 'published', 'cancelled'],
+    enum: ['draft', 'published', 'cancelled', 'postponed'],
     default: 'draft'
   },
   publishedAt: {
@@ -599,6 +617,73 @@ const enhancedEventSchema = new mongoose.Schema({
   totalCapacity: {
     type: Number,
     default: 0
+  },
+  
+  // Postponement-related fields
+  postponement: {
+    isPostponed: {
+      type: Boolean,
+      default: false
+    },
+    originalEventData: {
+      startDate: Date,
+      endDate: Date,
+      location: String,
+      meetingPlatform: String,
+      meetingLink: String,
+      meetingId: String,
+      passcode: String,
+      dialInNumbers: String,
+      participantInstructions: String
+    },
+    postponementHistory: [{
+      postponedAt: {
+        type: Date,
+        default: Date.now
+      },
+      postponedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'EnhancedUser'
+      },
+      reason: {
+        type: String,
+        trim: true,
+        maxlength: [500, "Postponement reason cannot exceed 500 characters"]
+      },
+      newDates: {
+        startDate: Date,
+        endDate: Date
+      },
+      newLocation: String,
+      newMeetingDetails: {
+        meetingPlatform: String,
+        meetingLink: String,
+        meetingId: String,
+        passcode: String,
+        dialInNumbers: String,
+        participantInstructions: String
+      },
+      refundOffered: {
+        type: Boolean,
+        default: false
+      },
+      refundPercentage: {
+        type: Number,
+        min: [0, "Refund percentage cannot be negative"],
+        max: [100, "Refund percentage cannot exceed 100%"]
+      },
+      notificationsSent: {
+        participants: {
+          type: Boolean,
+          default: false
+        },
+        speakers: {
+          type: Boolean,
+          default: false
+        },
+        sentAt: Date
+      }
+    }]
   }
 }, {
   timestamps: true,
@@ -712,8 +797,11 @@ enhancedEventSchema.methods.canBePublished = function () {
   if ((this.eventMode === 'offline' || this.eventMode === 'hybrid') && !this.location) {
     errors.push('Location is required for offline/hybrid events');
   }
-  if ((this.eventMode === 'online' || this.eventMode === 'hybrid') && !this.eventUrl) {
-    errors.push('Event URL is required for online/hybrid events');
+  if ((this.eventMode === 'online' || this.eventMode === 'hybrid') && !this.meetingLink) {
+    errors.push('Meeting link is required for online/hybrid events');
+  }
+  if ((this.eventMode === 'online' || this.eventMode === 'hybrid') && !this.meetingPlatform) {
+    errors.push('Meeting platform is required for online/hybrid events');
   }
   
   // Check date logic
@@ -760,11 +848,11 @@ enhancedEventSchema.methods.validatePolicies = function () {
   // Validate Participant Refund Policy
   if (this.policies.participantRefund?.allowRefunds) {
     const refund = this.policies.participantRefund;
-    if (refund.refundDeadline === undefined || refund.refundDeadline === null) {
+    if (refund.refundDeadline === undefined || refund.refundDeadline === null || refund.refundDeadline === '') {
       errors.push('Refund deadline is required when refunds are allowed');
       isCompliant = false;
     }
-    if (refund.refundPercentage === undefined || refund.refundPercentage === null) {
+    if (refund.refundPercentage === undefined || refund.refundPercentage === null || refund.refundPercentage === '') {
       errors.push('Refund percentage is required when refunds are allowed');
       isCompliant = false;
     }
@@ -772,41 +860,27 @@ enhancedEventSchema.methods.validatePolicies = function () {
       errors.push('Processing time is required when refunds are allowed');
       isCompliant = false;
     }
-    if (refund.allowEmergencyRefunds && (!refund.emergencyConditions || refund.emergencyConditions.trim().length === 0)) {
-      errors.push('Emergency conditions are required when emergency refunds are allowed');
-      isCompliant = false;
-    }
   }
 
   // Validate Speaker Cancellation Policy
   if (this.policies.speakerCancellation?.allowCancellation) {
     const speaker = this.policies.speakerCancellation;
-    if (speaker.cancellationDeadline === undefined || speaker.cancellationDeadline === null) {
+    if (speaker.cancellationDeadline === undefined || speaker.cancellationDeadline === null || speaker.cancellationDeadline === '') {
       errors.push('Cancellation deadline is required when speaker cancellations are allowed');
       isCompliant = false;
     }
-    if (speaker.penaltyPercentage === undefined || speaker.penaltyPercentage === null) {
-      errors.push('Penalty percentage is required when speaker cancellations are allowed');
-      isCompliant = false;
-    }
-    if (!speaker.paymentTerms || speaker.paymentTerms.trim().length === 0) {
-      errors.push('Payment terms are required when speaker cancellations are allowed');
-      isCompliant = false;
-    }
+    // Note: partialRefundPercentage is no longer required for speaker cancellation policy
+    // as per UI requirements - removed from validation
   }
 
   // Validate Event Cancellation Policy
   if (this.policies.eventCancellation?.allowCancellation) {
     const eventCancel = this.policies.eventCancellation;
-    if (eventCancel.fullRefundDeadline === undefined || eventCancel.fullRefundDeadline === null) {
+    if (eventCancel.fullRefundDeadline === undefined || eventCancel.fullRefundDeadline === null || eventCancel.fullRefundDeadline === '') {
       errors.push('Full refund deadline is required when event cancellations are allowed');
       isCompliant = false;
     }
-    if (eventCancel.partialRefundDeadline === undefined || eventCancel.partialRefundDeadline === null) {
-      errors.push('Partial refund deadline is required when event cancellations are allowed');
-      isCompliant = false;
-    }
-    if (eventCancel.partialRefundPercentage === undefined || eventCancel.partialRefundPercentage === null) {
+    if (eventCancel.partialRefundPercentage === undefined || eventCancel.partialRefundPercentage === null || eventCancel.partialRefundPercentage === '') {
       errors.push('Partial refund percentage is required when event cancellations are allowed');
       isCompliant = false;
     }
@@ -823,15 +897,19 @@ enhancedEventSchema.methods.validatePolicies = function () {
   // Validate Event Postponement Policy
   if (this.policies.eventPostponement?.allowPostponement) {
     const postponement = this.policies.eventPostponement;
-    if (postponement.noticeRequired === undefined || postponement.noticeRequired === null) {
+    if (postponement.noticeRequired === undefined || postponement.noticeRequired === null || postponement.noticeRequired === '') {
       errors.push('Notice required is required when postponements are allowed');
       isCompliant = false;
     }
-    if (postponement.maxPostponementDuration === undefined || postponement.maxPostponementDuration === null) {
+    if (postponement.maxPostponementDuration === undefined || postponement.maxPostponementDuration === null || postponement.maxPostponementDuration === '') {
       errors.push('Max postponement duration is required when postponements are allowed');
       isCompliant = false;
     }
-    if (postponement.offerRefundOnPostponement && (postponement.refundPercentageOnPostponement === undefined || postponement.refundPercentageOnPostponement === null)) {
+    if (postponement.partialRefundRequestDeadline === undefined || postponement.partialRefundRequestDeadline === null || postponement.partialRefundRequestDeadline === '') {
+      errors.push('Partial refund request deadline is required when postponements are allowed');
+      isCompliant = false;
+    }
+    if (postponement.offerRefundOnPostponement && (postponement.refundPercentageOnPostponement === undefined || postponement.refundPercentageOnPostponement === null || postponement.refundPercentageOnPostponement === '')) {
       errors.push('Refund percentage is required when refunds are offered on postponement');
       isCompliant = false;
     }
@@ -859,26 +937,25 @@ enhancedEventSchema.methods.getPolicySummary = function () {
     participantRefund: {
       enabled: this.policies.participantRefund?.allowRefunds || false,
       deadline: this.policies.participantRefund?.refundDeadline,
-      percentage: this.policies.participantRefund?.refundPercentage,
-      emergencyRefunds: this.policies.participantRefund?.allowEmergencyRefunds || false
+      percentage: this.policies.participantRefund?.refundPercentage
     },
     speakerCancellation: {
       enabled: this.policies.speakerCancellation?.allowCancellation || false,
       deadline: this.policies.speakerCancellation?.cancellationDeadline,
-      penaltyPercentage: this.policies.speakerCancellation?.penaltyPercentage,
       requireReplacement: this.policies.speakerCancellation?.requireReplacement || false
     },
     eventCancellation: {
       enabled: this.policies.eventCancellation?.allowCancellation || false,
       fullRefundDeadline: this.policies.eventCancellation?.fullRefundDeadline,
-      partialRefundDeadline: this.policies.eventCancellation?.partialRefundDeadline,
       partialRefundPercentage: this.policies.eventCancellation?.partialRefundPercentage
     },
     eventPostponement: {
       enabled: this.policies.eventPostponement?.allowPostponement || false,
       noticeRequired: this.policies.eventPostponement?.noticeRequired,
       maxDuration: this.policies.eventPostponement?.maxPostponementDuration,
-      ticketsValid: this.policies.eventPostponement?.ticketsValidForNewDate || false
+      partialRefundRequestDeadline: this.policies.eventPostponement?.partialRefundRequestDeadline,
+      ticketsValid: this.policies.eventPostponement?.ticketsValidForNewDate || false,
+      allowSpeakersToCancel: this.policies.eventPostponement?.allowSpeakersToCancelOnPostponement || false
     },
     generalTerms: this.policies.generalTerms ? this.policies.generalTerms.substring(0, 200) + '...' : '',
     lastUpdated: this.policies.metadata?.lastUpdated,

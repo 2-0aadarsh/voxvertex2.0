@@ -162,6 +162,14 @@ export const useEventForm = () => {
   
   // Transform form data to API format
   const transformToAPIFormat = useCallback((): CreateEventRequest => {
+    // Debug: Log the original form data to see what we're working with
+    console.log('🔍 Original form data before transformation:', {
+      policies: formData.policies,
+      participantRefund: formData.policies?.participantRefund,
+      speakerCancellation: formData.policies?.speakerCancellation,
+      eventCancellation: formData.policies?.eventCancellation
+    });
+    
     return {
       eventName: formData.eventName,
       startDate: formData.startDate,
@@ -169,7 +177,15 @@ export const useEventForm = () => {
       eventMode: formData.eventMode,
       format: formData.format,
       location: formData.location,
-      eventUrl: formData.eventUrl,
+      
+      // Online Event Platform fields
+      meetingPlatform: formData.meetingPlatform,
+      meetingLink: formData.meetingLink,
+      meetingId: formData.meetingId,
+      passcode: formData.passcode,
+      dialInNumbers: formData.dialInNumbers,
+      participantInstructions: formData.participantInstructions,
+      
       description: formData.description,
       bannerImage: formData.bannerImageUrl,
       tags: formData.tags,
@@ -185,7 +201,85 @@ export const useEventForm = () => {
       })),
       speakers: formData.speakers,
       addons: formData.addons,
-      policies: formData.policies,
+      policies: formData.policies ? {
+        // Participant Refund Policy - transform to new structure
+        participantRefund: {
+          allowRefunds: formData.policies.participantRefund?.allowRefunds || false,
+          refundDeadline: formData.policies.participantRefund?.refundDeadline || '',
+          refundPercentage: formData.policies.participantRefund?.refundPercentage || '',
+          processingTime: "48 hours", // Fixed default value
+          refundConditions: formData.policies.participantRefund?.refundConditions || []
+        },
+        // Speaker Cancellation Policy - transform to new structure
+        speakerCancellation: {
+          allowCancellation: formData.policies.speakerCancellation?.allowCancellation || false,
+          cancellationDeadline: formData.policies.speakerCancellation?.cancellationDeadline || '',
+          partialRefundPercentage: formData.policies.speakerCancellation?.partialRefundPercentage || '',
+          requireReplacement: formData.policies.speakerCancellation?.requireReplacement || false,
+          paymentTerms: formData.policies.speakerCancellation?.paymentTerms || '',
+          speakerConditions: formData.policies.speakerCancellation?.speakerConditions || []
+        },
+        // Event Cancellation Policy - transform to new structure
+        eventCancellation: {
+          allowCancellation: formData.policies.eventCancellation?.allowCancellation || false,
+          fullRefundDeadline: formData.policies.eventCancellation?.fullRefundDeadline || '',
+          partialRefundPercentage: formData.policies.eventCancellation?.partialRefundPercentage || '',
+          refundMethod: formData.policies.eventCancellation?.refundMethod || '',
+          processingTime: "48 hours", // Fixed default value
+          cancellationConditions: formData.policies.eventCancellation?.cancellationConditions || ''
+        },
+        // Event Postponement Policy - transform to new structure
+        eventPostponement: {
+          allowPostponement: formData.policies.eventPostponement?.allowPostponement || false,
+          noticeRequired: formData.policies.eventPostponement?.noticeRequired || '',
+          maxPostponementDuration: formData.policies.eventPostponement?.maxPostponementDuration || '',
+          partialRefundRequestDeadline: formData.policies.eventPostponement?.partialRefundRequestDeadline || '',
+          ticketsValidForNewDate: formData.policies.eventPostponement?.ticketsValidForNewDate || false,
+          offerRefundOnPostponement: formData.policies.eventPostponement?.offerRefundOnPostponement || false,
+          allowSpeakersToCancelOnPostponement: formData.policies.eventPostponement?.allowSpeakersToCancelOnPostponement || false,
+          refundPercentageOnPostponement: formData.policies.eventPostponement?.refundPercentageOnPostponement || '',
+          postponementConditions: formData.policies.eventPostponement?.postponementConditions || []
+        },
+        // General Terms & Conditions
+        generalTerms: formData.policies.generalTerms || ''
+      } : {
+        // Default policies if none provided
+        participantRefund: {
+          allowRefunds: false,
+          refundDeadline: '',
+          refundPercentage: '',
+          processingTime: "48 hours",
+          refundConditions: []
+        },
+        speakerCancellation: {
+          allowCancellation: false,
+          cancellationDeadline: '',
+          partialRefundPercentage: '',
+          requireReplacement: false,
+          paymentTerms: '',
+          speakerConditions: []
+        },
+        eventCancellation: {
+          allowCancellation: false,
+          fullRefundDeadline: '',
+          partialRefundPercentage: '',
+          refundMethod: '',
+          processingTime: "48 hours",
+          cancellationConditions: ''
+        },
+        eventPostponement: {
+          allowPostponement: false,
+          noticeRequired: '',
+          maxPostponementDuration: '',
+          partialRefundRequestDeadline: '',
+          ticketsValidForNewDate: false,
+          offerRefundOnPostponement: false,
+          allowSpeakersToCancelOnPostponement: false,
+          refundPercentageOnPostponement: '',
+          postponementConditions: []
+        },
+        generalTerms: ''
+      },
       status: formData.status
     };
   }, [formData]);
@@ -209,6 +303,14 @@ export const useEventForm = () => {
       
       // Transform data to API format
       const eventData = transformToAPIFormat();
+      
+      // Debug: Log the transformed data to see what we're sending
+      console.log('🔍 Transformed event data being sent to backend:', {
+        policies: eventData.policies,
+        participantRefund: eventData.policies?.participantRefund,
+        speakerCancellation: eventData.policies?.speakerCancellation,
+        eventCancellation: eventData.policies?.eventCancellation
+      });
       
       // Override banner image if provided
       if (overrideBannerImage) {

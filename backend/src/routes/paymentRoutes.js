@@ -4,6 +4,7 @@ import {
   addPaymentMethod,
   getPaymentMethods,
   addFunds,
+  withdrawFunds,
   getWalletBalance,
   getTransactions,
   clearTransaction,
@@ -20,6 +21,7 @@ router.get('/payment-methods/:userId', getPaymentMethods);
 
 // Wallet operations
 router.post('/add-funds', addFunds);
+router.post('/withdraw', withdrawFunds);
 router.get('/balance/:userId', getWalletBalance);
 router.get('/transactions/:userId', getTransactions);
 

@@ -265,7 +265,7 @@ export default function EventDetailsPage() {
               />
             )}
             {activeTab === 'participants' && <Participants eventId={params.eventId as string} />}
-            {activeTab === 'actions' && <Actions />}
+            {activeTab === 'actions' && <Actions eventId={params.eventId as string} />}
           </div>
         </div>
       </div>
