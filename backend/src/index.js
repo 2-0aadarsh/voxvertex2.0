@@ -41,6 +41,7 @@ import adminSubscriptionPlanRoutes from './routes/adminSubscriptionPlanRoutes.js
 import enhancedEventRoutes from './routes/enhancedEventRoutes.js'
 import enhancedEventRegisterRoutes from './routes/enhancedEventRegisterRoutes.js'
 import documentRoutes from './routes/documentRoutes.js'
+import privacyRoutes from './routes/privacyRoutes.js'
 
 import cors from "cors";
 import session from "express-session";
@@ -165,6 +166,9 @@ app.use("/api/enhanced-events/register", enhancedEventRegisterRoutes);
 
 // Document management routes
 app.use("/api/documents", documentRoutes);
+
+// Privacy settings routes
+app.use("/api/privacy", privacyRoutes);
 
 // Featured videos and upload routes
 app.use("/api/featured-videos", featuredVideoRoutes);

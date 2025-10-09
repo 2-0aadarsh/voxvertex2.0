@@ -18,6 +18,7 @@ import {
   DollarSign,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import { useAuth } from "@/store/hooks";
 
 interface FAQItem {
   id: string;
@@ -33,6 +34,7 @@ interface FAQCategory {
 }
 
 const FAQPage: React.FC = () => {
+  const { user, isAuthenticated } = useAuth();
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [activeCategory, setActiveCategory] = useState<string>("all");
 
@@ -254,7 +256,7 @@ const FAQPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Navigation Bar */}
-      <Navbar />
+      <Navbar isAuthenticated={isAuthenticated} user={user} />
 
       {/* Hero Section */}
       <div className="bg-gradient-to-b from-orange-400 to-orange-500 py-16">
