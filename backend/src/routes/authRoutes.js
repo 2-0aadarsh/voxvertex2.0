@@ -1,7 +1,7 @@
 import express from 'express';
 import auth from '../middleware/auth.js';
 import { authenticateJWT } from '../middleware/jwtAuth.js';
-import { registerUser, loginUser, getCurrentUser, validateToken, refreshToken, logoutUser, updateBasicInfo, updateProfileImage, getEnhancedProfile, forgotPassword, verifyResetOTP, resendResetOTP, resetPassword, testEmail } from '../controllers/enhancedAuthController.js';
+import { registerUser, loginUser, getCurrentUser, validateToken, refreshToken, logoutUser, updateBasicInfo, updateProfileImage, getEnhancedProfile, forgotPassword, verifyResetOTP, resendResetOTP, resetPassword, testEmail, deactivateAccount } from '../controllers/enhancedAuthController.js';
 import multer from 'multer';
 
 const router = express.Router();
@@ -151,5 +151,12 @@ router.post('/reset-password', resetPassword);
  * @access  Public
  */
 router.post('/test-email', testEmail);
+
+/**
+ * @route   DELETE /api/auth/account
+ * @desc    Deactivate user account
+ * @access  Private
+ */
+router.delete('/account', authenticateJWT, deactivateAccount);
 
 export default router;

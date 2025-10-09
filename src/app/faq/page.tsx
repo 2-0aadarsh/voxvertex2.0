@@ -35,11 +35,11 @@ interface FAQCategory {
 }
 
 const FAQPage: React.FC = () => {
+  const { user, isAuthenticated } = useAuth();
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [activeCategory, setActiveCategory] = useState<string>("all");
 
   // Authentication hooks
-  const { user, isAuthenticated } = useAuth();
   const { data: currentUserData } = useGetCurrentUserQuery();
 
   // Helper function to get profile image URL

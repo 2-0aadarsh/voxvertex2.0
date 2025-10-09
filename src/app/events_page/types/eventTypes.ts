@@ -111,6 +111,7 @@ export interface EventFormData {
   eventMode: 'offline' | 'online' | 'hybrid';
   format: string;
   location: string;
+  eventUrl?: string; // Optional URL for online events
   
   // Online Event Platform fields
   meetingPlatform?: string;

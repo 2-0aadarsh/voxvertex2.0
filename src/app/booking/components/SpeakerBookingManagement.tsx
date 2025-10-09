@@ -28,7 +28,7 @@ export default function SpeakerBookingManagement({ onTabChange, activeTab }: Spe
     error: apiError, 
     isLoading: apiLoading,
     refetch 
-  } = useGetSpeakerBookingsQuery(undefined, {
+  } = useGetSpeakerBookingsQuery({}, {
     skip: !isAuthenticated,
   });
 

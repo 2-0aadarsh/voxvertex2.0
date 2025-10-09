@@ -201,7 +201,48 @@ subscription: {
   commentedPosts: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'EnhancedPost'
-  }]
+  }],
+
+  // Privacy Settings
+  privacySettings: {
+    profileVisibility: {
+      type: String,
+      enum: ['public', 'private', 'connections'],
+      default: 'public'
+    },
+    showContactInformation: {
+      type: Boolean,
+      default: true
+    },
+    showEmail: {
+      type: Boolean,
+      default: true
+    },
+    showPhone: {
+      type: Boolean,
+      default: false
+    },
+    showLocation: {
+      type: Boolean,
+      default: true
+    },
+    showSocialLinks: {
+      type: Boolean,
+      default: true
+    },
+    showExperience: {
+      type: Boolean,
+      default: true
+    },
+    showEducation: {
+      type: Boolean,
+      default: true
+    },
+    showAwards: {
+      type: Boolean,
+      default: true
+    }
+  }
 }, {
   timestamps: true
 });

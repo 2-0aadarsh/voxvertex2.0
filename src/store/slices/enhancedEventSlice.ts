@@ -65,36 +65,33 @@ const initialFormData: EventFormData = {
       allowRefunds: false,
       refundDeadline: '',
       refundPercentage: '',
-      processingFee: '',
-      processingTime: '',
-      allowEmergencyRefunds: false,
-      emergencyConditions: '',
+      processingTime: '48 hours',
       refundConditions: []
     },
     speakerCancellation: {
       allowCancellation: false,
       cancellationDeadline: '',
-      penaltyPercentage: '',
+      partialRefundPercentage: '',
       requireReplacement: false,
-      forceMajeureClause: false,
       paymentTerms: '',
       speakerConditions: []
     },
     eventCancellation: {
       allowCancellation: false,
       fullRefundDeadline: '',
-      partialRefundDeadline: '',
       partialRefundPercentage: '',
-      administrativeFee: '',
       refundMethod: '',
-      processingTime: ''
+      processingTime: '48 hours',
+      cancellationConditions: ''
     },
     eventPostponement: {
       allowPostponement: false,
       noticeRequired: '',
       maxPostponementDuration: '',
+      partialRefundRequestDeadline: '',
       ticketsValidForNewDate: false,
       offerRefundOnPostponement: false,
+      allowSpeakersToCancelOnPostponement: false,
       refundPercentageOnPostponement: '',
       postponementConditions: []
     },
