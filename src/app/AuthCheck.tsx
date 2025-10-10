@@ -32,7 +32,7 @@ export default function AuthCheck() {
           console.log('🔍 Making direct API call to /api/auth/validate...');
           setDirectApiCalled(true);
           
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/auth/validate`, {
+          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://voxvertex20-production.up.railway.app/api'}/auth/validate`, {
             method: 'GET',
             credentials: 'include',
             headers: {

@@ -26,7 +26,7 @@ const initialState: EventsState = {
 
 // Async thunk to fetch events
 export const fetchEvents = createAsyncThunk('events/fetchEvents', async () => {
-  const res = await fetch('http://localhost:3001/api/events');
+  const res = await fetch('https://voxvertex20-production.up.railway.app/api/events');
   const data = await res.json();
   // Combine upcoming and past events
   return [...(data.data.upcoming || []), ...(data.data.past || [])] as Event[];

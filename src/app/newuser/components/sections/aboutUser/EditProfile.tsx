@@ -398,7 +398,7 @@ export default function EditProfile({ isOpen, onClose }: EditProfileProps) {
       console.log('📤 Sending payload to server:', JSON.stringify(userPayload, null, 2));
 
       // Make API request to update user basic info
-      const userApiUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/auth/profile/basic`;
+      const userApiUrl = `${process.env.NEXT_PUBLIC_API_URL || 'https://voxvertex20-production.up.railway.app/api'}/auth/profile/basic`;
       const userRes = await fetch(userApiUrl, {
         method: "PUT",
         headers: {

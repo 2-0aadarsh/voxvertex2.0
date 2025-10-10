@@ -99,7 +99,7 @@ export default function VerifyOTPPage() {
     setError('')
     
     try {
-      const response = await fetch('http://localhost:3001/api/auth/verify-reset-otp', {
+      const response = await fetch('https://voxvertex20-production.up.railway.app/api/auth/verify-reset-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -139,7 +139,7 @@ export default function VerifyOTPPage() {
     setError('')
     
     try {
-      const response = await fetch('http://localhost:3001/api/auth/resend-reset-otp', {
+      const response = await fetch('https://voxvertex20-production.up.railway.app/api/auth/resend-reset-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),

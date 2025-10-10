@@ -550,7 +550,8 @@ const PostMenu = ({ postId, post, onDelete, onEdit }) => {
 
       // Call API to update post using the correct enhanced-posts endpoint
       const apiUrl = `${
-        process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api"
+        process.env.NEXT_PUBLIC_API_URL ||
+        "https://voxvertex20-production.up.railway.app/api"
       }/enhanced-posts/${postId}`;
       const response = await fetch(apiUrl, {
         method: "PUT",
@@ -591,7 +592,8 @@ const PostMenu = ({ postId, post, onDelete, onEdit }) => {
 
       // Call API to delete post using the correct enhanced-posts endpoint
       const apiUrl = `${
-        process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api"
+        process.env.NEXT_PUBLIC_API_URL ||
+        "https://voxvertex20-production.up.railway.app/api"
       }/enhanced-posts/${postId}`;
       const response = await fetch(apiUrl, {
         method: "DELETE",

@@ -58,7 +58,7 @@ export interface PlansResponse {
 export const paymentApi = createApi({
   reducerPath: "paymentApi",
   baseQuery: fetchBaseQuery({
-    baseUrl: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api",
+    baseUrl: process.env.NEXT_PUBLIC_API_URL || "https://voxvertex20-production.up.railway.app/api",
     prepareHeaders: (headers) => {
     //   const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
     //   if (token) {

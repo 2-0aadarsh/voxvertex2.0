@@ -55,7 +55,7 @@ export default function Dashboard() {
       if (!auth.user && auth.isAuthenticated && !auth.isLoading) {
         try {
           console.log('🔍 Fetching user data directly...');
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/auth/me`, {
+          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://voxvertex20-production.up.railway.app/api'}/auth/me`, {
             method: 'GET',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' }

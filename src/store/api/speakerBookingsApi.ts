@@ -70,7 +70,7 @@ export interface SpeakerBookingsResponse {
 export const speakerBookingsApi = createApi({
   reducerPath: 'speakerBookingsApi',
   baseQuery: fetchBaseQuery({
-    baseUrl: 'http://localhost:3001/api',
+    baseUrl: 'https://voxvertex20-production.up.railway.app/api',
     prepareHeaders: (headers) => {
       const token = localStorage.getItem('accessToken');
       if (token) {

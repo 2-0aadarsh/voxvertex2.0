@@ -123,7 +123,7 @@ export default function CompleteSubscriptionModal({
       console.log('🚀 Starting Razorpay payment validation flow...');
 
       // Step 1: Create ₹1 validation order from backend
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://voxvertex20-production.up.railway.app/api';
       const validationResponse = await fetch(`${API_URL}/subscriptions/validate-payment`, {
         method: 'POST',
         headers: {

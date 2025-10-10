@@ -67,7 +67,7 @@ class SocketService {
       console.log('🔌 Connecting to Socket.IO server...');
 
       // Create socket connection
-      const socketUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const socketUrl = process.env.NEXT_PUBLIC_API_URL || 'https://voxvertex20-production.up.railway.app';
       console.log('🔌 Socket connecting to:', socketUrl);
       console.log('🔌 Token provided:', token ? 'Yes' : 'No');
       

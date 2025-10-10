@@ -81,7 +81,8 @@ const HeaderSection = ({ name, role, description, domains, profilePic }) => {
 
       // Upload image to server
       const apiUrl = `${
-        process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api"
+        process.env.NEXT_PUBLIC_API_URL ||
+        "https://voxvertex20-production.up.railway.app/api"
       }/auth/profile/image`;
       const response = await fetch(apiUrl, {
         method: "PUT",
@@ -150,7 +151,8 @@ const HeaderSection = ({ name, role, description, domains, profilePic }) => {
 
       // Call API to remove profile image
       const apiUrl = `${
-        process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api"
+        process.env.NEXT_PUBLIC_API_URL ||
+        "https://voxvertex20-production.up.railway.app/api"
       }/auth/profile/image`;
       const response = await fetch(apiUrl, {
         method: "DELETE",

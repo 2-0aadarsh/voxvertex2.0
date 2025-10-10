@@ -6,7 +6,7 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
 // Base query with authentication
 const baseQuery = fetchBaseQuery({
-  baseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api',
+  baseUrl: process.env.NEXT_PUBLIC_API_URL || 'https://voxvertex20-production.up.railway.app/api',
   credentials: 'include', // Include cookies for authentication
   prepareHeaders: (headers) => {
     // Only use cookie-based authentication - no Bearer tokens needed
@@ -26,8 +26,8 @@ const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
   console.log('=== BASE API DEBUG ===');
   console.log('Making request to:', args.url);
   console.log('Request args:', args);
-  console.log('Base URL:', process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api');
-  console.log('Full URL:', `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}${args.url}`);
+  console.log('Base URL:', process.env.NEXT_PUBLIC_API_URL || 'https://voxvertex20-production.up.railway.app/api');
+  console.log('Full URL:', `${process.env.NEXT_PUBLIC_API_URL || 'https://voxvertex20-production.up.railway.app/api'}${args.url}`);
   console.log('=====================');
   
   try {

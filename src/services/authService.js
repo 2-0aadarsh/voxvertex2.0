@@ -4,7 +4,7 @@
  */
 
 // Base API URL - should be configured from environment variables in production
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://voxvertex20-production.up.railway.app/api';
 
 /**
  * Get the current user ID from the server

@@ -3,7 +3,7 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 export const accountApi = createApi({
   reducerPath: 'accountApi',
   baseQuery: fetchBaseQuery({
-    baseUrl: 'http://localhost:3001/api/auth',
+    baseUrl: 'https://voxvertex20-production.up.railway.app/api/auth',
     prepareHeaders: (headers) => {
       const token = localStorage.getItem('accessToken');
       if (token) {

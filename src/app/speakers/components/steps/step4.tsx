@@ -73,7 +73,7 @@ const Step4: React.FC<Step4Props> = ({
     setSubmitError(null);
 
     try {
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://voxvertex20-production.up.railway.app/api';
       const response = await fetch(`${API_BASE_URL}/book-speaker`, {
         method: 'POST',
         headers: {

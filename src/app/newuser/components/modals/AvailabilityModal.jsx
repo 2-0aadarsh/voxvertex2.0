@@ -150,18 +150,21 @@ const AvailabilityModal = ({
         })),
       };
 
-      const res = await fetch("http://localhost:3001/api/availability", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          // request headers suggesting not to cache (helps intermediates revalidate)
-          "Cache-Control": "no-cache, no-store, must-revalidate",
-          Pragma: "no-cache",
-        },
-        // ensure browser fetches from network and does not rely on stored cache
-        cache: "no-store",
-        body: JSON.stringify(payload),
-      });
+      const res = await fetch(
+        "https://voxvertex20-production.up.railway.app/api/availability",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            // request headers suggesting not to cache (helps intermediates revalidate)
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            Pragma: "no-cache",
+          },
+          // ensure browser fetches from network and does not rely on stored cache
+          cache: "no-store",
+          body: JSON.stringify(payload),
+        }
+      );
 
       if (!res.ok) {
         const text = await res.text().catch(() => null);

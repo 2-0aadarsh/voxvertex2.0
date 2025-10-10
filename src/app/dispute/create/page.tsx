@@ -11,7 +11,7 @@ import DisputeDetailsStep from '../components/steps/DisputeDetailsStep';
 import DescriptionStep from '../components/steps/DescriptionStep';
 import ReviewStep from '../components/steps/ReviewStep';
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL as string) || 'http://localhost:3001';
+const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL as string) || 'https://voxvertex20-production.up.railway.app';
 
 export default function CreateDispute() {
   const [currentStep, setCurrentStep] = useState(1);

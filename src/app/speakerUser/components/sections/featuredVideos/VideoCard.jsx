@@ -53,7 +53,8 @@ const VideoCard = ({ title, duration, views, thumbnail, videoUrl }) => {
     // If it's a relative path, make it absolute
     else if (url.startsWith("/")) {
       processedUrl = `${
-        process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
+        process.env.NEXT_PUBLIC_API_URL ||
+        "https://voxvertex20-production.up.railway.app"
       }${url}`;
     }
     // If it's a Cloudinary URL without protocol, add https

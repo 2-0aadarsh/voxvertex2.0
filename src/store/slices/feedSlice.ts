@@ -169,7 +169,7 @@ export const feedApi = baseApi.injectEndpoints({
       query: (params) => {
         console.log('=== RTK QUERY DEBUG ===');
         console.log('Making API call to /enhanced-posts/feed with params:', params);
-        console.log('Full URL will be:', `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/enhanced-posts/feed`);
+        console.log('Full URL will be:', `${process.env.NEXT_PUBLIC_API_URL || 'https://voxvertex20-production.up.railway.app/api'}/enhanced-posts/feed`);
         console.log('========================');
         return {
           url: '/enhanced-posts/feed',

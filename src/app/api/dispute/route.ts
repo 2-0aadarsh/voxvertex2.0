@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     // Send the request to your backend
  
     // Forward request to backend
-    const res = await fetch('http://localhost:3001/api/dispute', {
+    const res = await fetch('https://voxvertex20-production.up.railway.app/api/dispute', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

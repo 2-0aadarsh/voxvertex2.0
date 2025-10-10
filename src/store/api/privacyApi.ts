@@ -36,7 +36,7 @@ export interface PublicProfile {
 export const privacyApi = createApi({
   reducerPath: 'privacyApi',
   baseQuery: fetchBaseQuery({
-    baseUrl: 'http://localhost:3001/api/privacy',
+    baseUrl: 'https://voxvertex20-production.up.railway.app/api/privacy',
     prepareHeaders: (headers) => {
       const token = localStorage.getItem('accessToken');
       if (token) {

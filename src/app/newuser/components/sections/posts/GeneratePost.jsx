@@ -139,7 +139,8 @@ const GeneratePost = ({ onPost }) => {
 
       // Upload to server with Cloudinary integration
       const apiUrl = `${
-        process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api"
+        process.env.NEXT_PUBLIC_API_URL ||
+        "https://voxvertex20-production.up.railway.app/api"
       }/post/create-with-media`;
       const res = await fetch(apiUrl, {
         method: "POST",

@@ -27,7 +27,8 @@ const Post = () => {
     const fetchPosts = async () => {
       try {
         const apiUrl = `${
-          process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api"
+          process.env.NEXT_PUBLIC_API_URL ||
+          "https://voxvertex20-production.up.railway.app/api"
         }/post/my-posts`;
         const res = await fetch(apiUrl, {
           credentials: "include", // important for cookies (auth)
@@ -62,7 +63,8 @@ const Post = () => {
                   // If it's a relative path, make it absolute
                   else if (processedUrl.startsWith("/")) {
                     processedUrl = `${
-                      process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
+                      process.env.NEXT_PUBLIC_API_URL ||
+                      "https://voxvertex20-production.up.railway.app"
                     }${processedUrl}`;
                   }
                   // If it's a data URL (base64), use as is
@@ -72,7 +74,8 @@ const Post = () => {
                   // Default case - assume it needs the base URL
                   else {
                     processedUrl = `${
-                      process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
+                      process.env.NEXT_PUBLIC_API_URL ||
+                      "https://voxvertex20-production.up.railway.app"
                     }/${processedUrl}`;
                   }
                 }

@@ -74,7 +74,7 @@ export default function StepOtp({ email, onVerifySuccess }: StepOtpProps) {
     setError("");
     try {
       const response = await fetch(
-        "http://localhost:3001/api/auth/verify-otp",
+        "https://voxvertex20-production.up.railway.app/api/auth/verify-otp",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -98,7 +98,7 @@ export default function StepOtp({ email, onVerifySuccess }: StepOtpProps) {
     setError("");
     try {
       const response = await fetch(
-        "http://localhost:3001/api/auth/resend-otp",
+        "https://voxvertex20-production.up.railway.app/api/auth/resend-otp",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
