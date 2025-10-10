@@ -2,7 +2,7 @@ import EnhancedUser from '../models/enhancedUser.js';
 import SubscriptionPlan from '../models/SubscriptionPlan.js';
 import Subscription from '../models/subscription.js';
 import SubscriptionTransaction from '../models/SubscriptionTransaction.js';
-//current changes starts
+
 import { 
   createSubscriptionPaymentOrder as createPaymentOrder, 
   verifySubscriptionPaymentSignature 
@@ -13,12 +13,10 @@ import {
   createRazorpayCustomer,
   storePaymentMethod
 } from '../services/autoPayService.js';
-/// current canges end
-import Transaction from '../models/transaction.js';
-import Razorpay from "razorpay";
-import crypto from 'crypto';
 
-const razorpayInstance = new Razorpay({
+import Transaction from '../models/transaction.js';
+
+import Razorpay from "razorpay";
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
