@@ -1,0 +1,790 @@
+
+import Negotiation from '../models/negotiation.js';
+import Conversation from '../models/conversation.js';
+import Message from '../models/message.js';
+import EnhancedUser from '../models/enhancedUser.js';
+import Booking from '../models/bookingSpeaker.js';
+import Availability from '../models/availability.js';
+import socketService from '../services/socketService.js';
+
+// Create a new negotiation
+export const createNegotiation = async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const { amount, currency = 'INR', topic, message, eventId } = req.body;
+    const currentUserId = req.user._id;
+    const currentUserRole = req.user.role;
+
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation || !conversation.isParticipant(currentUserId)) {
+      return res.status(403).json({ success: false, message: 'Access denied to this conversation' });
+    }
+
+    const existingNegotiation = await Negotiation.findByConversation(conversationId);
+    if (existingNegotiation && existingNegotiation.status === 'active') {
+      return res.status(400).json({ success: false, message: 'An active negotiation already exists for this conversation' });
+    }
+
+    // Determine organizer and speaker
+    const participants = conversation.participants;
+    let organizer, speaker;
+    for (const participant of participants) {
+      if (participant.user.toString() === currentUserId) {
+        if (currentUserRole === 'organizer') organizer = currentUserId;
+        else speaker = currentUserId;
+      } else {
+        const otherUser = await EnhancedUser.findById(participant.user);
+        if (otherUser.role === 'organizer') organizer = participant.user;
+        else speaker = participant.user;
+      }
+    }
+
+    if (!organizer || !speaker) {
+      return res.status(400).json({ success: false, message: 'Both organizer and speaker must be present in the conversation' });
+    }
+
+    const negotiation = new Negotiation({
+      conversation: conversationId,
+      organizer,
+      speaker,
+      event: eventId || null,
+      topic: topic || 'Speaking Engagement',
+      currentProposal: {
+        amount,
+        currency,
+        proposedBy: currentUserId,
+        proposedAt: new Date(),
+        message
+      },
+      proposals: [{
+        amount,
+        currency,
+        proposedBy: currentUserId,
+        proposedAt: new Date(),
+        message,
+        status: 'pending'
+      }],
+      status: 'active'
+    });
+
+    // Link to existing booking if it exists
+    const existingBooking = await Booking.findOne({ conversationId: conversationId });
+    if (existingBooking && existingBooking.status === 'pending') {
+      console.log(`📋 Linking negotiation to existing booking ${existingBooking._id}`);
+      negotiation.bookingId = existingBooking._id;
+    }
+
+    await negotiation.save();
+
+    const negotiationMessage = new Message({
+      content: `💰 New proposal: ${currency} ${amount} - ${message || 'No additional message'}`,
+      messageType: 'negotiation_proposal',
+      sender: currentUserId,
+      conversation: conversationId,
+      metadata: { negotiationId: negotiation._id, amount, currency, proposalType: 'initial' }
+    });
+
+    await negotiationMessage.save();
+
+    // Populate message sender
+    await negotiationMessage.populate('sender', 'firstName lastName profileImageUrl role');
+
+    conversation.lastMessage = {
+      content: `💰 New proposal: ${currency} ${amount}`,
+      sender: currentUserId,
+      timestamp: negotiationMessage.createdAt,
+      messageType: 'negotiation_proposal'
+    };
+    await conversation.save();
+
+    await negotiation.populate([
+      { path: 'organizer', select: 'firstName lastName email role' },
+      { path: 'speaker', select: 'firstName lastName email role' },
+      { path: 'event', select: 'title date' }
+    ]);
+
+    // Broadcast to conversation room
+    socketService.io.to(`conversation_${conversationId}`).emit('negotiation_created', { 
+      negotiation, 
+      message: negotiationMessage,
+      timestamp: new Date()
+    });
+    
+    // Also broadcast to user rooms for immediate delivery
+    socketService.io.to(`user_${negotiation.organizer}`).emit('negotiation_created', { 
+      negotiation, 
+      message: negotiationMessage,
+      timestamp: new Date()
+    });
+    socketService.io.to(`user_${negotiation.speaker}`).emit('negotiation_created', { 
+      negotiation, 
+      message: negotiationMessage,
+      timestamp: new Date()
+    });
+    
+    console.log(`💰 Broadcasting negotiation_created to conversation_${conversationId} and user rooms`);
+
+    res.status(201).json({ success: true, message: 'Negotiation created successfully', negotiation, message: negotiationMessage });
+
+  } catch (error) {
+    console.error('Error creating negotiation:', error);
+    res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
+  }
+};
+
+// Get negotiation by conversation
+export const getNegotiation = async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const currentUserId = req.user._id;
+
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation || !conversation.isParticipant(currentUserId)) {
+      return res.status(403).json({ success: false, message: 'Access denied to this conversation' });
+    }
+
+    const negotiation = await Negotiation.findByConversation(conversationId);
+    if (!negotiation) return res.status(404).json({ success: false, message: 'No negotiation found for this conversation' });
+
+    res.status(200).json({ success: true, message: 'Negotiation retrieved successfully', negotiation });
+
+  } catch (error) {
+    console.error('Error getting negotiation:', error);
+    res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
+  }
+};
+
+// Propose a new amount (counter-proposal)
+export const proposeAmount = async (req, res) => {
+  try {
+    const { negotiationId } = req.params;
+    const { amount, currency = 'INR', message } = req.body;
+    const currentUserId = req.user._id;
+
+    const negotiation = await Negotiation.findById(negotiationId);
+    if (!negotiation) return res.status(404).json({ success: false, message: 'Negotiation not found' });
+
+    const currentUserIdStr = currentUserId.toString();
+    const organizerIdStr = negotiation.organizer.toString();
+    const speakerIdStr = negotiation.speaker.toString();
+    if (organizerIdStr !== currentUserIdStr && speakerIdStr !== currentUserIdStr) {
+      return res.status(403).json({ success: false, message: 'Access denied to this negotiation' });
+    }
+
+    if (negotiation.status !== 'active') {
+      return res.status(400).json({ success: false, message: 'Negotiation is no longer active' });
+    }
+
+    const lastPendingProposal = negotiation.proposals.slice().reverse().find(p => p.status === 'pending');
+    if (lastPendingProposal && lastPendingProposal.proposedBy.toString() === currentUserIdStr) {
+      return res.status(400).json({ success: false, message: 'You cannot make consecutive proposals. Wait for the other party to respond.' });
+    }
+
+    if (negotiation.proposals.length >= negotiation.settings.maxProposals) {
+      return res.status(400).json({ success: false, message: 'Maximum number of proposals reached' });
+    }
+
+    await negotiation.addProposal(amount, currency, currentUserId, message);
+
+    const negotiationMessage = new Message({
+      content: `💰 Counter-proposal: ${currency} ${amount} - ${message || 'No additional message'}`,
+      messageType: 'negotiation_proposal',
+      sender: currentUserId,
+      conversation: negotiation.conversation,
+      metadata: { negotiationId: negotiation._id, amount, currency, proposalType: 'counter' }
+    });
+
+    await negotiationMessage.save();
+
+    // Populate message sender
+    await negotiationMessage.populate('sender', 'firstName lastName profileImageUrl role');
+
+    const conversation = await Conversation.findById(negotiation.conversation);
+    conversation.lastMessage = { content: `💰 Counter-proposal: ${currency} ${amount}`, sender: currentUserId, timestamp: negotiationMessage.createdAt, messageType: 'negotiation_proposal' };
+    await conversation.save();
+
+    await negotiation.populate([
+      { path: 'organizer', select: 'firstName lastName email role' },
+      { path: 'speaker', select: 'firstName lastName email role' },
+      { path: 'event', select: 'title date' }
+    ]);
+
+    // Broadcast to conversation room
+    socketService.io.to(`conversation_${negotiation.conversation}`).emit('negotiation_proposal', { 
+      negotiation, 
+      message: negotiationMessage,
+      timestamp: new Date()
+    });
+    
+    // Also broadcast to user rooms for immediate delivery
+    socketService.io.to(`user_${negotiation.organizer}`).emit('negotiation_proposal', { 
+      negotiation, 
+      message: negotiationMessage,
+      timestamp: new Date()
+    });
+    socketService.io.to(`user_${negotiation.speaker}`).emit('negotiation_proposal', { 
+      negotiation, 
+      message: negotiationMessage,
+      timestamp: new Date()
+    });
+    
+    console.log(`💰 Broadcasting negotiation_proposal to conversation_${negotiation.conversation} and user rooms`);
+
+    res.status(200).json({ success: true, message: 'Proposal sent successfully', negotiation, message: negotiationMessage });
+
+  } catch (error) {
+    console.error('Error proposing amount:', error);
+    res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
+  }
+};
+
+// Accept a proposal
+export const acceptProposal = async (req, res) => {
+  try {
+    const { negotiationId } = req.params;
+    const { message } = req.body;
+    const currentUserId = req.user._id;
+
+    const negotiation = await Negotiation.findById(negotiationId);
+    if (!negotiation) return res.status(404).json({ success: false, message: 'Negotiation not found' });
+
+    const currentUserIdStr = currentUserId.toString();
+    const organizerIdStr = negotiation.organizer.toString();
+    const speakerIdStr = negotiation.speaker.toString();
+    if (organizerIdStr !== currentUserIdStr && speakerIdStr !== currentUserIdStr) {
+      return res.status(403).json({ success: false, message: 'Access denied to this negotiation' });
+    }
+
+    if (negotiation.status !== 'active') {
+      return res.status(400).json({ success: false, message: 'Negotiation is no longer active' });
+    }
+
+    const lastProposal = negotiation.proposals[negotiation.proposals.length - 1];
+    if (!lastProposal || lastProposal.status !== 'pending') {
+      return res.status(400).json({ success: false, message: 'No pending proposal to accept' });
+    }
+
+    if (lastProposal.proposedBy.toString() === currentUserIdStr) {
+      return res.status(400).json({ success: false, message: 'You cannot accept your own proposal' });
+    }
+
+    // Accept proposal using respondToProposal (no manual update)
+    await negotiation.respondToProposal(negotiation.proposals.length - 1, 'accepted', message);
+
+    negotiation.currentProposal = { ...lastProposal, status: 'accepted', respondedAt: new Date(), responseMessage: message || 'I accept this proposal' };
+    negotiation.finalAgreement = { amount: lastProposal.amount, currency: lastProposal.currency, acceptedBy: currentUserId, acceptedAt: new Date() };
+    negotiation.status = 'accepted';
+
+    await negotiation.save();
+
+    // Update corresponding booking status if it exists
+    const booking = await Booking.findOne({ conversationId: negotiation.conversation });
+    if (booking) {
+      // Always update the compensation amount to the negotiated amount, regardless of booking status
+      const oldAmount = booking.compensationAndArrangements.primaryCompensation.speakerFeeAmount;
+      booking.compensationAndArrangements.primaryCompensation.speakerFeeAmount = lastProposal.amount;
+      
+      // Update status and timestamp if booking was pending
+      if (booking.status === 'pending') {
+        booking.status = 'accepted';
+        booking.acceptedAt = new Date();
+      }
+      
+      await booking.save();
+      console.log(`📋 Updated booking ${booking._id} with negotiated amount: $${oldAmount} → $${lastProposal.amount} (status: ${booking.status})`);
+
+      // Block availability slot for confirmed booking
+      if (booking.status === 'accepted') {
+        try {
+          const availability = await Availability.findOne({ 
+            userId: booking.speaker,
+            date: booking.date 
+          });
+
+          if (availability) {
+            // Check if slot is already blocked for this booking
+            const existingBlock = availability.blockedSlots.find(
+              block => block.bookingId.toString() === booking._id.toString()
+            );
+
+            if (!existingBlock) {
+              // Add blocked slot
+              availability.blockedSlots.push({
+                bookingId: booking._id,
+                date: booking.date,
+                timeSlot: booking.timeSlot,
+                reason: 'booking_confirmed'
+              });
+              
+              await availability.save();
+              console.log(`🚫 Blocked availability slot for speaker ${booking.speaker} on ${booking.date} at ${booking.timeSlot}`);
+            } else {
+              console.log(`⚠️ Availability slot already blocked for booking ${booking._id}`);
+            }
+          } else {
+            console.log(`⚠️ No availability record found for speaker ${booking.speaker} on ${booking.date}`);
+          }
+        } catch (availabilityError) {
+          console.error('❌ Error blocking availability slot:', availabilityError);
+          // Don't fail the entire operation if availability blocking fails
+        }
+      }
+    }
+
+    const acceptanceMessage = new Message({
+      content: `✅ Proposal accepted: ${negotiation.currentProposal.currency} ${negotiation.currentProposal.amount} - ${message || 'Deal confirmed!'}`,
+      messageType: 'negotiation_accepted',
+      sender: currentUserId,
+      conversation: negotiation.conversation,
+      metadata: { negotiationId: negotiation._id, amount: negotiation.currentProposal.amount, currency: negotiation.currentProposal.currency, finalAgreement: negotiation.finalAgreement }
+    });
+
+    await acceptanceMessage.save();
+
+    // Populate message sender
+    await acceptanceMessage.populate('sender', 'firstName lastName profileImageUrl role');
+
+    const conversation = await Conversation.findById(negotiation.conversation);
+    conversation.lastMessage = { content: `✅ Proposal accepted: ${negotiation.currentProposal.currency} ${negotiation.currentProposal.amount}`, sender: currentUserId, timestamp: acceptanceMessage.createdAt, messageType: 'negotiation_accepted' };
+    await conversation.save();
+
+    await negotiation.populate([
+      { path: 'organizer', select: 'firstName lastName email role' },
+      { path: 'speaker', select: 'firstName lastName email role' },
+      { path: 'event', select: 'title date' }
+    ]);
+
+    // Broadcast to conversation room
+    socketService.io.to(`conversation_${negotiation.conversation}`).emit('negotiation_accepted', { 
+      negotiation, 
+      message: acceptanceMessage,
+      timestamp: new Date()
+    });
+    
+    // Also broadcast to user rooms for immediate delivery
+    socketService.io.to(`user_${negotiation.organizer}`).emit('negotiation_accepted', { 
+      negotiation, 
+      message: acceptanceMessage,
+      timestamp: new Date()
+    });
+    socketService.io.to(`user_${negotiation.speaker}`).emit('negotiation_accepted', { 
+      negotiation, 
+      message: acceptanceMessage,
+      timestamp: new Date()
+    });
+    
+    console.log(`✅ Broadcasting negotiation_accepted to conversation_${negotiation.conversation} and user rooms`);
+
+    res.status(200).json({ success: true, message: 'Proposal accepted successfully', negotiation, message: acceptanceMessage });
+
+  } catch (error) {
+    console.error('Error accepting proposal:', error);
+    res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
+  }
+};
+
+// Decline a proposal
+export const declineProposal = async (req, res) => {
+  try {
+    const { negotiationId } = req.params;
+    const { message } = req.body;
+    const currentUserId = req.user._id;
+
+    const negotiation = await Negotiation.findById(negotiationId);
+    if (!negotiation) return res.status(404).json({ success: false, message: 'Negotiation not found' });
+
+    const currentUserIdStr = currentUserId.toString();
+    const organizerIdStr = negotiation.organizer.toString();
+    const speakerIdStr = negotiation.speaker.toString();
+    if (organizerIdStr !== currentUserIdStr && speakerIdStr !== currentUserIdStr) {
+      return res.status(403).json({ success: false, message: 'Access denied to this negotiation' });
+    }
+
+    if (negotiation.status !== 'active') {
+      return res.status(400).json({ success: false, message: 'Negotiation is no longer active' });
+    }
+
+    const lastProposal = negotiation.proposals[negotiation.proposals.length - 1];
+    if (!lastProposal || lastProposal.status !== 'pending') {
+      return res.status(400).json({ success: false, message: 'No pending proposal to decline' });
+    }
+
+    if (lastProposal.proposedBy.toString() === currentUserIdStr) {
+      return res.status(400).json({ success: false, message: 'You cannot decline your own proposal' });
+    }
+
+    await negotiation.respondToProposal(negotiation.proposals.length - 1, 'declined', message);
+
+    negotiation.currentProposal = { ...lastProposal, status: 'declined', respondedAt: new Date(), responseMessage: message || 'Proposal declined' };
+    negotiation.status = 'declined';
+    await negotiation.save();
+
+    // Update corresponding booking status if it exists
+    const booking = await Booking.findOne({ conversationId: negotiation.conversation });
+    if (booking && booking.status === 'pending') {
+      booking.status = 'declined';
+      booking.declinedAt = new Date();
+      booking.declineReason = message || 'Proposal declined';
+      await booking.save();
+      console.log(`📋 Updated booking ${booking._id} status to 'declined'`);
+    }
+
+    const declineMessage = new Message({
+      content: `❌ Proposal declined: ${negotiation.currentProposal.currency} ${negotiation.currentProposal.amount} - ${message || 'Proposal not accepted'}`,
+      messageType: 'negotiation_declined',
+      sender: currentUserId,
+      conversation: negotiation.conversation,
+      metadata: { negotiationId: negotiation._id, amount: negotiation.currentProposal.amount, currency: negotiation.currentProposal.currency }
+    });
+
+    await declineMessage.save();
+
+    // Populate message sender
+    await declineMessage.populate('sender', 'firstName lastName profileImageUrl role');
+
+    const conversation = await Conversation.findById(negotiation.conversation);
+    conversation.lastMessage = { content: `❌ Proposal declined: ${negotiation.currentProposal.currency} ${negotiation.currentProposal.amount}`, sender: currentUserId, timestamp: declineMessage.createdAt, messageType: 'negotiation_declined' };
+    await conversation.save();
+
+    await negotiation.populate([
+      { path: 'organizer', select: 'firstName lastName email role' },
+      { path: 'speaker', select: 'firstName lastName email role' },
+      { path: 'event', select: 'title date' }
+    ]);
+
+    // Broadcast to conversation room
+    socketService.io.to(`conversation_${negotiation.conversation}`).emit('negotiation_declined', { 
+      negotiation, 
+      message: declineMessage,
+      timestamp: new Date()
+    });
+    
+    // Also broadcast to user rooms for immediate delivery
+    socketService.io.to(`user_${negotiation.organizer}`).emit('negotiation_declined', { 
+      negotiation, 
+      message: declineMessage,
+      timestamp: new Date()
+    });
+    socketService.io.to(`user_${negotiation.speaker}`).emit('negotiation_declined', { 
+      negotiation, 
+      message: declineMessage,
+      timestamp: new Date()
+    });
+    
+    console.log(`❌ Broadcasting negotiation_declined to conversation_${negotiation.conversation} and user rooms`);
+
+    res.status(200).json({ success: true, message: 'Proposal declined successfully', negotiation, message: declineMessage });
+
+  } catch (error) {
+    console.error('Error declining proposal:', error);
+    res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
+  }
+};
+
+// Other methods (cancelNegotiation, getUserNegotiations, getNegotiationStats, etc.) remain the same
+// Cancel negotiation
+export const cancelNegotiation = async (req, res) => {
+  try {
+    const { negotiationId } = req.params;
+    const { reason } = req.body;
+    const currentUserId = req.user._id;
+
+    const negotiation = await Negotiation.findById(negotiationId);
+    if (!negotiation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Negotiation not found'
+      });
+    }
+
+    // Check if user is participant
+    const currentUserIdStr = currentUserId.toString();
+    const organizerIdStr = negotiation.organizer.toString();
+    const speakerIdStr = negotiation.speaker.toString();
+    
+    if (organizerIdStr !== currentUserIdStr && 
+        speakerIdStr !== currentUserIdStr) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied to this negotiation'
+      });
+    }
+
+    // Check if negotiation is still active
+    if (negotiation.status !== 'active') {
+      return res.status(400).json({
+        success: false,
+        message: 'Negotiation is no longer active'
+      });
+    }
+
+    // Cancel the negotiation
+    await negotiation.cancelNegotiation(currentUserId, reason);
+
+    // Update corresponding booking status if it exists
+    const booking = await Booking.findOne({ conversationId: negotiation.conversation });
+    if (booking && booking.status === 'pending') {
+      booking.status = 'cancelled';
+      await booking.save();
+      console.log(`📋 Updated booking ${booking._id} status to 'cancelled' due to negotiation cancellation`);
+    }
+
+    // Create cancellation message
+    const cancelMessage = new Message({
+      content: `🚫 Negotiation cancelled - ${reason || 'No reason provided'}`,
+      messageType: 'negotiation_cancelled',
+      sender: currentUserId,
+      conversation: negotiation.conversation,
+      metadata: {
+        negotiationId: negotiation._id,
+        cancelledBy: currentUserId,
+        reason
+      }
+    });
+
+    await cancelMessage.save();
+
+    // Populate message sender
+    await cancelMessage.populate('sender', 'firstName lastName profileImageUrl role');
+
+    // Update conversation's last message
+    const conversation = await Conversation.findById(negotiation.conversation);
+    conversation.lastMessage = {
+      content: `🚫 Negotiation cancelled`,
+      sender: currentUserId,
+      timestamp: cancelMessage.createdAt,
+      messageType: 'negotiation_cancelled'
+    };
+    await conversation.save();
+
+    // Populate negotiation data
+    await negotiation.populate([
+      { path: 'organizer', select: 'firstName lastName email role' },
+      { path: 'speaker', select: 'firstName lastName email role' },
+      { path: 'event', select: 'title date' }
+    ]);
+
+    // Broadcast to conversation room
+    socketService.io.to(`conversation_${negotiation.conversation}`).emit('negotiation_cancelled', { 
+      negotiation, 
+      message: cancelMessage,
+      timestamp: new Date()
+    });
+    
+    // Also broadcast to user rooms for immediate delivery
+    socketService.io.to(`user_${negotiation.organizer}`).emit('negotiation_cancelled', { 
+      negotiation, 
+      message: cancelMessage,
+      timestamp: new Date()
+    });
+    socketService.io.to(`user_${negotiation.speaker}`).emit('negotiation_cancelled', { 
+      negotiation, 
+      message: cancelMessage,
+      timestamp: new Date()
+    });
+    
+    console.log(`🚫 Broadcasting negotiation_cancelled to conversation_${negotiation.conversation} and user rooms`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Negotiation cancelled successfully',
+      negotiation: negotiation,
+      message: cancelMessage
+    });
+
+  } catch (error) {
+    console.error('Error cancelling negotiation:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+};
+
+// Get user's negotiations
+export const getUserNegotiations = async (req, res) => {
+  try {
+    const currentUserId = req.user._id;
+    const { status, limit = 20, skip = 0 } = req.query;
+
+    let filter = {
+      $or: [
+        { organizer: currentUserId },
+        { speaker: currentUserId }
+      ]
+    };
+
+    if (status) {
+      filter.status = status;
+    }
+
+    const negotiations = await Negotiation.find(filter)
+      .populate('organizer speaker event', 'firstName lastName email role title date')
+      .sort({ updatedAt: -1 })
+      .limit(parseInt(limit))
+      .skip(parseInt(skip));
+
+    res.status(200).json({
+      success: true,
+      message: 'Negotiations retrieved successfully',
+      negotiations: negotiations,
+      pagination: {
+        limit: parseInt(limit),
+        skip: parseInt(skip),
+        total: negotiations.length
+      }
+    });
+
+  } catch (error) {
+    console.error('Error getting user negotiations:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+};
+
+// Get negotiation statistics
+export const getNegotiationStats = async (req, res) => {
+  try {
+    const currentUserId = req.user._id;
+
+    const stats = await Negotiation.getNegotiationStats(currentUserId);
+
+    res.status(200).json({
+      success: true,
+      message: 'Negotiation statistics retrieved successfully',
+      stats: stats
+    });
+
+  } catch (error) {
+    console.error('Error getting negotiation stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+};
+
+// Admin: Get all negotiations
+export const getAllNegotiationsAdmin = async (req, res) => {
+  try {
+    const { status, limit = 50, skip = 0, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
+    
+    // Build filter
+    let filter = {};
+    if (status) {
+      filter.status = status;
+    }
+
+    // Build sort object
+    const sort = {};
+    sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
+    const negotiations = await Negotiation.find(filter)
+      .populate('organizer speaker event', 'firstName lastName email role title date')
+      .populate('conversation', 'participants type status')
+      .sort(sort)
+      .limit(parseInt(limit))
+      .skip(parseInt(skip));
+
+    const total = await Negotiation.countDocuments(filter);
+
+    res.status(200).json({
+      success: true,
+      message: 'All negotiations retrieved successfully',
+      negotiations: negotiations,
+      pagination: {
+        limit: parseInt(limit),
+        skip: parseInt(skip),
+        total: total,
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
+
+  } catch (error) {
+    console.error('Error getting all negotiations:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+};
+
+// Admin: Get negotiation details
+export const getNegotiationAdmin = async (req, res) => {
+  try {
+    const { negotiationId } = req.params;
+
+    const negotiation = await Negotiation.findById(negotiationId)
+      .populate('organizer speaker event', 'firstName lastName email role title date')
+      .populate('conversation', 'participants type status lastMessage')
+      .populate('proposals.proposedBy', 'firstName lastName email role');
+
+    if (!negotiation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Negotiation not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Negotiation details retrieved successfully',
+      negotiation: negotiation
+    });
+
+  } catch (error) {
+    console.error('Error getting negotiation details:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+};
+
+// Admin: Get negotiation statistics
+export const getNegotiationStatsAdmin = async (req, res) => {
+  try {
+    const stats = await Negotiation.aggregate([
+      {
+        $group: {
+          _id: '$status',
+          count: { $sum: 1 },
+          totalAmount: { $sum: '$currentProposal.amount' },
+          avgAmount: { $avg: '$currentProposal.amount' }
+        }
+      }
+    ]);
+
+    const totalNegotiations = await Negotiation.countDocuments();
+    const activeNegotiations = await Negotiation.countDocuments({ status: 'active' });
+    const completedNegotiations = await Negotiation.countDocuments({ status: 'accepted' });
+
+    res.status(200).json({
+      success: true,
+      message: 'Admin negotiation statistics retrieved successfully',
+      stats: {
+        totalNegotiations,
+        activeNegotiations,
+        completedNegotiations,
+        statusBreakdown: stats,
+        completionRate: totalNegotiations > 0 ? (completedNegotiations / totalNegotiations * 100).toFixed(2) : 0
+      }
+    });
+
+  } catch (error) {
+    console.error('Error getting admin negotiation stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+};
+

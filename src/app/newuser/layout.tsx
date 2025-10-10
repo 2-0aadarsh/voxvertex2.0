@@ -1,0 +1,172 @@
+"use client";
+
+import { Geist, Geist_Mono } from "next/font/google";
+import { useEffect, Suspense } from "react";
+import dynamic from "next/dynamic";
+import Navbar from "@/components/Navbar";
+import { useAuth } from "@/store/hooks";
+import { useGetCurrentUserQuery } from "@/store/slices/authSlice";
+
+// Dynamic imports
+const ProfileHeader = dynamic(
+  () => import("./components/header/ProfileHeader"),
+  {
+    loading: () => (
+      <div className="h-32 bg-white border-b border-gray-200 animate-pulse"></div>
+    ),
+    ssr: false,
+  }
+);
+
+const Sidebar = dynamic(() => import("@/components/Sidebar"), {
+  loading: () => <div className="w-64 bg-gray-100"></div>,
+  ssr: false,
+});
+
+const AboutUser = dynamic(
+  () => import("./components/sections/aboutUser/AboutUser"),
+  { loading: () => <div className="bg-white p-6 animate-pulse h-64"></div>, ssr: false }
+);
+
+const Post = dynamic(
+  () => import("./components/sections/posts/Posts"),
+  { loading: () => <div className="bg-white p-6 animate-pulse h-64"></div>, ssr: false }
+);
+
+const WorkExperience = dynamic(
+  () => import("./components/sections/workExperience/WorkExperience"),
+  { loading: () => <div className="bg-white p-6 animate-pulse h-64"></div>, ssr: false }
+);
+
+const Education = dynamic(
+  () => import("./components/sections/education/Education"),
+  { loading: () => <div className="bg-white p-6 animate-pulse h-64"></div>, ssr: false }
+);
+
+const AwardsAndCertifications = dynamic(
+  () => import("./components/sections/awardsAndCertifications/AwardsAndCertifications"),
+  { loading: () => <div className="bg-white p-6 animate-pulse h-64"></div>, ssr: false }
+);
+
+const FeaturedVideos = dynamic(
+  () => import("./components/sections/featuredVideos/FeaturedVideos"),
+  { loading: () => <div className="bg-white p-6 animate-pulse h-64"></div>, ssr: false }
+);
+
+const FeedbackReviews = dynamic(
+  () => import("@/components/feedbackReviews/FeedbackReviews"),
+  { loading: () => <div className="bg-white p-6 animate-pulse h-64"></div>, ssr: false }
+);
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
+export default function NewUserLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  // Scroll to top on page load
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+    }
+  }, []);
+
+  // Authentication hooks
+  const { user, isAuthenticated } = useAuth();
+  const { data: currentUserData } = useGetCurrentUserQuery();
+
+  // Helper function to get profile image URL
+  const getProfileImageUrl = (profileImage: string | { data?: unknown; contentType?: string; url?: string } | null | undefined) => {
+    if (!profileImage) {
+      return null;
+    }
+    
+    // Check if it's already a URL string
+    if (typeof profileImage === 'string') {
+      return profileImage;
+    }
+    
+    // Check if it has data and contentType (binary data)
+    if (profileImage.data && profileImage.contentType) {
+      const dataUrl = `data:${profileImage.contentType};base64,${(profileImage.data as { toString: (encoding: string) => string }).toString('base64')}`;
+      return dataUrl;
+    }
+    
+    // Check if it has a url property
+    if (profileImage.url) {
+      return profileImage.url;
+    }
+    
+    return null;
+  };
+
+  return (
+    <div className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+
+      <Suspense
+        fallback={
+          <div className="h-32 bg-white border-b border-gray-200 animate-pulse"></div>
+        }
+      >
+        {/* <Navbar 
+          user={user || undefined}
+          currentUserData={currentUserData}
+          isAuthenticated={isAuthenticated}
+          forceHomepageStyle={true}
+          getProfileImageUrl={(url) => getProfileImageUrl(url)}
+        /> */}
+        <ProfileHeader />
+      </Suspense>
+
+      <div className="flex flex-col lg:flex-row min-h-screen">
+        {/* Sidebar (Fixed) */}
+        <Suspense fallback={<div className="w-64 bg-white"></div>}>
+          <Sidebar />
+        </Suspense>
+        
+        <div className="w-full bg-[#fffbf5] ml-64">
+          <main className="flex flex-col items-center justify-between gap-5 py-5 px-4 lg:px-0">
+            <Suspense fallback={<div className="bg-white p-6 animate-pulse h-64"></div>}>
+              <AboutUser />
+            </Suspense>
+
+            <Suspense fallback={<div className="bg-white p-6 animate-pulse h-64"></div>}>
+              <Post />
+            </Suspense>
+
+            <Suspense fallback={<div className="bg-white p-6 animate-pulse h-64"></div>}>
+              <WorkExperience />
+            </Suspense>
+
+            <Suspense fallback={<div className="bg-white p-6 animate-pulse h-64"></div>}>
+              <Education />
+            </Suspense>
+
+            <Suspense fallback={<div className="bg-white p-6 animate-pulse h-64"></div>}>
+              <AwardsAndCertifications />
+            </Suspense>
+
+            <Suspense fallback={<div className="bg-white p-6 animate-pulse h-64"></div>}>
+              <FeaturedVideos />
+            </Suspense>
+
+            <Suspense fallback={<div className="bg-white p-6 animate-pulse h-64"></div>}>
+              <FeedbackReviews />
+            </Suspense>
+          </main>
+        </div>
+      </div>
+
+      {children}
+    </div>
+  );
+}

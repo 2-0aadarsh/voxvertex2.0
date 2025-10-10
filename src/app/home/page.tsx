@@ -1,0 +1,1243 @@
+'use client';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
+import { Heart, MessageCircle, Calendar, MapPin } from 'lucide-react';
+import {  CreditCard, Monitor, UserCheck, Grid3X3, Target, Clipboard } from 'lucide-react';
+import { useAuth, useAppDispatch, useAppSelector } from '@/store/hooks';
+import { useGetCurrentUserQuery } from '@/store/slices/authSlice';
+import { useGetFeedPostsQuery, useToggleFeedPostLikeMutation, useTestConnectionQuery, useTestDatabaseQuery, useDebugPostsQuery, useTestUserLikesQuery, useAddCommentMutation, feedApi } from '@/store/slices/feedSlice';
+import { useGetUpcomingEventsQuery, useGetPromotedEventsQuery } from '@/store/slices/enhancedEventSlice';
+import dynamic from 'next/dynamic';
+
+// Dynamic imports with loading states and prefetching
+const BottomHalf = dynamic(() => import("./components/BottomHalf"), {
+  loading: () => <div className="flex items-center justify-center h-32"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div></div>,
+  ssr: false
+});
+
+const Navbar = dynamic(() => import('@/components/Navbar'), {
+  loading: () => <div className="h-16 bg-white border-b border-gray-200 flex items-center justify-center"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500"></div></div>,
+  ssr: false
+});
+
+const ImageCarousel = dynamic(() => import('./components/ImageCarousel'), {
+  loading: () => <div className="flex items-center justify-center h-48 bg-gray-100 rounded-lg"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div></div>,
+  ssr: false
+});
+
+const CustomVerticalScrollbarV2 = dynamic(() => import('@/components/CustomVerticalScrollbarV2'), {
+  loading: () => <div className="h-32 bg-gray-50 rounded-lg flex items-center justify-center"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500"></div></div>,
+  ssr: false
+});
+
+
+export default function EventManagementPage() {
+  const [currentEventIndex, setCurrentEventIndex] = useState(0);
+  const [speakerScrollPosition, setSpeakerScrollPosition] = useState(0);
+  const [adScrollPosition, setAdScrollPosition] = useState(0);
+  const [commentingPostId, setCommentingPostId] = useState<string | null>(null);
+  const [commentText, setCommentText] = useState('');
+  const [viewingAllComments, setViewingAllComments] = useState<Set<string>>(new Set());
+  
+  
+  // Authentication hooks
+  const { user, isAuthenticated } = useAuth();
+  const { data: currentUserData } = useGetCurrentUserQuery();
+  const dispatch = useAppDispatch();
+
+  // Home state from Redux store
+  const { featuredSpeakers, topSpeakers, recentBlogs, advertisements } = useAppSelector((state) => state.home);
+
+  // Helper function to get profile image URL
+  const getProfileImageUrl = (profileImage: any) => {
+    if (!profileImage) return null;
+    
+    // Handle string URLs
+    if (typeof profileImage === 'string') {
+      if (profileImage.startsWith('http')) return profileImage;
+      return `https://res.cloudinary.com/demo/image/fetch/${profileImage}`;
+    }
+    
+    // Handle object with data and contentType (Buffer)
+    if (typeof profileImage === 'object' && profileImage.data && profileImage.contentType) {
+      const dataUrl = `data:${profileImage.contentType};base64,${profileImage.data.toString('base64')}`;
+      return dataUrl;
+    }
+    
+    // Handle object with url property
+    if (typeof profileImage === 'object' && profileImage.url) {
+      if (profileImage.url.startsWith('http')) return profileImage.url;
+      return `https://res.cloudinary.com/demo/image/fetch/${profileImage.url}`;
+    }
+    
+    return null;
+  };
+  
+  // Feed data hooks - fetch all posts at once
+  const { 
+    data: feedData, 
+    isLoading: feedLoading, 
+    error: feedError,
+    refetch: refetchFeed
+  } = useGetFeedPostsQuery({ 
+    page: 1, 
+    limit: 100 // Fetch up to 100 posts at once
+  });
+
+  // Get feed posts from API
+  const feedPosts = feedData?.data?.posts || [];
+  const pagination = feedData?.data?.pagination;
+
+  // Test endpoints
+  const { data: testData, error: testError } = useTestConnectionQuery();
+  const { data: dbTestData, error: dbTestError } = useTestDatabaseQuery();
+  const { data: debugData, error: debugError } = useDebugPostsQuery();
+  const { data: userLikesData, error: userLikesError } = useTestUserLikesQuery();
+
+
+  // Listen for new post creation events
+  useEffect(() => {
+    const handleNewPost = (event: CustomEvent) => {
+      // Refetch the feed when a new post is created
+      refetchFeed();
+    };
+
+    window.addEventListener('newPostCreated', handleNewPost as EventListener);
+    
+    return () => {
+      window.removeEventListener('newPostCreated', handleNewPost as EventListener);
+    };
+  }, [refetchFeed]);
+
+  
+  const [toggleLike] = useToggleFeedPostLikeMutation();
+  const [addComment, { isLoading: isCommenting }] = useAddCommentMutation();
+
+  // Helper function to handle like toggle with optimistic updates
+  const handleLikeToggle = useCallback(async (postId: string) => {
+    try {
+      // Find the current post to get its current like state
+      const currentPost = feedPosts.find(post => post._id === postId);
+      if (!currentPost) {
+        return;
+      }
+      
+      // Optimistic update - immediately update the UI
+      const optimisticLikeCount = currentPost.isLiked 
+        ? currentPost.likesCount - 1 
+        : currentPost.likesCount + 1;
+      const optimisticIsLiked = !currentPost.isLiked;
+      
+      // Update the cache optimistically
+      dispatch(
+        feedApi.util.updateQueryData('getFeedPosts', { page: 1, limit: 100 }, (draft) => {
+          if (draft.data) {
+            const postIndex = draft.data.posts.findIndex(post => post._id === postId);
+            if (postIndex !== -1) {
+              draft.data.posts[postIndex].isLiked = optimisticIsLiked;
+              draft.data.posts[postIndex].likesCount = optimisticLikeCount;
+            }
+          }
+        })
+      );
+      
+      // Make the API call
+      await toggleLike(postId).unwrap();
+      
+    } catch (error) {
+      // Revert optimistic update on error
+      const currentPost = feedPosts.find(post => post._id === postId);
+      if (currentPost) {
+        dispatch(
+          feedApi.util.updateQueryData('getFeedPosts', { page: 1, limit: 100 }, (draft) => {
+            if (draft.data) {
+              const postIndex = draft.data.posts.findIndex(post => post._id === postId);
+              if (postIndex !== -1) {
+                // Revert to original state
+                draft.data.posts[postIndex].isLiked = currentPost.isLiked;
+                draft.data.posts[postIndex].likesCount = currentPost.likesCount;
+              }
+            }
+          })
+        );
+      }
+    }
+  }, [toggleLike, feedPosts, dispatch]);
+
+
+  // Helper function to handle comment icon click
+  const handleCommentClick = useCallback((postId: string) => {
+    if (commentingPostId === postId) {
+      // If already commenting on this post, close the comment section
+      setCommentingPostId(null);
+      setCommentText('');
+    } else {
+      // Open comment section for this post
+      setCommentingPostId(postId);
+      setCommentText('');
+    }
+  }, [commentingPostId]);
+
+  // Helper function to handle comment submission with optimistic updates
+  const handleCommentSubmit = useCallback(async (postId: string) => {
+    if (!isAuthenticated || !commentText.trim()) {
+      return;
+    }
+
+    try {
+      // Find the current post to get its current comment count
+      const currentPost = feedPosts.find(post => post._id === postId);
+      if (!currentPost) {
+        return;
+      }
+      
+      // Create optimistic comment
+      const optimisticComment = {
+        _id: `temp_${Date.now()}`, // Temporary ID
+        content: commentText.trim(),
+        createdAt: new Date().toISOString(),
+        userName: user?.firstName && user?.lastName 
+          ? `${user.firstName} ${user.lastName}` 
+          : currentUserData?.user?.firstName && currentUserData?.user?.lastName
+          ? `${currentUserData.user.firstName} ${currentUserData.user.lastName}`
+          : "You",
+        userProfileImageUrl: (() => {
+          const profileImage = user?.profileImageUrl || currentUserData?.user?.profileImageUrl || user?.profileImage || currentUserData?.user?.profileImage;
+          return typeof profileImage === 'string' ? profileImage : undefined;
+        })(),
+        user: user?._id || currentUserData?.user?._id || 'unknown',
+        likes: [],
+        likesCount: 0,
+        replies: [],
+        isEdited: false,
+        updatedAt: new Date().toISOString(),
+      };
+      
+      // Optimistic update - immediately update the UI
+      const optimisticCommentCount = currentPost.commentsCount + 1;
+      
+      // Update the cache optimistically
+      dispatch(
+        feedApi.util.updateQueryData('getFeedPosts', { page: 1, limit: 100 }, (draft) => {
+          if (draft.data) {
+            const postIndex = draft.data.posts.findIndex(post => post._id === postId);
+            if (postIndex !== -1) {
+              // Add the optimistic comment to the beginning of comments array
+              if (!draft.data.posts[postIndex].comments) {
+                draft.data.posts[postIndex].comments = [];
+              }
+              draft.data.posts[postIndex].comments.unshift(optimisticComment as any);
+              draft.data.posts[postIndex].commentsCount = optimisticCommentCount;
+            }
+          }
+        })
+      );
+      
+      // Clear the comment text and close comment section immediately for better UX
+      setCommentText('');
+      setCommentingPostId(null);
+      
+      // Submit comment to API
+      await addComment({
+        postId,
+        content: commentText.trim()
+      }).unwrap();
+      
+    } catch (error) {
+      // Revert optimistic update on error
+      const currentPost = feedPosts.find(post => post._id === postId);
+      if (currentPost) {
+        dispatch(
+          feedApi.util.updateQueryData('getFeedPosts', { page: 1, limit: 100 }, (draft) => {
+            if (draft.data) {
+              const postIndex = draft.data.posts.findIndex(post => post._id === postId);
+              if (postIndex !== -1) {
+                // Remove the optimistic comment and revert count
+                if (draft.data.posts[postIndex].comments) {
+                  draft.data.posts[postIndex].comments = draft.data.posts[postIndex].comments.filter(
+                    comment => !comment._id.startsWith('temp_')
+                  );
+                }
+                draft.data.posts[postIndex].commentsCount = currentPost.commentsCount;
+              }
+            }
+          })
+        );
+      }
+      
+      // Restore comment text and reopen comment section on error
+      setCommentText(commentText);
+      setCommentingPostId(postId);
+    }
+  }, [isAuthenticated, commentText, addComment, feedPosts, dispatch, user, currentUserData]);
+
+  // Helper function to handle comment input key press
+  const handleCommentKeyPress = useCallback((e: React.KeyboardEvent, postId: string) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleCommentSubmit(postId);
+    }
+  }, [handleCommentSubmit]);
+
+  // Helper function to handle viewing all comments
+  const handleViewAllComments = useCallback((postId: string) => {
+    setViewingAllComments(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(postId)) {
+        newSet.delete(postId);
+      } else {
+        newSet.add(postId);
+      }
+      return newSet;
+    });
+  }, []);
+
+  // Helper function to format time ago
+  const formatTimeAgo = useCallback((dateString: string) => {
+    const now = new Date();
+    const postDate = new Date(dateString);
+    const diffInSeconds = Math.floor((now.getTime() - postDate.getTime()) / 1000);
+    
+    if (diffInSeconds < 60) return 'Just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+    if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)} days ago`;
+    return postDate.toLocaleDateString();
+  }, []);
+
+
+
+  // Fetch promoted events from API
+  const { data: promotedEventsResponse, isLoading: promotedEventsLoading } = useGetPromotedEventsQuery({
+    page: 1,
+    limit: 10,
+    sortBy: 'startDate',
+    sortOrder: 'asc'
+  });
+
+  // Transform API data to match the expected format
+  const promotedEvents = promotedEventsResponse?.data?.events?.map(event => ({
+    title: event.eventName,
+    description: event.description,
+    image: event.bannerImage || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=200&fit=crop"
+  })) || [];
+
+  // Fallback to static data if no promoted events are available
+  const staticPromotedEvents = [
+    {
+      title: "Global Leadership Summit 2025",
+      description: "Join industry leaders for three days of inspiring talks and networking opportunities.",
+      image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=200&fit=crop"
+    },
+    {
+      title: "AI & Future of Work Summit 2025",
+      description: "Explore how artificial intelligence is reshaping the workplace and creating new opportunities.",
+      image: "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=400&h=200&fit=crop"
+    },
+    {
+      title: "Digital Innovation Conference",
+      description: "Discover the latest trends in digital transformation and technology innovation.",
+      image: "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=400&h=200&fit=crop"
+    }
+  ];
+
+  // Use API data if available, otherwise use static data
+  const finalPromotedEvents = promotedEvents.length > 0 ? promotedEvents : staticPromotedEvents;
+  const extendedEvents = [...finalPromotedEvents, finalPromotedEvents[0]];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentEventIndex((prevIndex) => {
+        if (prevIndex === finalPromotedEvents.length - 1) {
+         
+          setTimeout(() => {
+            setCurrentEventIndex(0);
+          }, 2000); 
+          return finalPromotedEvents.length; 
+        }
+        return prevIndex + 1;
+      });
+    }, 6000); 
+
+    return () => clearInterval(interval);
+  }, [finalPromotedEvents.length]);
+
+ 
+  useEffect(() => {
+    const speakerInterval = setInterval(() => {
+      setSpeakerScrollPosition(prev => prev + 1);
+    }, 50); 
+
+    return () => clearInterval(speakerInterval);
+  }, []);
+
+  useEffect(() => {
+    const adInterval = setInterval(() => {
+      setAdScrollPosition(prev => prev + 0.5);
+    }, 50);
+
+    return () => clearInterval(adInterval);
+  }, []);
+
+  // Data is now coming from Redux store - no hardcoded data
+
+  // Fetch upcoming events from API
+  const { data: upcomingEventsResponse, isLoading: upcomingEventsLoading } = useGetUpcomingEventsQuery({
+    page: 1,
+    limit: 5,
+    sortBy: 'startDate',
+    sortOrder: 'asc'
+  });
+
+  // Transform API data to match the expected format
+  const upcomingEvents = upcomingEventsResponse?.data?.events?.slice(0, 5).map(event => ({
+    name: event.eventName,
+    date: new Date(event.startDate).toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric' 
+    }),
+    location: event.eventMode === 'online' ? 'Online' : 
+              event.eventMode === 'hybrid' ? `${event.location} (Hybrid)` : 
+              event.location || 'TBA'
+  })) || [];
+
+  // Advertisement images - now using dynamic data from Redux store
+  const adImages = advertisements.map(ad => ad.image);
+
+  return (
+    <div className="min-h-screen bg-white">
+      {/* Speaker Community Section */}
+      <div className="min-h-screen bg-gray-50">
+        
+        {/* Header */}
+        <Suspense fallback={<div className="h-16 bg-white border-b border-gray-200 flex items-center justify-center"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500"></div></div>}>
+          <Navbar 
+            user={user || undefined}
+            currentUserData={currentUserData}
+            isAuthenticated={isAuthenticated}
+            forceHomepageStyle={true}
+            getProfileImageUrl={getProfileImageUrl}
+          />
+        </Suspense>
+
+        {/* Hero Section - Full Width on Mobile/Tablet, Contained on Desktop */}
+        <div className="lg:mx-auto lg:px-6 xl:px-8">
+          <div className="lg:grid lg:grid-cols-12 lg:gap-6">
+            {/* Left Sidebar - Featured Speakers - Hidden on mobile/tablet */}
+            <div className="hidden lg:block lg:col-span-3">
+              <div className="bg-white rounded-lg p-3 mb-4">
+                <h2 className="text-base font-semibold mb-3 text-[#00425D]">Featured Speakers</h2>
+                {featuredSpeakers.length > 0 ? (
+                  <div className="space-y-10">
+                    {featuredSpeakers.map((speaker, index) => (
+                      <div key={speaker.id || index} className={`flex items-start gap-2 ${index % 2 === 1 ? 'flex-row-reverse' : ''}`}>
+                        <img
+                          src={speaker.image}
+                          alt={speaker.name}
+                          className="w-12 h-17 rounded-lg object-cover flex-shrink-0"
+                        />
+                        <div className={`flex-1 min-w-0 ${index % 2 === 1 ? 'text-right' : ''}`}>
+                          <h3 className="font-semibold text-xs text-gray-900 mb-0.5">{speaker.name}</h3>
+                          <p className="text-xs text-gray-600 font-medium mb-0.5">{speaker.title}</p>
+                          <p className="text-xs text-gray-500 leading-tight">{speaker.description}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <div className="w-16 h-16 mx-auto mb-3 bg-gray-100 rounded-full flex items-center justify-center">
+                      <UserCheck className="w-8 h-8 text-gray-400" />
+                    </div>
+                    <p className="text-sm text-gray-500">No featured speakers available</p>
+                    <p className="text-xs text-gray-400 mt-1">Check back later for updates</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Top 10 Speakers */}
+              <div className="bg-white rounded-lg p-3 mb-4">
+                <h2 className="text-base font-semibold mb-3 text-[#00425D]">Top 10 Speakers</h2>
+                {topSpeakers.length > 0 ? (
+                  <div className="relative overflow-hidden">
+                    <div 
+                      className="flex transition-transform ease-linear"
+                      style={{
+                        transform: `translateX(-${(speakerScrollPosition % (topSpeakers.length * 120))}px)`,
+                        width: `${topSpeakers.length * 2 * 120}px`
+                      }}
+                    >
+                      {/* Duplicate speakers array for seamless loop */}
+                      {[...topSpeakers, ...topSpeakers].map((speaker, index) => (
+                        <div key={speaker.id || index} className="flex-shrink-0 w-28 mx-1">
+                          <div className="bg-gray-100 rounded-lg p-2 text-center">
+                            <img
+                              src={speaker.image}
+                              alt={speaker.name}
+                              className="w-12 h-12 rounded-full mx-auto mb-2 object-cover"
+                            />
+                            <p className="text-xs font-medium text-gray-900 mb-1 truncate">{speaker.name}</p>
+                            <p className="text-xs text-gray-600 mb-1 truncate">{speaker.title}</p>
+                            <p className="text-xs text-gray-500 leading-tight text-center px-1">{speaker.bio}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <div className="w-16 h-16 mx-auto mb-3 bg-gray-100 rounded-full flex items-center justify-center">
+                      <UserCheck className="w-8 h-8 text-gray-400" />
+                    </div>
+                    <p className="text-sm text-gray-500">No top speakers available</p>
+                    <p className="text-xs text-gray-400 mt-1">Check back later for updates</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Recent Blogs */}
+              <div className="bg-white rounded-lg p-3">
+                <h2 className="text-base font-semibold mb-3 text-[#00425D]">Recent Blogs</h2>
+                {recentBlogs.length > 0 ? (
+                  <div className="space-y-4">
+                    {recentBlogs.map((blog, index) => (
+                      <div key={blog.id || index} className="flex items-center space-x-2 mb-6 last:mb-0">
+                        <img
+                          src={blog.image}
+                          alt={blog.title}
+                          className="w-14 h-14 rounded object-cover"
+                        />
+                        <div>
+                          <h3 className="text-xs font-medium">{blog.title}</h3>
+                          <p className="text-xs text-gray-500">{blog.description}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <div className="w-16 h-16 mx-auto mb-3 bg-gray-100 rounded-full flex items-center justify-center">
+                      <Clipboard className="w-8 h-8 text-gray-400" />
+                    </div>
+                    <p className="text-sm text-gray-500">No recent blogs available</p>
+                    <p className="text-xs text-gray-400 mt-1">Check back later for updates</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Main Content */}
+            <div className="lg:col-span-9">
+              {/* Hero Section - Full Width on Mobile/Tablet, Contained on Desktop */}
+              <div className="relative overflow-hidden mb-3 sm:mb-4 h-48 sm:h-56 lg:h-64 xl:h-70 lg:rounded-xl xl:rounded-2xl">
+                <img
+                  src="https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1400&h=320&fit=crop"
+                  alt="Conference speaker"
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 flex items-center justify-center px-4 sm:px-6 lg:px-12">
+                  <div className="bg-white/85 rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-7 max-w-sm sm:max-w-lg lg:max-w-xl text-center">
+                    <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-gray-800 mb-1">
+                      Build Better Events,
+                    </h1>
+                    <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-gray-800 mb-2">
+                      Book Brighter Speakers.
+                    </h2>
+                    <p className="text-gray-700 mb-3 text-xs sm:text-sm leading-tight">
+                      Discover inspiring voices, share knowledge, and build meaningful connections in our vibrant speaker community
+                    </p>
+                    <button className="bg-orange-500 hover:bg-orange-600 text-white px-4 sm:px-5 py-2 rounded-lg font-medium text-xs sm:text-sm">
+                      Join the Community
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Mobile Featured Speakers - Horizontal Scroll */}
+              <div className="lg:hidden px-3 sm:px-4 mb-4">
+                <div className="bg-white rounded-lg p-3">
+                  <h2 className="text-base font-semibold mb-3 text-[#00425D]">Featured Speakers</h2>
+                  {featuredSpeakers.length > 0 ? (
+                    <div className="flex overflow-x-auto space-x-3 pb-2 scrollbar-hide">
+                      {featuredSpeakers.map((speaker, index) => (
+                        <div key={speaker.id || index} className="flex-shrink-0 w-48 bg-gray-50 rounded-lg p-3">
+                          <div className="flex items-start gap-3">
+                            <img
+                              src={speaker.image}
+                              alt={speaker.name}
+                              className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-semibold text-xs text-gray-900 mb-1">{speaker.name}</h3>
+                              <p className="text-xs text-gray-600 font-medium mb-1">{speaker.title}</p>
+                              <p className="text-xs text-gray-500 leading-tight line-clamp-2">{speaker.description}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <div className="w-16 h-16 mx-auto mb-3 bg-gray-100 rounded-full flex items-center justify-center">
+                        <UserCheck className="w-8 h-8 text-gray-400" />
+                      </div>
+                      <p className="text-sm text-gray-500">No featured speakers available</p>
+                      <p className="text-xs text-gray-400 mt-1">Check back later for updates</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Mobile Top 10 Speakers - Horizontal Scroll with Auto-scrolling */}
+              <div className="lg:hidden px-3 sm:px-4 mb-4">
+                <div className="bg-white rounded-lg p-3">
+                  <h2 className="text-base font-semibold mb-3 text-[#00425D]">Top 10 Speakers</h2>
+                  {topSpeakers.length > 0 ? (
+                    <div className="relative overflow-hidden">
+                      <div 
+                        className="flex transition-transform ease-linear"
+                        style={{
+                          transform: `translateX(-${(speakerScrollPosition % (topSpeakers.length * 120))}px)`,
+                          width: `${topSpeakers.length * 2 * 120}px`
+                        }}
+                      >
+                        {/* Duplicate speakers array for seamless loop */}
+                        {[...topSpeakers, ...topSpeakers].map((speaker, index) => (
+                          <div key={speaker.id || index} className="flex-shrink-0 w-28 mx-1">
+                            <div className="bg-gray-100 rounded-lg p-2 text-center">
+                              <img
+                                src={speaker.image}
+                                alt={speaker.name}
+                                className="w-12 h-12 rounded-full mx-auto mb-2 object-cover"
+                              />
+                              <p className="text-xs font-medium text-gray-900 mb-1 truncate">{speaker.name}</p>
+                              <p className="text-xs text-gray-600 mb-1 truncate">{speaker.title}</p>
+                              <p className="text-xs text-gray-500 leading-tight text-center px-1">{speaker.bio}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <div className="w-16 h-16 mx-auto mb-3 bg-gray-100 rounded-full flex items-center justify-center">
+                        <UserCheck className="w-8 h-8 text-gray-400" />
+                      </div>
+                      <p className="text-sm text-gray-500">No top speakers available</p>
+                      <p className="text-xs text-gray-400 mt-1">Check back later for updates</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="px-3 sm:px-4 lg:px-0">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4">
+
+                  {/* Posts Column with Scroll and Orange Sidebar */}
+                  <div className="lg:col-span-8">
+                  <div className="relative">
+                   
+                    
+                    {/* Scrollable Posts Container */}
+                    <div 
+                      className="h-[600px] sm:h-[700px] lg:h-[800px] xl:h-[945px] overflow-y-auto scrollbar-thin scrollbar-thumb-orange-300 scrollbar-track-gray-100 pl-2 sm:pl-4"
+                    >
+                      <div className="space-y-3 sm:space-y-4 pr-2">
+                        {feedLoading && feedPosts.length === 0 ? (
+                          <div className="flex items-center justify-center h-32">
+                            <div className="flex items-center space-x-2">
+                              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-orange-500"></div>
+                              <div className="text-gray-500 text-sm">Loading posts...</div>
+                            </div>
+                          </div>
+                        ) : feedError ? (
+                          <div className="flex items-center justify-center h-32">
+                            <div className="text-red-500 text-sm">Failed to load posts</div>
+                          </div>
+                        ) : feedPosts.length === 0 ? (
+                          <div className="flex items-center justify-center h-32">
+                            <div className="text-gray-500 text-sm">No posts available</div>
+                          </div>
+                        ) : (
+                          feedPosts.map((post) => {
+                            // Get real comments from the post data
+                            const postComments = post.comments || [];
+                            
+                            const profileImageUrl = getProfileImageUrl(post.userProfileImage || (post.user as any)?.profileImageUrl || post.user?.profileImage);
+                            const authorName = post.userName || `${post.user?.firstName} ${post.user?.lastName}`;
+                            
+                            return (
+                              <div key={post._id} className="bg-white rounded-lg p-3 sm:p-4">
+                                <div className="flex items-center space-x-2 sm:space-x-3 mb-2 sm:mb-3">
+                                  {profileImageUrl ? (
+                                    <img
+                                      src={profileImageUrl}
+                                      alt={authorName}
+                                      className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover"
+                                      onError={(e) => {
+                                        e.currentTarget.style.display = 'none';
+                                        const nextElement = e.currentTarget.nextElementSibling as HTMLElement;
+                                        if (nextElement) {
+                                          nextElement.style.display = 'flex';
+                                        }
+                                      }}
+                                    />
+                                  ) : null}
+                                  <div 
+                                    className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs sm:text-sm"
+                                    style={{
+                                      display: profileImageUrl ? 'none' : 'flex',
+                                    }}
+                                  >
+                                    {authorName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                                  </div>
+                                  <div>
+                                    <h3 className="font-semibold text-xs sm:text-sm">{authorName}</h3>
+                                    <span className="text-xs text-gray-400">{formatTimeAgo(post.createdAt)}</span>
+                                  </div>
+                                </div>
+
+                                {post.title && (
+                                  <h2 className="text-sm sm:text-base font-semibold mb-2 sm:mb-3 text-[#00425D]">{post.title}</h2>
+                                )}
+                                <p className="text-gray-500 text-xs sm:text-sm mb-3 sm:mb-4 leading-tight">
+                                  {post.caption}
+                                </p>
+                                
+                                {post.media && post.media.length > 0 && (
+                                  <Suspense fallback={<div className="flex items-center justify-center h-48 bg-gray-100 rounded-lg"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div></div>}>
+                                    <ImageCarousel 
+                                      media={post.media} 
+                                      alt={`${authorName}'s post`}
+                                    />
+                                  </Suspense>
+                                )}
+                                
+                                <div className="flex items-center space-x-4 sm:space-x-6 text-xs sm:text-sm text-gray-400">
+                                  <button 
+                                    className={`flex items-center space-x-1 sm:space-x-2 transition-colors duration-200 ${post.isLiked ? 'text-red-500' : 'hover:text-red-500'}`}
+                                    onClick={() => handleLikeToggle(post._id)}
+                                  >
+                                    <Heart 
+                                      className={`w-3 h-3 sm:w-4 sm:h-4 transition-all duration-200 ${
+                                        post.isLiked 
+                                          ? 'fill-red-500 text-red-500' 
+                                          : 'fill-none text-gray-400 hover:text-red-500'
+                                      }`} 
+                                    />
+                                    <span className={post.isLiked ? 'text-red-500' : ''}>{post.likesCount}</span>
+                                  </button>
+                                  <button 
+                                    className={`flex items-center space-x-1 sm:space-x-2 hover:text-blue-500 ${commentingPostId === post._id ? 'text-blue-500' : ''}`}
+                                    onClick={() => handleCommentClick(post._id)}
+                                  >
+                                    <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+                                    <span>{post.commentsCount}</span>
+                                  </button>
+                                </div>
+
+                                {/* Comment Section */}
+                                {commentingPostId === post._id && (
+                                  <div className="mt-3 sm:mt-4 pt-3 border-t border-gray-100">
+                                    {/* Existing Comments Display */}
+                                    {postComments && postComments.length > 0 ? (
+                                      <div className="mb-3">
+                                        <Suspense fallback={<div className="h-32 bg-gray-50 rounded-lg flex items-center justify-center"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500"></div></div>}>
+                                          <CustomVerticalScrollbarV2 
+                                            maxHeight="150px"
+                                            scrollbarColor="#FF6B35"
+                                            trackColor="rgba(255,107,53,0.06)"
+                                            showArrows={true}
+                                          >
+                                          <div className="space-y-2 pr-4 sm:pr-8">
+                                            {(viewingAllComments.has(post._id) ? postComments : postComments.slice(0, 3)).map((comment: { userName?: string; content: string; createdAt: string; userProfileImage?: any; userProfileImageUrl?: string; user?: any }, index: number) => {
+                                              // Get profile image from multiple sources: userProfileImageUrl (new), userProfileImage (old), or user.profileImageUrl (populated)
+                                              const profileImageUrl = getProfileImageUrl(comment.userProfileImageUrl || comment.userProfileImage || comment.user?.profileImageUrl || comment.user?.profileImage);
+                                              const displayName = comment.userName || `${comment.user?.firstName} ${comment.user?.lastName}`;
+                                              
+                                              return (
+                                              <div key={index} className="flex items-start space-x-2 sm:space-x-3">
+                                                <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center flex-shrink-0">
+                                                  {profileImageUrl ? (
+                                                    <img
+                                                      src={profileImageUrl}
+                                                      alt={displayName || 'User'}
+                                                      className="w-full h-full object-cover object-center"
+                                                      onError={(e) => {
+                                                        // Fallback to initials if image fails to load
+                                                        e.currentTarget.style.display = "none";
+                                                        const nextElement = e.currentTarget.nextElementSibling as HTMLElement;
+                                                        if (nextElement) {
+                                                          nextElement.style.display = "flex";
+                                                        }
+                                                      }}
+                                                    />
+                                                  ) : null}
+                                                  <div
+                                                    className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold text-xs"
+                                                    style={{
+                                                      display: profileImageUrl ? "none" : "flex",
+                                                    }}
+                                                  >
+                                                    {displayName ? displayName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) : 'U'}
+                                                  </div>
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                  <div className="bg-gray-50 rounded-lg px-3 py-2">
+                                                    <p className="text-xs sm:text-sm font-medium text-gray-900 mb-1">
+                                                      {displayName || 'Anonymous'}
+                                                    </p>
+                                                    <p className="text-xs sm:text-sm text-gray-700 leading-relaxed">
+                                                      {comment.content}
+                                                    </p>
+                                                  </div>
+                                                  <span className="text-xs text-gray-400 mt-1 block">
+                                                    {formatTimeAgo(comment.createdAt)}
+                                                  </span>
+                                </div>
+                              </div>
+                            );
+                                            })}
+                                          </div>
+                                          </CustomVerticalScrollbarV2>
+                                        </Suspense>
+                                        
+                                        {/* View all comments button */}
+                                        {postComments.length > 3 && (
+                                          <div className="text-center mt-2">
+                                            <button
+                                              onClick={() => handleViewAllComments(post._id)}
+                                              className="text-xs text-blue-500 hover:text-blue-600 font-medium cursor-pointer transition-colors duration-200"
+                                            >
+                                              {viewingAllComments.has(post._id) 
+                                                ? 'Show less' 
+                                                : `View all ${postComments.length} comments`
+                                              }
+                                            </button>
+                                          </div>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <div className="mb-3">
+                                        <p className="text-xs text-gray-500 text-center py-2">
+                                          No comments yet. Be the first to comment!
+                                        </p>
+                                      </div>
+                                    )}
+
+                                    {/* Comment Input */}
+                                    {isAuthenticated ? (
+                            <div className="flex items-center space-x-2 sm:space-x-3 mt-3">
+                                        <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center flex-shrink-0">
+                                          {getProfileImageUrl(user?.profileImageUrl || currentUserData?.user?.profileImageUrl || user?.profileImage || currentUserData?.user?.profileImage) ? (
+                                            <img
+                                              src={getProfileImageUrl(user?.profileImageUrl || currentUserData?.user?.profileImageUrl || user?.profileImage || currentUserData?.user?.profileImage) || ''}
+                                              alt="profile"
+                                              className="w-full h-full object-cover object-center"
+                                              onError={(e) => {
+                                                // Fallback to initials if image fails to load
+                                                e.currentTarget.style.display = "none";
+                                                const nextElement = e.currentTarget.nextElementSibling as HTMLElement;
+                                                if (nextElement) {
+                                                  nextElement.style.display = "flex";
+                                                }
+                                              }}
+                                            />
+                                          ) : null}
+                                          <div
+                                            className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold text-xs"
+                                            style={{
+                                              display: getProfileImageUrl(user?.profileImageUrl || currentUserData?.user?.profileImageUrl || user?.profileImage || currentUserData?.user?.profileImage) ? "none" : "flex",
+                                            }}
+                                          >
+                                            {(user?.firstName && user?.lastName 
+                                              ? `${user.firstName} ${user.lastName}` 
+                                              : currentUserData?.user?.firstName && currentUserData?.user?.lastName
+                                              ? `${currentUserData.user.firstName} ${currentUserData.user.lastName}`
+                                              : "User")
+                                              .split(" ")
+                                              .map((n) => n[0])
+                                              .join("")
+                                              .toUpperCase()
+                                              .slice(0, 2)}
+                            </div>
+                                        </div>
+                                        <div className="flex-1 relative">
+                                          <input
+                                            type="text"
+                                            placeholder="Add a comment..."
+                                            value={commentText}
+                                            onChange={(e) => setCommentText(e.target.value)}
+                                            onKeyPress={(e) => handleCommentKeyPress(e, post._id)}
+                                            className="w-full px-3 py-2 text-xs sm:text-sm border border-gray-200 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                            autoFocus
+                                          />
+                                        </div>
+                                        <button
+                                          onClick={() => handleCommentSubmit(post._id)}
+                                          disabled={!commentText.trim() || isCommenting}
+                                          className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
+                                            commentText.trim() && !isCommenting
+                                              ? 'bg-blue-500 hover:bg-blue-600 text-white' 
+                                              : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                          }`}
+                                        >
+                                          {isCommenting ? 'Posting...' : 'Post'}
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <div className="text-center py-2">
+                                        <p className="text-xs text-gray-500 mb-2">
+                                          Please log in to comment
+                                        </p>
+                                        <button 
+                                          onClick={() => window.location.href = '/signup/login'}
+                                          className="text-xs text-blue-500 hover:text-blue-600 font-medium"
+                                        >
+                                          Login
+                                        </button>
+                          </div>
+                        )}
+                          </div>
+                        )}
+                              </div>
+                            );
+                          })
+                        )}
+                        
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                  {/* Right Sidebar */}
+                  <div className="lg:col-span-4">
+                  {/* Promoted Events */}
+                  <div className="bg-white rounded-lg overflow-hidden mb-3 sm:mb-4 relative">
+                    <div className="absolute left-0 top-0 w-1 h-full bg-orange-500 z-10"></div>
+
+                    <div className="p-3 pb-1">
+                      <h2 className="text-sm sm:text-base font-bold text-[#00425D] mb-3">Promoted Events</h2>
+                    </div>
+
+                   
+                    <div className="relative h-[240px] sm:h-[280px] overflow-hidden">
+                      {promotedEventsLoading ? (
+                        <div className="flex items-center justify-center h-full">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+                        </div>
+                      ) : finalPromotedEvents.length > 0 ? (
+                        <div
+                          className={`flex flex-col transition-transform ease-in-out duration-[2000ms] space-y-2 sm:space-y-3`}
+                          style={{
+                            transform: `translateY(-${currentEventIndex * (window.innerWidth < 640 ? 240 : 280)}px)`,
+                          }}
+                        >
+                          {extendedEvents.map((event, index) => (
+                            <div
+                              key={index}
+                              className="h-[240px] sm:h-[280px] flex-shrink-0 px-3"
+                            >
+                              <img
+                                src={event.image}
+                                alt={event.title}
+                                className="w-full h-20 sm:h-24 object-cover rounded-lg mb-2"
+                              />
+                              <div className="px-0">
+                                <h3 className="font-bold text-xs sm:text-sm mb-1 text-gray-900">{event.title}</h3>
+                                <p className="text-xs text-gray-600 mb-2 leading-tight line-clamp-3">
+                                  {event.description}
+                                </p>
+                                <button className="w-full bg-orange-500 hover:bg-orange-600 text-white py-1.5 sm:py-2 rounded-lg text-xs font-semibold transition-colors">
+                                  Ticket & Info
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center h-full">
+                          <p className="text-xs text-gray-500 text-center">No promoted events available</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Upcoming Events */}
+                  <div className="bg-white rounded-lg p-3 mb-3 sm:mb-4">
+                    <h2 className="text-sm sm:text-base font-semibold mb-3 text-[#00425D]">Upcoming Events</h2>
+                    <div className="space-y-4 sm:space-y-6">
+                      {upcomingEventsLoading ? (
+                        <div className="flex items-center justify-center py-4">
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500"></div>
+                        </div>
+                      ) : upcomingEvents.length > 0 ? (
+                        upcomingEvents.map((event, index) => (
+                          <div key={index} className="border-l-4 border-orange-500 pl-2">
+                            <h3 className="font-medium text-xs sm:text-sm">{event.name}</h3>
+                            <div className="flex items-center text-xs text-gray-500 mt-0.5">
+                              <Calendar className="w-3 h-3 mr-1 flex-shrink-0" />
+                              <span className="mr-2 truncate">{event.date}</span>
+                              <MapPin className="w-3 h-3 mr-1 flex-shrink-0" />
+                              <span className="truncate">{event.location}</span>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center py-4">
+                          <p className="text-xs text-gray-500">No upcoming events found</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Advertisements with Auto-scrolling Images */}
+<div className="bg-white rounded-lg p-3">
+  <h2 className="text-sm sm:text-base font-semibold mb-3">Advertisements</h2>
+  {advertisements.length > 0 ? (
+    <div className="h-40 sm:h-50 overflow-hidden relative rounded-lg">
+      <div 
+        className="flex flex-col transition-transform ease-linear"
+        style={{
+          transform: `translateY(-${(adScrollPosition % (adImages.length * 140))}px)`,
+          height: `${adImages.length * 2 * 140}px`
+        }}
+      >
+        {[...adImages, ...adImages].map((image, index) => (
+          <div key={index} className="flex-shrink-0 w-full h-32 sm:h-40 mb-2">
+            <img
+              src={image}
+              alt={`Advertisement ${index + 1}`}
+              className="w-full h-full object-cover rounded-lg"
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  ) : (
+    <div className="text-center py-8">
+      <div className="w-16 h-16 mx-auto mb-3 bg-gray-100 rounded-full flex items-center justify-center">
+        <Monitor className="w-8 h-8 text-gray-400" />
+      </div>
+      <p className="text-sm text-gray-500">No advertisements available</p>
+      <p className="text-xs text-gray-400 mt-1">Check back later for updates</p>
+    </div>
+  )}
+</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Event Management Features Section */}
+      <div className="bg-white">
+        {/* Header section with white background */}
+        <div className="container mx-auto px-4 sm:px-6 py-8 sm:py-12">
+          <div className="text-center mb-8 sm:mb-12">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-[#00425D] mb-3 sm:mb-4 leading-tight max-w-4xl mx-auto">
+              Everything You Need for a Successful Event, All in One Place
+            </h1>
+            <p className="text-gray-600 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed px-4">
+              Streamline your event management with our comprehensive platform designed to
+              handle every aspect of professional speaking engagements
+            </p>
+          </div>
+        </div>
+
+        {/* Background image section */}
+        <div className="bg-gray-50 relative overflow-hidden min-h-[400px] sm:min-h-[500px] lg:min-h-[600px]">
+          {/* Background image */}
+          <div className="absolute inset-0">
+            <img 
+              src="/orange1000px.png" 
+              alt="Background" 
+              className="w-full h-full object-fill"
+            />
+          </div>
+
+          {/* Feature cards content */}
+          <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16">
+           
+            {/* Feature cards */}
+            <div className="max-w-7xl mx-auto space-y-8 sm:space-y-10 lg:space-y-12 px-2 sm:px-4">
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 items-start">
+                {/* Milestone-Based Escrow - Left (higher) */}
+                <div className="feature-card bg-white/55 backdrop-blur-sm rounded-lg p-4 sm:p-6 shadow-lg border border-white transition-all duration-300 hover:bg-white/90 hover:rotate-1 hover:scale-[1.02] w-full max-w-lg mx-auto md:mx-0">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 bg-orange-100 rounded-lg flex items-center justify-center mb-2 sm:mb-3">
+                    <CreditCard className="w-3 h-3 sm:w-4 sm:h-4 text-orange-600" />
+                  </div>
+                  <h3 className="text-sm sm:text-base font-bold mb-2" style={{ color: '#00425D' }}>Milestone-Based Escrow</h3>
+                  <p className="text-gray-600 text-xs leading-relaxed">
+                    Secure staged payments that protect both organizers and
+                    speakers throughout the entire event process, ensuring trust
+                    and accountability.
+                  </p>
+                </div>
+
+                <div className="feature-card bg-white/55 backdrop-blur-sm rounded-lg p-4 sm:p-6 shadow-lg border border-white transition-all duration-300 hover:bg-white/90 hover:-rotate-1 hover:scale-[1.02] w-full max-w-lg mx-auto md:ml-auto md:mt-8 lg:mt-16">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 bg-orange-100 rounded-lg flex items-center justify-center mb-2 sm:mb-3">
+                    <Monitor className="w-3 h-3 sm:w-4 sm:h-4 text-orange-600" />
+                  </div>
+                  <h3 className="text-sm sm:text-base font-bold mb-2" style={{ color: '#00425D' }}>The Accountability Engine</h3>
+                  <p className="text-gray-600 text-xs leading-relaxed">
+                    Double-blind review system that provides unbiased feedback
+                    and maintains high standards across the platform.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 items-start">
+            
+                <div className="feature-card bg-white/55 backdrop-blur-sm rounded-lg p-4 sm:p-6 shadow-lg border border-white transition-all duration-300 hover:bg-white/90 hover:rotate-1 hover:scale-[1.02] w-full max-w-lg mx-auto md:mx-0">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 bg-orange-100 rounded-lg flex items-center justify-center mb-2 sm:mb-3">
+                    <UserCheck className="w-3 h-3 sm:w-4 sm:h-4 text-orange-600" />
+                  </div>
+                  <h3 className="text-sm sm:text-base font-bold mb-2" style={{ color: '#00425D' }}>Source Vetted Professionals</h3>
+                  <p className="text-gray-600 text-xs leading-relaxed">
+                    Access verified speakers with authenticated credentials and
+                    identity badges, ensuring quality and reliability for your
+                    events.
+                  </p>
+                </div>
+
+                <div className="feature-card bg-white/55 backdrop-blur-sm rounded-lg p-4 sm:p-6 shadow-lg border border-white transition-all duration-300 hover:bg-white/90 hover:-rotate-1 hover:scale-[1.02] w-full max-w-lg mx-auto md:ml-auto md:mt-8 lg:mt-16">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 bg-orange-100 rounded-lg flex items-center justify-center mb-2 sm:mb-3">
+                    <Grid3X3 className="w-3 h-3 sm:w-4 sm:h-4 text-orange-600" />
+                  </div>
+                  <h3 className="text-sm sm:text-base font-bold mb-2" style={{ color: '#00425D' }}>3-Stage Dispute Resolution</h3>
+                  <p className="text-gray-600 text-xs leading-relaxed">
+                    Fair, structured process for resolving disagreements with
+                    mediation and arbitration options.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 items-start">
+                {/* Centralized Action Center - Left (higher) */}
+                <div className="feature-card bg-white/55 backdrop-blur-sm rounded-lg p-4 sm:p-6 shadow-lg border border-white transition-all duration-300 hover:bg-white/90 hover:rotate-1 hover:scale-[1.02] w-full max-w-lg mx-auto md:mx-0">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 bg-orange-100 rounded-lg flex items-center justify-center mb-2 sm:mb-3">
+                    <Target className="w-3 h-3 sm:w-4 sm:h-4 text-orange-600" />
+                  </div>
+                  <h3 className="text-sm sm:text-base font-bold mb-2" style={{ color: '#00425D' }}>Centralized Action Center</h3>
+                  <p className="text-gray-600 text-xs leading-relaxed">
+                    Smart dashboard that consolidates all event tasks,
+                    communications, and deadlines in one intuitive
+                    interface.
+                  </p>
+                </div>
+
+                <div className="feature-card bg-white/55 backdrop-blur-sm rounded-lg p-4 sm:p-6 shadow-lg border border-white transition-all duration-300 hover:bg-white/90 hover:-rotate-1 hover:scale-[1.02] w-full max-w-lg mx-auto md:ml-auto md:mt-8 lg:mt-16">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 bg-orange-100 rounded-lg flex items-center justify-center mb-2 sm:mb-3">
+                    <Clipboard className="w-3 h-3 sm:w-4 sm:h-4 text-orange-600" />
+                  </div>
+                  <h3 className="text-sm sm:text-base font-bold mb-2" style={{ color: '#00425D' }}>All-in-One Event Publishing</h3>
+                  <p className="text-gray-600 text-xs leading-relaxed">
+                    Create custom-branded event pages with integrated
+                    ticketing, communications, and promotional tools.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <Suspense fallback={<div className="flex items-center justify-center h-32"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div></div>}>
+        <BottomHalf />
+      </Suspense>
+
+      <style jsx>{`
+        .feature-card {
+          cursor: pointer;
+        }
+        
+        /* Image carousel improvements */
+        .image-carousel-container {
+          position: relative;
+          overflow: hidden;
+          border-radius: 10px;
+          background: #f9fafb;
+          min-height: 200px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        
+        .image-carousel-container img,
+        .image-carousel-container video {
+          width: 100%;
+          max-height: 384px; /* max-h-96 equivalent */
+          object-fit: contain;
+          transition: all 0.5s ease-in-out;
+          border-radius: 8px;
+        }
+        
+        .image-carousel-container:hover img {
+          transform: scale(1.01);
+        }
+        
+        /* Loading state for images */
+        .image-loading {
+          background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+          background-size: 200% 100%;
+          animation: loading 1.5s infinite;
+        }
+        
+        @keyframes loading {
+          0% {
+            background-position: 200% 0;
+          }
+          100% {
+            background-position: -200% 0;
+          }
+        }
+        
+        /* PDF Viewer improvements */
+        .pdf-viewer-container {
+          border-radius: 10px;
+          overflow: hidden;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        .pdf-viewer-container .react-pdf__Page {
+          border-radius: 8px;
+        }
+        
+        .pdf-viewer-container .react-pdf__Page__canvas {
+          border-radius: 8px;
+        }
+        
+        /* Fullscreen PDF styles */
+        .pdf-fullscreen {
+          z-index: 9999;
+        }
+        
+        .pdf-fullscreen .react-pdf__Page {
+          max-width: 90vw;
+          max-height: 90vh;
+        }
+        
+        /* Hide scrollbar for horizontal scroll */
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+        
+        /* Line clamp utility */
+        .line-clamp-2 {
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+      `}</style>
+    </div>
+  );
+}

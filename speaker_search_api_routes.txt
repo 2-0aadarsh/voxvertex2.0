@@ -1,0 +1,480 @@
+# SPEAKER SEARCH & FILTERING API ROUTES
+# Base URL: http://localhost:3001/api/speaker-search/
+# Authentication: JWT Token required in Authorization header
+
+================================================================================
+1. BASIC SEARCH ROUTES
+================================================================================
+
+1.1 TEXT SEARCH
+--------------
+# Basic keyword search
+GET http://localhost:3001/api/speaker-search/search?q=technology
+GET http://localhost:3001/api/speaker-search/search?q=AI
+GET http://localhost:3001/api/speaker-search/search?q=Machine Learning
+GET http://localhost:3001/api/speaker-search/search?q=Speaker
+GET http://localhost:3001/api/speaker-search/search?q=python
+GET http://localhost:3001/api/speaker-search/search?q=Artificial Intelligence
+GET http://localhost:3001/api/speaker-search/search?q=Software Development
+GET http://localhost:3001/api/speaker-search/search?q=Cybersecurity
+GET http://localhost:3001/api/speaker-search/search?q=John
+GET http://localhost:3001/api/speaker-search/search?q=Smith
+GET http://localhost:3001/api/speaker-search/search?q=john.doe@email.com
+GET http://localhost:3001/api/speaker-search/search?q=+919876543210
+
+# Search with pagination
+GET http://localhost:3001/api/speaker-search/search?q=technology&page=1&limit=5
+GET http://localhost:3001/api/speaker-search/search?q=technology&page=2&limit=10
+GET http://localhost:3001/api/speaker-search/search?q=AI&page=1&limit=3
+
+1.2 SUGGESTIONS/AUTOCOMPLETE
+----------------------------
+# Get suggestions for autocomplete
+GET http://localhost:3001/api/speaker-search/suggestions?q=tech
+GET http://localhost:3001/api/speaker-search/suggestions?q=AI
+GET http://localhost:3001/api/speaker-search/suggestions?q=Speaker
+GET http://localhost:3001/api/speaker-search/suggestions?q=Machine
+GET http://localhost:3001/api/speaker-search/suggestions?q=John
+GET http://localhost:3001/api/speaker-search/suggestions?q=Corp
+
+# Limit suggestions
+GET http://localhost:3001/api/speaker-search/suggestions?q=tech&limit=3
+GET http://localhost:3001/api/speaker-search/suggestions?q=AI&limit=5
+GET http://localhost:3001/api/speaker-search/suggestions?q=Speaker&limit=2
+
+================================================================================
+2. AVAILABILITY DATE FILTERING
+================================================================================
+
+2.1 SINGLE DATE FILTERING
+-------------------------
+GET http://localhost:3001/api/speaker-search/filter?availabilityDate=2025-09-25
+GET http://localhost:3001/api/speaker-search/filter?availabilityDate=2025-09-19
+GET http://localhost:3001/api/speaker-search/filter?availabilityDate=2025-09-20
+GET http://localhost:3001/api/speaker-search/filter?availabilityDate=2025-09-26
+GET http://localhost:3001/api/speaker-search/filter?availabilityDate=2025-10-01
+GET http://localhost:3001/api/speaker-search/filter?availabilityDate=2025-10-15
+GET http://localhost:3001/api/speaker-search/filter?availabilityDate=2025-11-01
+
+2.2 MULTIPLE DATES FILTERING
+----------------------------
+GET http://localhost:3001/api/speaker-search/filter?availabilityDate=2025-09-19&availabilityDate=2025-09-25
+GET http://localhost:3001/api/speaker-search/filter?availabilityDate=2025-09-19&availabilityDate=2025-09-20&availabilityDate=2025-09-25
+GET http://localhost:3001/api/speaker-search/filter?availabilityDate=2025-09-25&availabilityDate=2025-10-01
+GET http://localhost:3001/api/speaker-search/filter?availabilityDate=2025-10-01&availabilityDate=2025-10-15&availabilityDate=2025-11-01
+
+================================================================================
+3. EVENT TYPES FILTERING
+================================================================================
+
+3.1 SINGLE EVENT TYPE
+---------------------
+GET http://localhost:3001/api/speaker-search/filter?eventTypes=Corporate%20%26%20Professional%20Events
+GET http://localhost:3001/api/speaker-search/filter?eventTypes=Educational%20%26%20Training%20Formats
+GET http://localhost:3001/api/speaker-search/filter?eventTypes=Specialized%20%26%20Niche%20Events
+
+3.2 MULTIPLE EVENT TYPES
+------------------------
+GET http://localhost:3001/api/speaker-search/filter?eventTypes=Corporate%20%26%20Professional%20Events&eventTypes=Educational%20%26%20Training%20Formats
+GET http://localhost:3001/api/speaker-search/filter?eventTypes=Corporate%20%26%20Professional%20Events&eventTypes=Specialized%20%26%20Niche%20Events
+GET http://localhost:3001/api/speaker-search/filter?eventTypes=Educational%20%26%20Training%20Formats&eventTypes=Specialized%20%26%20Niche%20Events
+
+================================================================================
+4. SUB-TYPES FILTERING
+================================================================================
+
+4.1 SINGLE SUB-TYPE
+-------------------
+GET http://localhost:3001/api/speaker-search/filter?subTypes=Conferences%20%26%20Summits
+GET http://localhost:3001/api/speaker-search/filter?subTypes=Leadership%20Retreats
+GET http://localhost:3001/api/speaker-search/filter?subTypes=Fireside%20Chats
+GET http://localhost:3001/api/speaker-search/filter?subTypes=Networking%20Events
+GET http://localhost:3001/api/speaker-search/filter?subTypes=Festivals%20(Music,%20Arts,%20Community)
+GET http://localhost:3001/api/speaker-search/filter?subTypes=Workshops%20%26%20Training%20Sessions
+GET http://localhost:3001/api/speaker-search/filter?subTypes=Webinars%20%26%20Online%20Sessions
+GET http://localhost:3001/api/speaker-search/filter?subTypes=Masterclasses%20%26%20Intensive%20Programs
+
+4.2 MULTIPLE SUB-TYPES
+----------------------
+GET http://localhost:3001/api/speaker-search/filter?subTypes=Fireside%20Chats&subTypes=Networking%20Events
+GET http://localhost:3001/api/speaker-search/filter?subTypes=Conferences%20%26%20Summits&subTypes=Leadership%20Retreats
+GET http://localhost:3001/api/speaker-search/filter?subTypes=Workshops%20%26%20Training%20Sessions&subTypes=Webinars%20%26%20Online%20Sessions
+
+================================================================================
+5. FEE RANGE FILTERING
+================================================================================
+
+5.1 MINIMUM FEE ONLY
+--------------------
+GET http://localhost:3001/api/speaker-search/filter?minFee=10000
+GET http://localhost:3001/api/speaker-search/filter?minFee=25000
+GET http://localhost:3001/api/speaker-search/filter?minFee=50000
+GET http://localhost:3001/api/speaker-search/filter?minFee=75000
+GET http://localhost:3001/api/speaker-search/filter?minFee=100000
+GET http://localhost:3001/api/speaker-search/filter?minFee=150000
+GET http://localhost:3001/api/speaker-search/filter?minFee=200000
+GET http://localhost:3001/api/speaker-search/filter?minFee=300000
+GET http://localhost:3001/api/speaker-search/filter?minFee=500000
+
+5.2 MAXIMUM FEE ONLY
+--------------------
+GET http://localhost:3001/api/speaker-search/filter?maxFee=25000
+GET http://localhost:3001/api/speaker-search/filter?maxFee=50000
+GET http://localhost:3001/api/speaker-search/filter?maxFee=75000
+GET http://localhost:3001/api/speaker-search/filter?maxFee=100000
+GET http://localhost:3001/api/speaker-search/filter?maxFee=150000
+GET http://localhost:3001/api/speaker-search/filter?maxFee=200000
+GET http://localhost:3001/api/speaker-search/filter?maxFee=250000
+GET http://localhost:3001/api/speaker-search/filter?maxFee=300000
+GET http://localhost:3001/api/speaker-search/filter?maxFee=500000
+
+5.3 FEE RANGE (MIN & MAX)
+-------------------------
+GET http://localhost:3001/api/speaker-search/filter?minFee=15000&maxFee=50000
+GET http://localhost:3001/api/speaker-search/filter?minFee=25000&maxFee=75000
+GET http://localhost:3001/api/speaker-search/filter?minFee=50000&maxFee=100000
+GET http://localhost:3001/api/speaker-search/filter?minFee=75000&maxFee=150000
+GET http://localhost:3001/api/speaker-search/filter?minFee=100000&maxFee=200000
+GET http://localhost:3001/api/speaker-search/filter?minFee=150000&maxFee=250000
+GET http://localhost:3001/api/speaker-search/filter?minFee=200000&maxFee=300000
+GET http://localhost:3001/api/speaker-search/filter?minFee=180000&maxFee=250000
+
+================================================================================
+6. DELIVERY MODES FILTERING
+================================================================================
+
+6.1 SINGLE DELIVERY MODE
+------------------------
+GET http://localhost:3001/api/speaker-search/filter?deliveryModes=Online
+GET http://localhost:3001/api/speaker-search/filter?deliveryModes=Offline
+GET http://localhost:3001/api/speaker-search/filter?deliveryModes=Hybrid
+
+6.2 MULTIPLE DELIVERY MODES
+---------------------------
+GET http://localhost:3001/api/speaker-search/filter?deliveryModes=Online&deliveryModes=Offline
+GET http://localhost:3001/api/speaker-search/filter?deliveryModes=Online&deliveryModes=Hybrid
+GET http://localhost:3001/api/speaker-search/filter?deliveryModes=Offline&deliveryModes=Hybrid
+
+================================================================================
+7. PROFILE FILTERS
+================================================================================
+
+7.1 YEARS OF EXPERIENCE
+-----------------------
+GET http://localhost:3001/api/speaker-search/filter?yearsOfExperience=1
+GET http://localhost:3001/api/speaker-search/filter?yearsOfExperience=3
+GET http://localhost:3001/api/speaker-search/filter?yearsOfExperience=5
+GET http://localhost:3001/api/speaker-search/filter?yearsOfExperience=7
+GET http://localhost:3001/api/speaker-search/filter?yearsOfExperience=10
+GET http://localhost:3001/api/speaker-search/filter?yearsOfExperience=15
+GET http://localhost:3001/api/speaker-search/filter?yearsOfExperience=20
+GET http://localhost:3001/api/speaker-search/filter?yearsOfExperience=25
+
+7.2 LOCATION FILTERING
+----------------------
+GET http://localhost:3001/api/speaker-search/filter?location=Mumbai
+GET http://localhost:3001/api/speaker-search/filter?location=Delhi
+GET http://localhost:3001/api/speaker-search/filter?location=Bangalore
+GET http://localhost:3001/api/speaker-search/filter?location=Chennai
+GET http://localhost:3001/api/speaker-search/filter?location=Hyderabad
+GET http://localhost:3001/api/speaker-search/filter?location=Pune
+GET http://localhost:3001/api/speaker-search/filter?location=Kolkata
+GET http://localhost:3001/api/speaker-search/filter?location=Ahmedabad
+
+7.3 EXPERTISE AREAS
+-------------------
+GET http://localhost:3001/api/speaker-search/filter?expertise=Machine%20Learning
+GET http://localhost:3001/api/speaker-search/filter?expertise=python
+GET http://localhost:3001/api/speaker-search/filter?expertise=Artificial%20Intelligence
+GET http://localhost:3001/api/speaker-search/filter?expertise=Data%20Science
+GET http://localhost:3001/api/speaker-search/filter?expertise=Blockchain
+GET http://localhost:3001/api/speaker-search/filter?expertise=Cloud%20Computing
+GET http://localhost:3001/api/speaker-search/filter?expertise=DevOps
+GET http://localhost:3001/api/speaker-search/filter?expertise=Mobile%20Development
+GET http://localhost:3001/api/speaker-search/filter?expertise=Web%20Development
+GET http://localhost:3001/api/speaker-search/filter?expertise=Cybersecurity
+
+7.4 TOPICS/ACTIVITIES
+---------------------
+GET http://localhost:3001/api/speaker-search/filter?topics=Cybersecurity
+GET http://localhost:3001/api/speaker-search/filter?topics=Software%20Development%20%26%20Engineering
+GET http://localhost:3001/api/speaker-search/filter?topics=Artificial%20Intelligence%20%26%20Machine%20Learning
+GET http://localhost:3001/api/speaker-search/filter?topics=Digital%20Transformation
+GET http://localhost:3001/api/speaker-search/filter?topics=Leadership%20%26%20Management
+GET http://localhost:3001/api/speaker-search/filter?topics=Innovation%20%26%20Strategy
+GET http://localhost:3001/api/speaker-search/filter?topics=Startup%20%26%20Entrepreneurship
+GET http://localhost:3001/api/speaker-search/filter?topics=Marketing%20%26%20Branding
+
+================================================================================
+8. COMBINED FILTERS (MULTIPLE CRITERIA)
+================================================================================
+
+8.1 TWO-FILTER COMBINATIONS
+---------------------------
+# Date + Event Type
+GET http://localhost:3001/api/speaker-search/filter?availabilityDate=2025-09-25&eventTypes=Corporate%20%26%20Professional%20Events
+GET http://localhost:3001/api/speaker-search/filter?availabilityDate=2025-09-19&eventTypes=Educational%20%26%20Training%20Formats
+
+# Date + Fee Range
+GET http://localhost:3001/api/speaker-search/filter?availabilityDate=2025-09-25&minFee=10000&maxFee=50000
+GET http://localhost:3001/api/speaker-search/filter?availabilityDate=2025-09-19&minFee=50000&maxFee=150000
+
+# Event Type + Delivery Mode
+GET http://localhost:3001/api/speaker-search/filter?eventTypes=Corporate%20%26%20Professional%20Events&deliveryModes=Online
+GET http://localhost:3001/api/speaker-search/filter?eventTypes=Educational%20%26%20Training%20Formats&deliveryModes=Offline
+
+# Fee + Delivery Mode
+GET http://localhost:3001/api/speaker-search/filter?minFee=50000&deliveryModes=Offline
+GET http://localhost:3001/api/speaker-search/filter?minFee=100000&deliveryModes=Online
+
+# Sub-Type + Fee Range
+GET http://localhost:3001/api/speaker-search/filter?subTypes=Fireside%20Chats&minFee=150000&maxFee=250000
+GET http://localhost:3001/api/speaker-search/filter?subTypes=Networking%20Events&minFee=200000&maxFee=400000
+
+# Experience + Event Type
+GET http://localhost:3001/api/speaker-search/filter?yearsOfExperience=5&eventTypes=Corporate%20%26%20Professional%20Events
+GET http://localhost:3001/api/speaker-search/filter?yearsOfExperience=10&eventTypes=Educational%20%26%20Training%20Formats
+
+8.2 THREE-FILTER COMBINATIONS
+-----------------------------
+# Date + Event Type + Fee
+GET http://localhost:3001/api/speaker-search/filter?availabilityDate=2025-09-25&eventTypes=Corporate%20%26%20Professional%20Events&minFee=10000
+GET http://localhost:3001/api/speaker-search/filter?availabilityDate=2025-09-19&eventTypes=Educational%20%26%20Training%20Formats&minFee=50000
+
+# Event Type + Delivery Mode + Experience
+GET http://localhost:3001/api/speaker-search/filter?eventTypes=Corporate%20%26%20Professional%20Events&deliveryModes=Online&yearsOfExperience=5
+GET http://localhost:3001/api/speaker-search/filter?eventTypes=Specialized%20%26%20Niche%20Events&deliveryModes=Offline&yearsOfExperience=10
+
+# Fee + Delivery Mode + Sub-Type
+GET http://localhost:3001/api/speaker-search/filter?minFee=100000&deliveryModes=Offline&subTypes=Fireside%20Chats
+GET http://localhost:3001/api/speaker-search/filter?minFee=200000&deliveryModes=Online&subTypes=Networking%20Events
+
+# Date + Fee + Delivery Mode
+GET http://localhost:3001/api/speaker-search/filter?availabilityDate=2025-09-25&minFee=50000&deliveryModes=Online
+GET http://localhost:3001/api/speaker-search/filter?availabilityDate=2025-09-19&minFee=100000&deliveryModes=Offline
+
+8.3 COMPLEX COMBINATIONS (4+ FILTERS)
+-------------------------------------
+# Date + Event Type + Fee + Delivery Mode
+GET http://localhost:3001/api/speaker-search/filter?availabilityDate=2025-09-25&eventTypes=Corporate%20%26%20Professional%20Events&minFee=10000&deliveryModes=Online
+GET http://localhost:3001/api/speaker-search/filter?availabilityDate=2025-09-19&eventTypes=Educational%20%26%20Training%20Formats&minFee=50000&deliveryModes=Offline
+
+# Event Type + Sub-Type + Fee + Experience
+GET http://localhost:3001/api/speaker-search/filter?eventTypes=Corporate%20%26%20Professional%20Events&subTypes=Fireside%20Chats&minFee=100000&yearsOfExperience=5
+GET http://localhost:3001/api/speaker-search/filter?eventTypes=Specialized%20%26%20Niche%20Events&subTypes=Networking%20Events&minFee=200000&yearsOfExperience=10
+
+# All major filters
+GET http://localhost:3001/api/speaker-search/filter?availabilityDate=2025-09-25&eventTypes=Corporate%20%26%20Professional%20Events&subTypes=Fireside%20Chats&minFee=10000&maxFee=300000&deliveryModes=Online&yearsOfExperience=5
+GET http://localhost:3001/api/speaker-search/filter?availabilityDate=2025-09-19&eventTypes=Educational%20%26%20Training%20Formats&subTypes=Workshops%20%26%20Training%20Sessions&minFee=50000&maxFee=150000&deliveryModes=Offline&yearsOfExperience=10
+
+================================================================================
+9. TEXT SEARCH + FILTERS
+================================================================================
+
+9.1 SEARCH QUERY WITH FILTERS
+-----------------------------
+# Search + Date
+GET http://localhost:3001/api/speaker-search/filter?q=technology&availabilityDate=2025-09-25
+GET http://localhost:3001/api/speaker-search/filter?q=AI&availabilityDate=2025-09-19
+
+# Search + Event Type
+GET http://localhost:3001/api/speaker-search/filter?q=AI&eventTypes=Corporate%20%26%20Professional%20Events
+GET http://localhost:3001/api/speaker-search/filter?q=Machine%20Learning&eventTypes=Educational%20%26%20Training%20Formats
+
+# Search + Fee Range
+GET http://localhost:3001/api/speaker-search/filter?q=Machine%20Learning&minFee=50000
+GET http://localhost:3001/api/speaker-search/filter?q=technology&minFee=100000&maxFee=300000
+
+# Search + Multiple Filters
+GET http://localhost:3001/api/speaker-search/filter?q=technology&availabilityDate=2025-09-25&eventTypes=Corporate%20%26%20Professional%20Events&minFee=10000
+GET http://localhost:3001/api/speaker-search/filter?q=AI&availabilityDate=2025-09-19&eventTypes=Educational%20%26%20Training%20Formats&deliveryModes=Online
+
+# Search by name + filters
+GET http://localhost:3001/api/speaker-search/filter?q=John&availabilityDate=2025-09-25&minFee=50000
+GET http://localhost:3001/api/speaker-search/filter?q=Smith&eventTypes=Corporate%20%26%20Professional%20Events&deliveryModes=Offline
+
+# Search by email + filters
+GET http://localhost:3001/api/speaker-search/filter?q=john.doe@email.com&availabilityDate=2025-09-25
+GET http://localhost:3001/api/speaker-search/filter?q=speaker@company.com&minFee=100000
+
+================================================================================
+10. UTILITY ROUTES
+================================================================================
+
+10.1 GET AVAILABLE EVENT TYPES
+------------------------------
+GET http://localhost:3001/api/speaker-search/event-types
+
+10.2 PAGINATION TESTING
+-----------------------
+# Test pagination with filters
+GET http://localhost:3001/api/speaker-search/filter?minFee=10000&page=1&limit=5
+GET http://localhost:3001/api/speaker-search/filter?minFee=10000&page=2&limit=5
+GET http://localhost:3001/api/speaker-search/filter?minFee=10000&page=1&limit=10
+GET http://localhost:3001/api/speaker-search/filter?eventTypes=Corporate%20%26%20Professional%20Events&page=1&limit=3
+GET http://localhost:3001/api/speaker-search/filter?availabilityDate=2025-09-25&page=1&limit=5
+
+================================================================================
+11. EDGE CASES & ERROR TESTING
+================================================================================
+
+11.1 INVALID INPUTS
+-------------------
+# Invalid date format
+GET http://localhost:3001/api/speaker-search/filter?availabilityDate=invalid-date
+GET http://localhost:3001/api/speaker-search/filter?availabilityDate=2025-13-45
+GET http://localhost:3001/api/speaker-search/filter?availabilityDate=not-a-date
+
+# Invalid fee values
+GET http://localhost:3001/api/speaker-search/filter?minFee=abc
+GET http://localhost:3001/api/speaker-search/filter?maxFee=xyz
+GET http://localhost:3001/api/speaker-search/filter?minFee=-1000
+GET http://localhost:3001/api/speaker-search/filter?maxFee=abc123
+
+# Non-existent event types
+GET http://localhost:3001/api/speaker-search/filter?eventTypes=NonExistent%20Event%20Type
+GET http://localhost:3001/api/speaker-search/filter?eventTypes=Invalid%20Category
+
+# Empty parameters
+GET http://localhost:3001/api/speaker-search/filter?availabilityDate=
+GET http://localhost:3001/api/speaker-search/filter?minFee=
+GET http://localhost:3001/api/speaker-search/filter?eventTypes=
+GET http://localhost:3001/api/speaker-search/filter?q=
+
+11.2 BOUNDARY TESTING
+---------------------
+# Very high fees
+GET http://localhost:3001/api/speaker-search/filter?minFee=1000000
+GET http://localhost:3001/api/speaker-search/filter?maxFee=1
+GET http://localhost:3001/api/speaker-search/filter?minFee=999999999
+
+# Very high experience
+GET http://localhost:3001/api/speaker-search/filter?yearsOfExperience=50
+GET http://localhost:3001/api/speaker-search/filter?yearsOfExperience=100
+
+# Future dates
+GET http://localhost:3001/api/speaker-search/filter?availabilityDate=2030-01-01
+GET http://localhost:3001/api/speaker-search/filter?availabilityDate=2050-12-31
+
+# Past dates
+GET http://localhost:3001/api/speaker-search/filter?availabilityDate=2020-01-01
+GET http://localhost:3001/api/speaker-search/filter?availabilityDate=2023-12-31
+
+================================================================================
+12. SEARCH FIELDS COVERAGE
+================================================================================
+
+The search functionality covers these fields:
+- firstName
+- lastName
+- email
+- mobileNo
+- bio
+- professionalTitle
+- location
+- areaOfExpertise
+- roleSpecificData.industry
+- roleSpecificData.activities
+- roleSpecificData.socialLinks.linkedin
+- roleSpecificData.socialLinks.twitter
+- roleSpecificData.socialLinks.website
+- roleSpecificData.socialLinks.portfolio
+
+Example searches for each field:
+GET http://localhost:3001/api/speaker-search/search?q=John
+GET http://localhost:3001/api/speaker-search/search?q=Smith
+GET http://localhost:3001/api/speaker-search/search?q=john.doe@email.com
+GET http://localhost:3001/api/speaker-search/search?q=+919876543210
+GET http://localhost:3001/api/speaker-search/search?q=experienced%20professional
+GET http://localhost:3001/api/speaker-search/search?q=Senior%20Developer
+GET http://localhost:3001/api/speaker-search/search?q=Mumbai
+GET http://localhost:3001/api/speaker-search/search?q=Machine%20Learning
+GET http://localhost:3001/api/speaker-search/search?q=technology
+GET http://localhost:3001/api/speaker-search/search?q=Cybersecurity
+GET http://localhost:3001/api/speaker-search/search?q=linkedin.com/in/speaker
+GET http://localhost:3001/api/speaker-search/search?q=@speaker_twitter
+GET http://localhost:3001/api/speaker-search/search?q=speaker-website.com
+GET http://localhost:3001/api/speaker-search/search?q=speaker-portfolio.com
+
+================================================================================
+13. RESPONSE FORMATS
+================================================================================
+
+SUCCESS RESPONSE:
+{
+  "success": true,
+  "message": "Found X available speaker(s) matching criteria",
+  "data": {
+    "speakers": [...],
+    "pagination": {
+      "currentPage": 1,
+      "totalPages": 1,
+      "totalCount": 1,
+      "hasNextPage": false,
+      "hasPrevPage": false,
+      "limit": 10
+    },
+    "filters": {
+      "availabilityDate": "2025-09-25",
+      "eventTypes": ["Corporate & Professional Events"],
+      "subTypes": ["Conferences & Summits"],
+      "minFee": 10000,
+      "maxFee": 50000,
+      "deliveryModes": ["Online"],
+      "yearsOfExperience": 5,
+      "location": "Mumbai",
+      "expertise": ["Machine Learning"],
+      "topics": ["Artificial Intelligence"]
+    }
+  }
+}
+
+NO RESULTS RESPONSE:
+{
+  "success": true,
+  "message": "No speakers found matching the availability criteria",
+  "data": {
+    "speakers": [],
+    "pagination": {...},
+    "filters": {...}
+  }
+}
+
+ERROR RESPONSE:
+{
+  "success": false,
+  "message": "Internal server error while searching speakers with filters",
+  "error": "Error details..."
+}
+
+================================================================================
+14. TESTING CHECKLIST
+================================================================================
+
+BASIC FUNCTIONALITY:
+□ Text search works
+□ Suggestions/autocomplete works
+□ Individual filters work
+□ Pagination works
+□ Error handling works
+
+FILTER COMBINATIONS:
+□ Two-filter combinations
+□ Three-filter combinations
+□ Complex multi-filter combinations
+□ Text search + filters
+
+EDGE CASES:
+□ Invalid inputs
+□ Boundary values
+□ Empty parameters
+□ Non-existent data
+
+PERFORMANCE:
+□ Large result sets
+□ Complex queries
+□ Response times
+
+================================================================================
+END OF API ROUTES
+================================================================================
