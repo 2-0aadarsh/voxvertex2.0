@@ -5,6 +5,7 @@
 const corsMiddleware = (req, res, next) => {
   // Allow requests from these origins
   const allowedOrigins = [
+    'https://voxvertex1-0.netlify.app',
     'http://localhost:5173', 
     'http://localhost:3000', 
     'http://localhost:3001', 
