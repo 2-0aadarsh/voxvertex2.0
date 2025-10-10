@@ -4,6 +4,6 @@ import { redirect } from 'next/navigation';
 
 export default function Home() {
   // Temporarily disabled to fix subscription flow
-  // redirect('/home');
-  return null;
+  redirect('/home');
+  // return null;
 }
